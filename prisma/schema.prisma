@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                         String         @id @default(uuid())
+  name                       String
+  email                      String         @unique
+  password_hash              String
+  role                       String         @default("student") // "student" | "admin"
+  academic_year              String?
+  monthly_allowance_baseline Decimal        @default(0) @db.Decimal(12, 2)
+  monthly_savings_goal       Decimal        @default(0) @db.Decimal(12, 2)
+  created_at                 DateTime       @default(now())
+  updated_at                 DateTime       @updatedAt
+
+  transactions               Transaction[]
+  budgets                    Budget[]
+  insights                   Insight[]
+  saving_tips                SavingTip[]
+  categories                 Category[]
+  notifications              Notification[]
+
+  @@map("users")
+}
+
+model Category {
+  id           Int           @id @default(autoincrement())
+  user_id      String?       // null = danh mục mặc định toàn hệ thống, non-null = danh mục cá nhân
+  name         String
+  type         String        // "income" | "expense"
+  icon         String?       // tên icon lucide (vd: Utensils, Home, Book, Film...)
+  color        String?       // mã màu hex hoặc tailwind class
+  is_default   Boolean       @default(false)
+  created_at   DateTime      @default(now())
+
+  user         User?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id                    String    @id @default(uuid())
+  user_id               String
+  category_id           Int
+  amount                Decimal   @db.Decimal(12, 2)
+  type                  String    // "income" | "expense"
+  description           String
+  ai_suggested_category Int?      // ID danh mục AI đã gợi ý
+  date                  DateTime  @default(now())
+  is_recurring          Boolean   @default(false)
+  recurrence_period     String?   // "monthly" | "weekly"
+  created_at            DateTime  @default(now())
+
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  category              Category  @relation(fields: [category_id], references: [id], onDelete: Restrict)
+
+  @@map("transactions")
+}
+
+model Budget {
+  id           Int       @id @default(autoincrement())
+  user_id      String
+  category_id  Int
+  month        String    // định dạng "YYYY-MM", ví dụ "2026-09"
+  limit_amount Decimal   @db.Decimal(12, 2)
+  created_at   DateTime  @default(now())
+
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  category     Category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, category_id, month])
+  @@map("budgets")
+}
+
+model Insight {
+  id           Int       @id @default(autoincrement())
+  user_id      String
+  month        String    // định dạng "YYYY-MM"
+  summary_text String    @db.Text
+  tip_text     String    @db.Text
+  is_pinned    Boolean   @default(false)
+  generated_at DateTime  @default(now())
+
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("insights")
+}
+
+model SavingTip {
+  id               Int       @id @default(autoincrement())
+  user_id          String?   // null = mẹo hệ thống/admin, non-null = mẹo sinh viên
+  title            String
+  content          String    @db.Text
+  category_type    String?   // "Food" | "Transport" | "Subscriptions"...
+  potential_saving Decimal?  @db.Decimal(12, 2)
+  is_pinned        Boolean   @default(false)
+  is_dismissed     Boolean   @default(false)
+  created_at       DateTime  @default(now())
+
+  user             User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("saving_tips")
+}
+
+model Notification {
+  id         Int       @id @default(autoincrement())
+  user_id    String
+  title      String
+  message    String    @db.Text
+  type       String    @default("info") // "info" | "warning" | "alert" | "success"
+  is_read    Boolean   @default(false)
+  created_at DateTime  @default(now())
+
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}

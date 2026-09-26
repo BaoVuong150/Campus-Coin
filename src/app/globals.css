@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-canvas: var(--canvas);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-hairline-tertiary: var(--hairline-tertiary);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-focus: var(--primary-focus);
+  --color-brand-secure: var(--brand-secure);
+  --color-semantic-success: var(--semantic-success);
+}
+
+@layer base {
+  :root {
+    /* Linear Light Mode Defaults */
+    --canvas: #ffffff;
+    --surface-1: #ffffff;
+    --surface-2: #f8f9fa;
+    --surface-3: #f1f3f5;
+    --surface-4: #e9ecef;
+    --hairline: #e2e8f0;
+    --hairline-strong: #cbd5e1;
+    --hairline-tertiary: #94a3b8;
+    --ink: #0f1011;
+    --ink-muted: #334155;
+    --ink-subtle: #64748b;
+    --ink-tertiary: #94a3b8;
+    --primary: #5e6ad2;
+    --primary-hover: #4d58ba;
+    --primary-focus: #5e69d1;
+    --brand-secure: #7a7fad;
+    --semantic-success: #27a644;
+  }
+
+  .dark, [data-theme="dark"] {
+    /* Canonical Linear Dark Canvas from DESIGN.md */
+    --canvas: #010102;
+    --surface-1: #0f1011;
+    --surface-2: #141516;
+    --surface-3: #18191a;
+    --surface-4: #191a1b;
+    --hairline: #23252a;
+    --hairline-strong: #34343a;
+    --hairline-tertiary: #3e3e44;
+    --ink: #f7f8f8;
+    --ink-muted: #d0d6e0;
+    --ink-subtle: #8a8f98;
+    --ink-tertiary: #62666d;
+    --primary: #5e6ad2;
+    --primary-hover: #828fff;
+    --primary-focus: #5e69d1;
+    --brand-secure: #7a7fad;
+    --semantic-success: #27a644;
+  }
+
+  /* Accessibility font sizing */
+  html[data-font-size="normal"] {
+    font-size: 16px;
+  }
+
+  html[data-font-size="large"] {
+    font-size: 18px;
+  }
+
+  html[data-font-size="larger"] {
+    font-size: 20px;
+  }
+}
+
+/* =========================================================================
+   LINEAR SEAMLESS DUAL-THEME ENGINE
+   Maps hardcoded Linear dark hex utilities to their Light counterparts
+   whenever the page is NOT in .dark mode.
+   This guarantees that ALL existing pages (dashboard, modals, admin, etc.)
+   seamlessly switch between crisp Light and deep Linear Dark.
+   ========================================================================= */
+html:not(.dark) .bg-\[\#010102\] {
+  background-color: #ffffff !important;
+}
+html:not(.dark) .bg-\[\#0f1011\] {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+html:not(.dark) .bg-\[\#141516\] {
+  background-color: #f8f9fa !important;
+}
+html:not(.dark) .bg-\[\#18191a\] {
+  background-color: #f1f3f5 !important;
+}
+html:not(.dark) .bg-\[\#191a1b\] {
+  background-color: #e9ecef !important;
+}
+html:not(.dark) .border-\[\#23252a\] {
+  border-color: #e2e8f0 !important;
+}
+html:not(.dark) .border-\[\#34343a\] {
+  border-color: #cbd5e1 !important;
+}
+html:not(.dark) .border-\[\#3e3e44\] {
+  border-color: #cbd5e1 !important;
+}
+html:not(.dark) .text-\[\#f7f8f8\] {
+  color: #0f1011 !important;
+}
+html:not(.dark) .text-\[\#d0d6e0\] {
+  color: #334155 !important;
+}
+html:not(.dark) .text-\[\#8a8f98\] {
+  color: #64748b !important;
+}
+html:not(.dark) .text-\[\#62666d\] {
+  color: #94a3b8 !important;
+}
+html:not(.dark) .hover\:bg-\[\#141516\]:hover {
+  background-color: #f1f3f5 !important;
+}
+html:not(.dark) .hover\:bg-\[\#141516\]\/50:hover {
+  background-color: #f1f3f5 !important;
+}
+html:not(.dark) .bg-\[\#141516\]\/50 {
+  background-color: #f8f9fa !important;
+}
+html:not(.dark) .hover\:bg-\[\#18191a\]:hover {
+  background-color: #e9ecef !important;
+}
+html:not(.dark) .hover\:bg-\[\#191a1b\]:hover {
+  background-color: #dee2e6 !important;
+}
+html:not(.dark) .hover\:text-\[\#f7f8f8\]:hover {
+  color: #0f1011 !important;
+}
+html:not(.dark) .edge-highlight {
+  box-shadow: inset 0 1px 0 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+body {
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Inter", "Geist Sans", sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* =========================================================================
+   GLOBAL INTERACTION & CURSOR POINTER
+   Ensures ALL buttons and interactive elements globally have cursor: pointer
+   ========================================================================= */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+input[type="button"]:disabled,
+input[type="submit"]:disabled {
+  cursor: not-allowed;
+}
+
+/* Linear-inspired typography tracking utilities from DESIGN.md */
+.tracking-display-xl {
+  letter-spacing: -3.0px;
+}
+.tracking-display-lg {
+  letter-spacing: -1.8px;
+}
+.tracking-display-md {
+  letter-spacing: -1.0px;
+}
+.tracking-headline {
+  letter-spacing: -0.6px;
+}
+.tracking-card-title {
+  letter-spacing: -0.4px;
+}
+.tracking-subhead {
+  letter-spacing: -0.2px;
+}
+.tracking-body-lg {
+  letter-spacing: -0.1px;
+}
+.tracking-body {
+  letter-spacing: -0.05px;
+}
+.tracking-eyebrow {
+  letter-spacing: 0.4px;
+}
+
+/* Linear Hairline Top Edge Highlight */
+.edge-highlight {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Linear Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #23252a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #34343a;
+}

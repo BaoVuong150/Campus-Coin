@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils/cn";
 export type ProgressTone = "primary" | "warning" | "danger" | "info";
 
 const TONES: Record<ProgressTone, string> = {
-  primary: "bg-primary",
-  warning: "bg-warning",
-  danger: "bg-danger",
+  primary: "bg-brand",
+  warning: "bg-warning-fill",
+  danger: "bg-danger-fill",
   info: "bg-info",
 };
 

@@ -17,13 +17,13 @@ export interface ChartColors {
 const FALLBACK: ChartColors = {
   income: "#0d9488",
   expense: "#e5484d",
-  grid: "#e8ebe9",
-  axis: "#7a8580",
+  grid: "#e6eeed",
+  axis: "#647677",
   surface: "#ffffff",
-  foreground: "#101513",
-  muted: "#4f5a55",
-  series: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"],
-  other: "#a3aaa6",
+  foreground: "#0b1716",
+  muted: "#56686a",
+  series: ["#2a78d6", "#eb6834", "#0f9f94", "#eda100", "#e87ba4", "#4d7c0f", "#4a3aa7", "#e34948"],
+  other: "#a2b0b0",
 };
 
 function read(): ChartColors {

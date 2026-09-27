@@ -6,14 +6,14 @@ import type { Formatters } from "@/i18n/format";
 import type { ReportDTO } from "@/types/finance";
 
 /** Màu in cố định (PDF luôn nền trắng, không phụ thuộc theme). */
-const INK = "#101513";
-const MUTED = "#4f5a55";
-const LINE = "#e4e7e5";
+const INK = "#0b1716";
+const MUTED = "#56686a";
+const LINE = "#e3eceb";
 const PRIMARY = "#2dd4bf";
 const PRIMARY_INK = "#042f2e";
 const INCOME = "#0d9488";
 const EXPENSE = "#e5484d";
-const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
+const SERIES = ["#2a78d6", "#eb6834", "#0f9f94", "#eda100", "#e87ba4", "#4d7c0f", "#4a3aa7", "#e34948"];
 
 const PAGE_W = 210;
 const PAGE_H = 297;

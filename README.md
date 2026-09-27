@@ -191,3 +191,26 @@ Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm 
 - Logo, favicon (`src/app/icon.svg`) và logo trong file PDF xuất báo cáo (`src/lib/report-pdf.ts`) đổi sang nền teal, chữ C màu tối.
 - Màu biểu đồ Thu/Chi, màu cảnh báo (đỏ/vàng) giữ nguyên vì đã được kiểm định cho người mù màu.
 - Nguồn sự thật của mọi màu: `src/app/globals.css` (xem thêm `DESIGN.md`).
+
+### Hài hòa màu sắc & căn chỉnh giao diện
+
+- **Màu trung tính ngả teal:** nền, chữ, viền đổi từ xám ngả xanh lá (còn sót từ bảng emerald) sang xám ngả teal để
+  đồng bộ với màu chủ đạo.
+
+  | Token | Sáng | Tối |
+  | --- | --- | --- |
+  | `--background` | `#f7fafa` | `#081110` |
+  | `--surface` / `--surface-secondary` | `#ffffff` / `#f1f6f6` | `#0c1817` / `#122120` |
+  | `--foreground` / `--muted` / `--subtle` | `#0b1716` / `#56686a` / `#647677` | `#eef6f5` / `#9eb2b1` / `#8a9e9d` |
+  | `--border` | `rgb(12 45 43 / .09)` | `rgb(255 255 255 / .08)` |
+  | `--inverse` (section Bảo mật) | `#08201e` | `#050d0c` |
+
+- **Màu tô thanh tiến độ mới** `--warning-fill` (`#f59e0b`) và `--danger-fill` (`#e5484d`): thanh "sắp chạm ngân sách"
+  trước đây dùng màu chữ cảnh báo `#b45309` nên trông nâu; nay thanh dùng màu tô sáng, còn chữ vẫn giữ màu đậm để đủ tương phản.
+- **Thanh tiến độ bình thường** dùng `--brand` (`#14b8a6`) thống nhất giữa trang chủ và ứng dụng.
+- **Bảng màu danh mục (biểu đồ tròn, PDF):** thay 2 màu xanh lá cũ bằng teal `#0f9f94` và xanh ô liu `#4d7c0f`
+  (tối: `#14a399`, `#5f9a12`); đã chạy kiểm định cho người mù màu ở cả hai chế độ.
+- **Khối CTA cuối trang:** bỏ mảng teal đặc chói mắt, thay bằng nền teal nhạt có quầng sáng nhẹ, chữ tối và nút chính teal.
+- **Dashboard:** bỏ nút "Thêm giao dịch" bị trùng (đã có trên thanh trên cùng; mobile có nút tròn ở thanh dưới),
+  sửa khoảng cách giữa tiêu đề và hàng thẻ số liệu (trước đó `mb-0` ghi đè `space-y-6` của Tailwind 4).
+- Màu chữ/đường kẻ trong file PDF báo cáo cập nhật theo bảng trung tính mới.

@@ -13,7 +13,7 @@ export function SurfaceCard({ className, ...props }: HTMLAttributes<HTMLDivEleme
 const WARNING_PERCENT = 80;
 
 export function ProgressBar({ percent, label, className }: { percent: number; label: string; className?: string }) {
-  const tone = percent > 100 ? "bg-danger" : percent >= WARNING_PERCENT ? "bg-warning" : "bg-brand";
+  const tone = percent > 100 ? "bg-danger-fill" : percent >= WARNING_PERCENT ? "bg-warning-fill" : "bg-brand";
   return (
     <div
       role="progressbar"

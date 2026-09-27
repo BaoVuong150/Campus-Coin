@@ -10,18 +10,18 @@ Nguồn sự thật của mọi giá trị bên dưới là `src/app/globals.css
 
 | Token | Sáng | Tối | Dùng cho |
 | --- | --- | --- | --- |
-| `--background` | `#fafbfa` | `#0b0e0d` | Nền trang |
-| `--surface` / `--surface-secondary` | `#ffffff` / `#f5f7f5` | `#111513` / `#161b18` | Card, ô nhập / nền phụ |
-| `--border` | `rgb(15 23 20 / .08)` | `rgb(255 255 255 / .08)` | Đường viền mảnh |
-| `--foreground` / `--muted` / `--subtle` | `#101312` / `#626966` / `#737b77` | `#f4f7f5` / `#a7b0ab` / `#8b9690` | Chữ chính / phụ / chú thích |
+| `--background` | `#f7fafa` | `#081110` | Nền trang (xám ngả teal) |
+| `--surface` / `--surface-secondary` | `#ffffff` / `#f1f6f6` | `#0c1817` / `#122120` | Card, ô nhập / nền phụ |
+| `--border` | `rgb(12 45 43 / .09)` | `rgb(255 255 255 / .08)` | Đường viền mảnh |
+| `--foreground` / `--muted` / `--subtle` | `#0b1716` / `#56686a` / `#647677` | `#eef6f5` / `#9eb2b1` / `#8a9e9d` | Chữ chính / phụ / chú thích |
 | `--primary` / `--primary-foreground` | `#2dd4bf` (teal) / `#042f2e` | `#2dd4bf` / `#042f2e` | Nền nút chính, CTA, logo; chữ tối trên nền teal (~10:1) |
 | `--primary-ink` | `#0f766e` | `#2dd4bf` | Chữ, icon, viền màu nhấn (đạt tương phản AA) |
 | `--brand` / `--brand-bright` | `#14b8a6` / `#2dd4bf` | `#2dd4bf` / `#5eead4` | Màu thương hiệu cho thanh tiến độ, điểm nhấn, glow |
 | `--success` | `#0f766e` | `#2dd4bf` | Thu nhập, trạng thái tốt |
-| `--danger` | `#c9343a` | `#f08080` | Chi tiêu, vượt ngân sách, xóa |
-| `--warning` | `#b45309` | `#fbbf24` | Chạm 80% ngân sách, bất thường |
+| `--danger` (chữ) / `--danger-fill` (thanh) | `#c9343a` / `#e5484d` | `#f08080` / `#f08080` | Chi tiêu, vượt ngân sách, xóa |
+| `--warning` (chữ) / `--warning-fill` (thanh) | `#b45309` / `#f59e0b` | `#fbbf24` / `#fbbf24` | Chạm 80% ngân sách, bất thường |
 | `--info` | `#2563eb` | `#60a5fa` | Thông tin trung tính |
-| `--inverse` (+ `-foreground/-muted/-border`) | `#0e1311` | `#070908` | Section nền tối (Bảo mật) trên landing |
+| `--inverse` (+ `-foreground/-muted/-border`) | `#08201e` | `#050d0c` | Section nền tối (Bảo mật) trên landing |
 
 Mỗi màu trạng thái có biến `-soft` cho nền nhạt (badge, thông báo). Không thêm màu ngẫu nhiên ngoài bảng này.
 

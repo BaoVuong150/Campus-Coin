@@ -133,7 +133,7 @@ export default function DashboardPage() {
 
   // User Profile & Monthly Allowance & Pay Day & Fixed Bills
   const [monthlyAllowance, setMonthlyAllowance] = useState<number>(8000000);
-  const [studentName, setStudentName] = useState<string>("Nguyễn Văn An");
+  const [studentName, setStudentName] = useState<string>("Sinh viên");
   const [salaryPayDay, setSalaryPayDay] = useState<number>(5);
   const [fixedBills, setFixedBills] = useState<FixedBill[]>(DEFAULT_FIXED_BILLS);
   const [isAllowanceModalOpen, setIsAllowanceModalOpen] = useState(false);

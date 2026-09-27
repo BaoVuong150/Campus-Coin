@@ -19,8 +19,6 @@ export async function GET() {
         academic_year: true,
         monthly_allowance_baseline: true,
         monthly_savings_goal: true,
-        salary_pay_day: true,
-        fixed_bills: true,
       },
     });
 
@@ -30,7 +28,24 @@ export async function GET() {
 
     const allowance = Number(userData.monthly_allowance_baseline) || 8000000;
     const savingsGoal = Number(userData.monthly_savings_goal) || 1500000;
-    const salaryPayDay = userData.salary_pay_day || 5;
+    let salaryPayDay = 5;
+    let fixedBills = null;
+
+    try {
+      const extraRows = await prisma.$queryRaw<Array<{ salary_pay_day: number | null; fixed_bills: unknown }>>`
+        SELECT salary_pay_day, fixed_bills FROM "users" WHERE id = ${user.userId} LIMIT 1
+      `;
+      if (extraRows && extraRows.length > 0) {
+        if (extraRows[0].salary_pay_day != null) {
+          salaryPayDay = Number(extraRows[0].salary_pay_day);
+        }
+        if (extraRows[0].fixed_bills) {
+          fixedBills = extraRows[0].fixed_bills;
+        }
+      }
+    } catch (rawErr) {
+      console.warn("Could not query extra user fields via raw SQL:", rawErr);
+    }
 
     return NextResponse.json({
       is_authenticated: true,
@@ -39,12 +54,13 @@ export async function GET() {
         monthly_allowance_baseline: allowance,
         monthly_savings_goal: savingsGoal,
         salary_pay_day: salaryPayDay,
-        fixed_bills: userData.fixed_bills || null,
+        fixed_bills: fixedBills,
       },
     });
-  } catch (err) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("GET user profile error:", err);
-    return NextResponse.json({ error: "Lỗi máy chủ nội bộ." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi máy chủ nội bộ.", details: errorMsg }, { status: 500 });
   }
 }
 
@@ -70,17 +86,28 @@ export async function PATCH(req: Request) {
     if (monthly_savings_goal !== undefined) {
       updateData.monthly_savings_goal = Number(monthly_savings_goal);
     }
-    if (salary_pay_day !== undefined) {
-      updateData.salary_pay_day = Number(salary_pay_day);
-    }
-    if (fixed_bills !== undefined) {
-      updateData.fixed_bills = fixed_bills;
-    }
 
     const updated = await prisma.user.update({
       where: { id: user.userId },
       data: updateData,
     });
+
+    let sDay = 5;
+    let fBills = fixed_bills;
+
+    if (salary_pay_day !== undefined || fixed_bills !== undefined) {
+      try {
+        sDay = salary_pay_day !== undefined ? Number(salary_pay_day) : 5;
+        const billsJson = fixed_bills !== undefined ? JSON.stringify(fixed_bills) : null;
+        await prisma.$executeRaw`
+          UPDATE "users" 
+          SET salary_pay_day = ${sDay}, fixed_bills = ${billsJson}::jsonb
+          WHERE id = ${user.userId}
+        `;
+      } catch (rawErr) {
+        console.warn("Could not update extra user fields via raw SQL:", rawErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -90,8 +117,8 @@ export async function PATCH(req: Request) {
         email: updated.email,
         monthly_allowance_baseline: Number(updated.monthly_allowance_baseline),
         monthly_savings_goal: Number(updated.monthly_savings_goal),
-        salary_pay_day: updated.salary_pay_day || 5,
-        fixed_bills: updated.fixed_bills,
+        salary_pay_day: sDay,
+        fixed_bills: fBills,
       },
     });
   } catch (err) {

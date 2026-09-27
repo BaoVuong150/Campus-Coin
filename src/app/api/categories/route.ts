@@ -1,55 +1,20 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { z } from "zod";
+import { handle, ok, parseBody, parseQuery } from "@/lib/api/response";
+import { requireAuth } from "@/lib/auth/session";
+import { createCategorySchema } from "@/lib/validations/category.schema";
+import { createUserCategory, listCategories } from "@/services/category.service";
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
+const querySchema = z.object({ type: z.enum(["income", "expense"]).optional() });
 
-    // Lấy các danh mục mặc định toàn trường và danh mục riêng của sinh viên (nếu đã đăng nhập)
-    const categories = await prisma.category.findMany({
-      where: {
-        OR: [
-          { is_default: true },
-          ...(user ? [{ user_id: user.userId }] : []),
-        ],
-      },
-      orderBy: [{ is_default: "desc" }, { name: "asc" }],
-    });
+export const GET = handle(async (req) => {
+  const user = await requireAuth();
+  const { type } = parseQuery(req, querySchema);
+  return ok(await listCategories(user.id, type));
+});
 
-    return NextResponse.json({ categories });
-  } catch (error) {
-    console.error("Categories GET error:", error);
-    return NextResponse.json({ error: "Lỗi tải danh mục." }, { status: 500 });
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
-    }
-
-    const { name, type, icon, color } = await req.json();
-    if (!name || !type) {
-      return NextResponse.json({ error: "Tên và loại danh mục là bắt buộc." }, { status: 400 });
-    }
-
-    const category = await prisma.category.create({
-      data: {
-        name: name.trim(),
-        type,
-        icon: icon || "Tag",
-        color: color || "#5e6ad2",
-        is_default: false,
-        user_id: user.userId,
-      },
-    });
-
-    return NextResponse.json({ success: true, category });
-  } catch (error) {
-    console.error("Categories POST error:", error);
-    return NextResponse.json({ error: "Lỗi tạo danh mục mới." }, { status: 500 });
-  }
-}
+/** Tạo danh mục cá nhân. Danh mục hệ thống chỉ tạo qua /api/admin/categories. */
+export const POST = handle(async (req) => {
+  const user = await requireAuth();
+  const input = await parseBody(req, createCategorySchema);
+  return ok(await createUserCategory(user.id, input), { status: 201 });
+});

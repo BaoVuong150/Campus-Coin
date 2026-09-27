@@ -1,0 +1,82 @@
+import { NextResponse } from "next/server";
+import { ZodError, type ZodType } from "zod";
+import { Prisma } from "@prisma/client";
+import { ApiError, Errors, type ErrorCode } from "./errors";
+import { ConfigurationError } from "@/lib/env";
+
+export interface ApiSuccess<T> {
+  success: true;
+  data: T;
+}
+
+export interface ApiFailure {
+  success: false;
+  error: { code: ErrorCode; message: string; fields?: Record<string, string> };
+}
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
+
+export function ok<T>(data: T, init?: ResponseInit): NextResponse<ApiSuccess<T>> {
+  return NextResponse.json({ success: true as const, data }, init);
+}
+
+export function fail(error: ApiError): NextResponse<ApiFailure> {
+  return NextResponse.json(
+    { success: false as const, error: { code: error.code, message: error.message, fields: error.fields } },
+    { status: error.status }
+  );
+}
+
+export function zodFields(error: ZodError): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = issue.path.join(".") || "_";
+    if (!fields[key]) fields[key] = issue.message;
+  }
+  return fields;
+}
+
+/** Chuẩn hóa mọi lỗi ném ra từ route handler thành response thống nhất, không lộ stack trace. */
+export function toErrorResponse(error: unknown): NextResponse<ApiFailure> {
+  if (error instanceof ApiError) return fail(error);
+  if (error instanceof ZodError) {
+    const fields = zodFields(error);
+    return fail(Errors.badRequest(Object.values(fields)[0] ?? "Dữ liệu không hợp lệ.", fields));
+  }
+  if (error instanceof ConfigurationError) {
+    console.error("[config]", error.message);
+    return fail(new ApiError(500, "CONFIGURATION_ERROR", "Máy chủ chưa được cấu hình đúng."));
+  }
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    return fail(new ApiError(409, "CONFLICT", "Dữ liệu đã tồn tại."));
+  }
+  console.error("[api]", error);
+  return fail(new ApiError(500, "INTERNAL_ERROR", "Đã có lỗi xảy ra. Vui lòng thử lại."));
+}
+
+type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
+
+export function handle<C = unknown>(fn: Handler<C>): Handler<C> {
+  return async (req, ctx) => {
+    try {
+      return await fn(req, ctx);
+    } catch (error) {
+      return toErrorResponse(error);
+    }
+  };
+}
+
+export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T> {
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    throw new ApiError(400, "INVALID_JSON", "Dữ liệu gửi lên không hợp lệ.");
+  }
+  return schema.parse(raw);
+}
+
+export function parseQuery<T>(req: Request, schema: ZodType<T>): T {
+  const params = Object.fromEntries(new URL(req.url).searchParams.entries());
+  return schema.parse(params);
+}

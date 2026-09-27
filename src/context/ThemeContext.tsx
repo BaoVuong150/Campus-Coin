@@ -1,16 +1,12 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import { FONT_SIZE_STORAGE_KEY as FONT_KEY, THEME_STORAGE_KEY as THEME_KEY } from "@/lib/theme-script";
 
 export type Theme = "light" | "dark";
 export type FontSize = "normal" | "large" | "larger";
 
-const THEME_KEY = "campuscoin_theme";
-const FONT_KEY = "campuscoin_font_size";
 const CHANGE_EVENT = "campuscoin:theme";
-
-/** Chạy trong <head> trước khi render: đọc lựa chọn đã lưu, mặc định theo hệ điều hành. */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}var r=document.documentElement;r.classList.toggle("dark",t==="dark");r.setAttribute("data-theme",t);var f=localStorage.getItem("${FONT_KEY}");r.setAttribute("data-font-size",f==="large"||f==="larger"?f:"normal")}catch(e){}})();`;
 
 interface ThemeContextValue {
   theme: Theme;

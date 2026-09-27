@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider, THEME_INIT_SCRIPT } from "@/context/ThemeContext";
+import Script from "next/script";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { I18nProvider } from "@/i18n/provider";
 import { getLocale, getServerMessages } from "@/i18n/server";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin", "latin-ext"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -32,11 +34,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   return (
     <html lang={locale} suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full`}>
-      <head>
-        {/* Áp theme trước khi vẽ trang để không bị nháy màu. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
       <body className="min-h-full antialiased">
+        {/* Áp theme trước khi hydrate để không bị nháy màu; next/script thay cho thẻ <script> mà React 19 cảnh báo. */}
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <ThemeProvider>
           <I18nProvider initialLocale={locale}>
             <ToastProvider>{children}</ToastProvider>

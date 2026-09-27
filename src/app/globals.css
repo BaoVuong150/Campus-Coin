@@ -157,6 +157,52 @@
     --chart-other: #5d6661;
   }
 
+  /* Trước khi script theme chạy (chưa có data-theme): theo cài đặt hệ điều hành để không nháy màu.
+     Giữ giá trị đồng bộ với khối :root.dark phía trên. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+      --background: #0c0e0d;
+      --surface: #141715;
+      --surface-secondary: #1a1d1b;
+      --surface-hover: #202421;
+      --border: #262a28;
+      --border-strong: #353a37;
+      --foreground: #eef2ef;
+      --muted: #a7b0ab;
+      --subtle: #7d8681;
+      --primary: #10b981;
+      --primary-hover: #34d399;
+      --primary-foreground: #04150e;
+      --primary-soft: #0f2a20;
+      --success: #34d399;
+      --success-soft: #0f2a20;
+      --danger: #f87171;
+      --danger-soft: #2c1517;
+      --danger-foreground: #1a0a0b;
+      --warning: #fbbf24;
+      --warning-soft: #2b2110;
+      --info: #60a5fa;
+      --info-soft: #14203a;
+      --ring: #34d399;
+      --overlay: rgb(0 0 0 / 0.6);
+
+      --chart-income: #14a391;
+      --chart-expense: #e5484d;
+      --chart-grid: #232725;
+      --chart-axis: #7d8681;
+      --chart-1: #3987e5;
+      --chart-2: #d95926;
+      --chart-3: #199e70;
+      --chart-4: #c98500;
+      --chart-5: #d55181;
+      --chart-6: #008300;
+      --chart-7: #9085e9;
+      --chart-8: #e66767;
+      --chart-other: #5d6661;
+    }
+  }
+
   html[data-font-size="normal"] { font-size: 16px; }
   html[data-font-size="large"] { font-size: 17px; }
   html[data-font-size="larger"] { font-size: 18px; }

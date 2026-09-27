@@ -102,6 +102,20 @@ export function errorText(t: Messages, locale: Locale, error: unknown): string {
   return t.errors[error.code] ?? t.errors.INTERNAL_ERROR;
 }
 
+/** Lỗi theo từng ô từ server (tiếng Việt): giữ nguyên khi xem tiếng Việt, ngôn ngữ khác dùng thông báo chung. */
+export function fieldErrorText(t: Messages, locale: Locale, message: string | undefined): string | undefined {
+  if (!message) return undefined;
+  return locale === "vi" ? message : t.errors.VALIDATION_ERROR;
+}
+
+/** Lựa chọn Chi/Thu dạng ngắn cho các nhóm nút chọn loại. */
+export function transactionTypeOptions(t: Messages): { value: "expense" | "income"; label: string }[] {
+  return [
+    { value: "expense", label: t.common.expenseShort },
+    { value: "income", label: t.common.incomeShort },
+  ];
+}
+
 export interface Formatters {
   category: (name: string) => string;
   month: (key: string) => string;
@@ -111,6 +125,7 @@ export interface Formatters {
   compact: (value: number) => string;
   period: (period: "month" | "quarter" | "year", anchor: string) => string;
   error: (error: unknown) => string;
+  fieldError: (message: string | undefined) => string | undefined;
 }
 
 export function createFormatters(t: Messages, locale: Locale): Formatters {
@@ -123,5 +138,6 @@ export function createFormatters(t: Messages, locale: Locale): Formatters {
     compact: (value) => compact(t, locale, value),
     period: (period, anchor) => periodLabel(t, period, anchor),
     error: (error) => errorText(t, locale, error),
+    fieldError: (message) => fieldErrorText(t, locale, message),
   };
 }

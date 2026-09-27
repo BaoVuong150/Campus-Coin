@@ -104,15 +104,6 @@ export async function getTransaction(userId: string, id: string): Promise<Transa
   return toTransactionDTO(t);
 }
 
-export async function recentTransactions(userId: string, limit: number): Promise<TransactionDTO[]> {
-  const items = await prisma.transaction.findMany({
-    where: { user_id: userId },
-    include: { category: true },
-    orderBy: [{ date: "desc" }, { created_at: "desc" }],
-    take: limit,
-  });
-  return items.map(toTransactionDTO);
-}
 
 export async function createTransaction(userId: string, input: CreateTransactionInput): Promise<TransactionDTO> {
   await getUsableCategory(userId, input.category_id, input.type);

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PASSWORD_MIN_LENGTH } from "@/constants/finance";
+import { isStrongPassword } from "./rules";
 
 const emailSchema = z
   .string("Vui lòng nhập email.")
@@ -13,7 +14,7 @@ export const passwordSchema = z
   .string("Vui lòng nhập mật khẩu.")
   .min(PASSWORD_MIN_LENGTH, `Mật khẩu cần tối thiểu ${PASSWORD_MIN_LENGTH} ký tự.`)
   .max(72, "Mật khẩu tối đa 72 ký tự.")
-  .refine((v) => /[A-Za-z]/.test(v) && /\d/.test(v), "Mật khẩu cần có cả chữ và số.");
+  .refine(isStrongPassword, "Mật khẩu cần có cả chữ và số.");
 
 export const loginSchema = z.object({
   email: emailSchema,

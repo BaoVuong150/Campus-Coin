@@ -14,6 +14,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useAdminCategories, useAdminMutations } from "@/hooks/use-admin";
 import { useI18n } from "@/i18n/provider";
+import { transactionTypeOptions } from "@/i18n/format";
 import { formatNumber } from "@/lib/utils/money";
 import type { TransactionType } from "@/types/finance";
 
@@ -67,10 +68,7 @@ function DefaultCategories() {
             label={l.type}
             value={type}
             onChange={setType}
-            options={[
-              { value: "expense", label: t.common.expenseShort },
-              { value: "income", label: t.common.incomeShort },
-            ]}
+            options={transactionTypeOptions(t)}
             size="md"
           />
           <Button type="submit" loading={saving} disabled={!name.trim()}>

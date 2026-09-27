@@ -13,9 +13,8 @@ export interface DonutSlice extends CategoryBreakdownItem {
 
 /** Tối đa 5 danh mục lớn nhất + "Khác" để donut không vụn. */
 export const MAX_SLICES = 5;
+/** Nhóm gộp các danh mục nhỏ; tên hiển thị lấy từ từ điển (t.common.other). */
 const OTHER_ID = -1;
-/** Nhóm gộp; tên hiển thị lấy từ từ điển (t.common.other). */
-const OTHER_NAME = "__other__";
 
 /**
  * Màu gắn với danh mục (theo id), không theo thứ hạng: lọc tháng khác cũng không đổi màu của danh mục.
@@ -32,7 +31,7 @@ export function buildSlices(items: CategoryBreakdownItem[], orderedIds: number[]
   if (rest.length === 0) return top;
   const amount = rest.reduce((a, b) => a + b.amount, 0);
   const percentage = rest.reduce((a, b) => a + b.percentage, 0);
-  return [...top, { categoryId: OTHER_ID, name: OTHER_NAME, icon: null, color: other, amount, percentage }];
+  return [...top, { categoryId: OTHER_ID, name: "", icon: null, color: other, amount, percentage }];
 }
 
 interface Props {

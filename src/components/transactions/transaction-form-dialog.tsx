@@ -40,7 +40,7 @@ const SUGGEST_MIN_CHARS = 2;
 export function TransactionFormDialog({ open, onClose, transaction, defaults }: Props) {
   const editing = !!transaction;
   const { toast, confirm } = useToast();
-  const { t, fmt, locale } = useI18n();
+  const { t, fmt } = useI18n();
   const f = t.transactions.form;
   const { data: categories, isLoading: loadingCategories } = useCategories();
   const { create, update, check } = useTransactionMutations();
@@ -159,13 +159,11 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
       onClose();
     } catch (error) {
       if (error instanceof ApiClientError && error.fields) {
-        // Thông điệp chi tiết của server là tiếng Việt; ngôn ngữ khác dùng thông báo chung.
-        const field = (message?: string) => message && (locale === "vi" ? message : t.errors.VALIDATION_ERROR);
         setErrors({
-          amount: field(error.fields.amount),
-          description: field(error.fields.description),
-          category: field(error.fields.category_id),
-          date: field(error.fields.date),
+          amount: fmt.fieldError(error.fields.amount),
+          description: fmt.fieldError(error.fields.description),
+          category: fmt.fieldError(error.fields.category_id),
+          date: fmt.fieldError(error.fields.date),
         });
       }
       toast.error(f.saveFailed, fmt.error(error));

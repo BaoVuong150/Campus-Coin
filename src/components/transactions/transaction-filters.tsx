@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils/cn";
 import type { CategoryDTO } from "@/types/finance";
 import type { TransactionFilters as Filters } from "@/hooks/use-transactions";
 import { useI18n } from "@/i18n/provider";
+import { transactionTypeOptions } from "@/i18n/format";
 
 interface Props {
   filters: Filters;
@@ -24,11 +25,7 @@ interface Props {
 export function TransactionFiltersBar({ filters, categories, onChange, onReset, autoFocusSearch }: Props) {
   const { t, fmt } = useI18n();
   const l = t.transactions.filters;
-  const typeOptions = [
-    { value: "all" as const, label: t.common.all },
-    { value: "expense" as const, label: t.common.expenseShort },
-    { value: "income" as const, label: t.common.incomeShort },
-  ];
+  const typeOptions = [{ value: "all" as const, label: t.common.all }, ...transactionTypeOptions(t)];
   const [q, setQ] = useState(filters.q ?? "");
   const [min, setMin] = useState(filters.min ? formatCurrencyInput(filters.min) : "");
   const [max, setMax] = useState(filters.max ? formatCurrencyInput(filters.max) : "");

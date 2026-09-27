@@ -36,13 +36,6 @@ const KIND_TO_PREFERENCE: Partial<Record<NotificationKind, keyof NotificationPre
   unusual: "unusual",
 };
 
-export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  budget: true,
-  recurring: true,
-  goal: true,
-  unusual: true,
-};
-
 export function readNotificationPreferences(preferences: Prisma.JsonValue | null): NotificationPreferences {
   const raw =
     preferences && typeof preferences === "object" && !Array.isArray(preferences)

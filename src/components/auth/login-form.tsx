@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { apiFetch } from "@/lib/api-client";
 import { useI18n } from "@/i18n/provider";
+import { isEmailLike } from "@/lib/validations/rules";
 import type { SessionUser } from "@/lib/auth/session";
 
 const REASONS = ["expired", "disabled", "required"] as const;
@@ -33,7 +34,7 @@ export function LoginForm({ portal }: { portal: "student" | "admin" }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next = {
-      email: /^\S+@\S+\.\S+$/.test(email.trim()) ? undefined : t.validation.emailInvalid,
+      email: isEmailLike(email) ? undefined : t.validation.emailInvalid,
       password: password ? undefined : t.validation.passwordRequired,
     };
     setErrors(next);

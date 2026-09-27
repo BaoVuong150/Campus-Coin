@@ -11,6 +11,8 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Segmented } from "@/components/ui/segmented";
 import { PASSWORD_MIN_LENGTH } from "@/constants/finance";
+import { isStrongPassword } from "@/lib/validations/rules";
+import { transactionTypeOptions } from "@/i18n/format";
 import { useTheme, type FontSize } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
 import { useCategories, useCategoryMutations } from "@/hooks/use-categories";
@@ -253,10 +255,7 @@ export function CategoriesSection() {
             label={l.type}
             value={type}
             onChange={setType}
-            options={[
-              { value: "expense", label: t.common.expenseShort },
-              { value: "income", label: t.common.incomeShort },
-            ]}
+            options={transactionTypeOptions(t)}
             size="md"
           />
           <Button type="submit" loading={saving} disabled={!name.trim()}>
@@ -287,7 +286,7 @@ export function CategoriesSection() {
 export function SecuritySection() {
   const { changePassword } = useProfileMutations();
   const { toast } = useToast();
-  const { t, fmt, locale } = useI18n();
+  const { t, fmt } = useI18n();
   const l = t.settings.security;
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -299,8 +298,7 @@ export function SecuritySection() {
     e.preventDefault();
     const found = {
       current: current ? undefined : t.validation.currentPasswordRequired,
-      next:
-        next.length >= PASSWORD_MIN_LENGTH && /[A-Za-z]/.test(next) && /\d/.test(next) ? undefined : t.validation.passwordRule(PASSWORD_MIN_LENGTH),
+      next: isStrongPassword(next) ? undefined : t.validation.passwordRule(PASSWORD_MIN_LENGTH),
       confirm: next === confirmValue ? undefined : t.validation.passwordMismatch,
     };
     setErrors(found);
@@ -314,8 +312,7 @@ export function SecuritySection() {
       toast.success(l.changed);
     } catch (err) {
       if (err instanceof ApiClientError && err.fields) {
-        const field = (message?: string) => message && (locale === "vi" ? message : t.errors.VALIDATION_ERROR);
-        setErrors({ current: field(err.fields.currentPassword), next: field(err.fields.newPassword) });
+        setErrors({ current: fmt.fieldError(err.fields.currentPassword), next: fmt.fieldError(err.fields.newPassword) });
       }
       toast.error(l.failed, fmt.error(err));
     } finally {

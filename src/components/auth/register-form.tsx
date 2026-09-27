@@ -8,6 +8,7 @@ import { Field, Input } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ApiClientError, apiFetch } from "@/lib/api-client";
 import { useI18n } from "@/i18n/provider";
+import { isEmailLike, isStrongPassword } from "@/lib/validations/rules";
 import { parseCurrencyInput } from "@/lib/utils/money";
 import { PASSWORD_MIN_LENGTH } from "@/constants/finance";
 
@@ -15,7 +16,7 @@ type Errors = Partial<Record<"name" | "email" | "password" | "confirm", string>>
 
 export function RegisterForm() {
   const router = useRouter();
-  const { t, fmt, locale } = useI18n();
+  const { t, fmt } = useI18n();
   const l = t.auth;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,11 +31,8 @@ export function RegisterForm() {
     e.preventDefault();
     const next: Errors = {
       name: name.trim().length >= 2 ? undefined : t.validation.nameMin,
-      email: /^\S+@\S+\.\S+$/.test(email.trim()) ? undefined : t.validation.emailInvalid,
-      password:
-        password.length >= PASSWORD_MIN_LENGTH && /[A-Za-z]/.test(password) && /\d/.test(password)
-          ? undefined
-          : t.validation.passwordRule(PASSWORD_MIN_LENGTH),
+      email: isEmailLike(email) ? undefined : t.validation.emailInvalid,
+      password: isStrongPassword(password) ? undefined : t.validation.passwordRule(PASSWORD_MIN_LENGTH),
       confirm: password === confirm ? undefined : t.validation.passwordMismatch,
     };
     setErrors(next);
@@ -57,7 +55,13 @@ export function RegisterForm() {
       router.refresh();
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "EMAIL_TAKEN") setErrors({ email: t.errors.EMAIL_TAKEN });
-      else if (error instanceof ApiClientError && error.fields && locale === "vi") setErrors(error.fields as Errors);
+      else if (error instanceof ApiClientError && error.fields) {
+        setErrors({
+          name: fmt.fieldError(error.fields.name),
+          email: fmt.fieldError(error.fields.email),
+          password: fmt.fieldError(error.fields.password),
+        });
+      }
       setFormError(fmt.error(error) || l.registerFailed);
       setLoading(false);
     }

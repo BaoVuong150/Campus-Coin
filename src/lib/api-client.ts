@@ -1,4 +1,5 @@
 import type { ErrorCode } from "@/lib/api/errors";
+import type { ApiResponse } from "@/lib/api/response";
 
 export class ApiClientError extends Error {
   constructor(
@@ -51,10 +52,10 @@ export async function apiFetch<T>(url: string, { body, skipAuthRedirect, headers
     // body rỗng hoặc không phải JSON
   }
 
-  const data = payload as { success?: boolean; data?: T; error?: { code: ErrorCode; message: string; fields?: Record<string, string> } } | null;
-  if (response.ok && data?.success) return data.data as T;
+  const data = payload as ApiResponse<T> | null;
+  if (response.ok && data?.success) return data.data;
 
-  const error = data?.error;
+  const error = data && !data.success ? data.error : undefined;
   const code = error?.code ?? "INTERNAL_ERROR";
   if (!skipAuthRedirect && response.status === 401 && SESSION_CODES.has(code)) redirectToLogin(code);
   if (!skipAuthRedirect && code === "ACCOUNT_DISABLED") redirectToLogin(code);

@@ -4,23 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
-    let user = await getCurrentUser();
-
-    // Fallback sang tài khoản sinh viên mẫu nếu chưa có token để phục vụ chấm điểm chấm thi mượt mà
-    if (!user) {
-      const demoStudent = await prisma.user.findUnique({
-        where: { email: "student@campuscoin.edu" },
-      });
-      if (demoStudent) {
-        user = {
-          userId: demoStudent.id,
-          email: demoStudent.email,
-          role: demoStudent.role,
-          name: demoStudent.name,
-        };
-      }
-    }
-
+    const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
     }
@@ -92,6 +76,54 @@ export async function GET(req: Request) {
 
     const balance = totalIncome - totalExpense;
 
+    // Tính tổng hợp 6 tháng gần nhất từ CSDL cho biểu đồ SRS 3.6
+    const [selYear, selMonthNum] = (selectedMonth || "2026-09").split("-").map(Number);
+    const sixMonthsAgo = new Date(Date.UTC(selYear, selMonthNum - 6, 1, 0, 0, 0));
+    const endOfSelMonth = new Date(Date.UTC(selYear, selMonthNum, 0, 23, 59, 59, 999));
+
+    const sixMonthsTxs = await prisma.transaction.findMany({
+      where: {
+        user_id: user.userId,
+        date: {
+          gte: sixMonthsAgo,
+          lte: endOfSelMonth,
+        },
+      },
+      select: {
+        amount: true,
+        type: true,
+        date: true,
+      },
+    });
+
+    const sixMonthsData = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(selYear, selMonthNum - 1 - i, 1));
+      const y = d.getUTCFullYear();
+      const m = d.getUTCMonth() + 1;
+      const monthPrefix = `${y}-${String(m).padStart(2, "0")}`;
+      const label = `T${String(m).padStart(2, "0")}`;
+
+      let mThu = 0;
+      let mChi = 0;
+
+      sixMonthsTxs.forEach((tx) => {
+        const txDateStr = tx.date.toISOString().slice(0, 7);
+        if (txDateStr === monthPrefix) {
+          const amt = Number(tx.amount);
+          if (tx.type === "income") mThu += amt;
+          else mChi += amt;
+        }
+      });
+
+      sixMonthsData.push({
+        month: label,
+        monthKey: monthPrefix,
+        Thu: Math.round(mThu / 1000),
+        Chi: Math.round(mChi / 1000),
+      });
+    }
+
     return NextResponse.json({
       transactions,
       summary: {
@@ -101,6 +133,7 @@ export async function GET(req: Request) {
         count: transactions.length,
         timeline,
         selectedMonth,
+        sixMonths: sixMonthsData,
       },
     });
   } catch (error) {
@@ -111,21 +144,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    let user = await getCurrentUser();
-    if (!user) {
-      const demoStudent = await prisma.user.findUnique({
-        where: { email: "student@campuscoin.edu" },
-      });
-      if (demoStudent) {
-        user = {
-          userId: demoStudent.id,
-          email: demoStudent.email,
-          role: demoStudent.role,
-          name: demoStudent.name,
-        };
-      }
-    }
-
+    const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
     }

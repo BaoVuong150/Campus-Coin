@@ -4,21 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
   try {
-    let user = await getCurrentUser();
-    if (!user) {
-      const demoStudent = await prisma.user.findUnique({
-        where: { email: "student@campuscoin.edu" },
-      });
-      if (demoStudent) {
-        user = {
-          userId: demoStudent.id,
-          email: demoStudent.email,
-          role: demoStudent.role,
-          name: demoStudent.name,
-        };
-      }
-    }
-
+    const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
     }

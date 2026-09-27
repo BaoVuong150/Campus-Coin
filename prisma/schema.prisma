@@ -16,6 +16,8 @@ model User {
   academic_year              String?
   monthly_allowance_baseline Decimal        @default(0) @db.Decimal(12, 2)
   monthly_savings_goal       Decimal        @default(0) @db.Decimal(12, 2)
+  salary_pay_day             Int?           @default(5)
+  fixed_bills                Json?
   created_at                 DateTime       @default(now())
   updated_at                 DateTime       @updatedAt
 
@@ -62,6 +64,8 @@ model Transaction {
   user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   category              Category  @relation(fields: [category_id], references: [id], onDelete: Restrict)
 
+  @@index([user_id, date])
+  @@index([user_id, category_id])
   @@map("transactions")
 }
 

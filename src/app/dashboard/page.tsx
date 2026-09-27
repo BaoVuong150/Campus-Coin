@@ -101,6 +101,25 @@ interface SavingTip {
   is_pinned: boolean;
 }
 
+function getTodayDateString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getCurrentMonthString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function getCurrentYearString(): string {
+  return String(new Date().getFullYear());
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { toast, confirm } = useToast();
@@ -108,9 +127,9 @@ export default function DashboardPage() {
   // State
   const [mounted, setMounted] = useState(false);
   const [timeline, setTimeline] = useState<"day" | "month" | "year">("month");
-  const [selectedMonth, setSelectedMonth] = useState("2026-09");
-  const [selectedDay, setSelectedDay] = useState("2026-09-24");
-  const [selectedYear, setSelectedYear] = useState("2026");
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthString());
+  const [selectedDay, setSelectedDay] = useState(getTodayDateString());
+  const [selectedYear, setSelectedYear] = useState(getCurrentYearString());
 
   // User Profile & Monthly Allowance & Pay Day & Fixed Bills
   const [monthlyAllowance, setMonthlyAllowance] = useState<number>(8000000);
@@ -172,9 +191,10 @@ export default function DashboardPage() {
   const [txAmount, setTxAmount] = useState("");
   const [txDesc, setTxDesc] = useState("");
   const [txCategoryId, setTxCategoryId] = useState<number | "">("");
-  const [txDate, setTxDate] = useState("2026-09-24");
+  const [txDate, setTxDate] = useState(getTodayDateString());
   const [txRecurring, setTxRecurring] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{ name: string; id: number; confidence: number } | null>(null);
+  const [sixMonthsData, setSixMonthsData] = useState<{ month: string; monthKey: string; Thu: number; Chi: number }[]>([]);
 
   // Budget Modal Form State
   const [budgetCatId, setBudgetCatId] = useState<number>(1);
@@ -228,6 +248,14 @@ export default function DashboardPage() {
         setMonthlySavingsGoal(goal);
         setEditSavingsGoalInput(formatCurrencyInput(goal));
         setSettingsSavingsGoalInput(formatCurrencyInput(goal));
+        if (u.salary_pay_day) {
+          setSalaryPayDay(Number(u.salary_pay_day));
+          setSettingsSalaryPayDay(Number(u.salary_pay_day));
+        }
+        if (Array.isArray(u.fixed_bills) && u.fixed_bills.length > 0) {
+          setFixedBills(u.fixed_bills);
+          setSettingsFixedBills(u.fixed_bills);
+        }
       }
 
       if (catResult.status === "fulfilled" && catResult.value?.categories) {
@@ -236,6 +264,9 @@ export default function DashboardPage() {
 
       if (txResult.status === "fulfilled" && txResult.value?.transactions) {
         setTransactions(txResult.value.transactions);
+        if (Array.isArray(txResult.value?.summary?.sixMonths)) {
+          setSixMonthsData(txResult.value.summary.sixMonths);
+        }
       }
 
       if (bResult.status === "fulfilled" && bResult.value?.budgets) {
@@ -334,6 +365,40 @@ export default function DashboardPage() {
       return;
     }
 
+    // SRS 3.12: Phát hiện giao dịch bất thường (>40% quỹ lương)
+    if (amountNum >= monthlyAllowance * 0.4) {
+      const confirmLarge = await confirm({
+        title: "Cảnh báo chi phí bất thường",
+        message: `Khoản chi này có số tiền ${amountNum.toLocaleString("vi-VN")} đ, chiếm hơn 40% tổng quỹ lương tháng (${monthlyAllowance.toLocaleString("vi-VN")} đ). Bạn có chắc chắn muốn ghi nhận không?`,
+        confirmText: "Vẫn ghi nhận",
+        cancelText: "Kiểm tra lại",
+        isDestructive: false,
+      });
+      if (!confirmLarge) return;
+    }
+
+    // SRS 3.12: Phát hiện giao dịch trùng lặp trong ngày
+    const targetDate = selectedDay || getTodayDateString();
+    const isDuplicate = transactions.some((t) => {
+      const txDay = t.date.split("T")[0];
+      const isSameDate = txDay === targetDate;
+      const isSameType = t.type === "expense";
+      const isSameDesc = t.description.trim().toLowerCase() === inlineDesc.trim().toLowerCase();
+      const isSameAmount = Math.abs(Number(t.amount) - amountNum) < 1;
+      return isSameDate && isSameType && isSameDesc && isSameAmount;
+    });
+
+    if (isDuplicate) {
+      const confirmDup = await confirm({
+        title: "Cảnh báo trùng lặp giao dịch",
+        message: `Bạn đã có một khoản chi "${inlineDesc.trim()}" (${amountNum.toLocaleString("vi-VN")} đ) trong ngày hôm nay. Bạn có chắc muốn thêm một khoản tương tự không?`,
+        confirmText: "Vẫn thêm tiếp",
+        cancelText: "Hủy bỏ",
+        isDestructive: false,
+      });
+      if (!confirmDup) return;
+    }
+
     setIsSubmittingInline(true);
     try {
       const res = await fetch("/api/transactions", {
@@ -344,7 +409,7 @@ export default function DashboardPage() {
           type: "expense",
           description: inlineDesc.trim(),
           category_id: inlineCategoryId || (inlineAiSuggestion ? inlineAiSuggestion.id : 6), // 6: Food default
-          date: selectedDay || "2026-09-24",
+          date: targetDate,
           is_recurring: false,
           ai_suggested_category: inlineAiSuggestion ? inlineAiSuggestion.id : null,
         }),
@@ -405,13 +470,15 @@ export default function DashboardPage() {
         })
       );
 
-      // Đồng bộ mức quỹ & mục tiêu tiết kiệm lên backend PostgreSQL
+      // Đồng bộ mức quỹ, mục tiêu tiết kiệm, ngày nhận lương & chi phí cố định lên PostgreSQL qua API
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           monthly_allowance_baseline: val,
           monthly_savings_goal: goalVal,
+          salary_pay_day: settingsSalaryPayDay,
+          fixed_bills: settingsFixedBills,
         }),
       });
 
@@ -420,7 +487,7 @@ export default function DashboardPage() {
         fetchData();
         toast.success(
           "Lưu cài đặt dòng tiền thành công",
-          `Quỹ tháng (${val.toLocaleString("vi-VN")} đ), mục tiêu tiết kiệm (${goalVal.toLocaleString("vi-VN")} đ) và ${settingsFixedBills.length} khoản chi cố định đã được lưu.`
+          `Quỹ tháng (${val.toLocaleString("vi-VN")} đ), mục tiêu tiết kiệm (${goalVal.toLocaleString("vi-VN")} đ) và ${settingsFixedBills.length} khoản chi cố định đã được lưu vào cơ sở dữ liệu.`
         );
       } else {
         toast.error("Lỗi cập nhật", "Không thể lưu cài đặt lên máy chủ.");
@@ -586,6 +653,40 @@ export default function DashboardPage() {
       return;
     }
 
+    // SRS 3.12: Phát hiện giao dịch bất thường (>40% quỹ lương nếu là chi tiêu)
+    if (txType === "expense" && amountNum >= monthlyAllowance * 0.4) {
+      const confirmLarge = await confirm({
+        title: "Cảnh báo chi phí bất thường",
+        message: `Khoản chi này có số tiền ${amountNum.toLocaleString("vi-VN")} đ, chiếm hơn 40% tổng quỹ lương tháng (${monthlyAllowance.toLocaleString("vi-VN")} đ). Bạn có chắc chắn muốn ghi nhận không?`,
+        confirmText: "Vẫn ghi nhận",
+        cancelText: "Kiểm tra lại",
+        isDestructive: false,
+      });
+      if (!confirmLarge) return;
+    }
+
+    // SRS 3.12: Phát hiện giao dịch trùng lặp
+    const txTargetDate = txDate || getTodayDateString();
+    const isDuplicate = transactions.some((t) => {
+      const txDay = t.date.split("T")[0];
+      const isSameDate = txDay === txTargetDate;
+      const isSameType = t.type === txType;
+      const isSameDesc = t.description.trim().toLowerCase() === txDesc.trim().toLowerCase();
+      const isSameAmount = Math.abs(Number(t.amount) - amountNum) < 1;
+      return isSameDate && isSameType && isSameDesc && isSameAmount;
+    });
+
+    if (isDuplicate) {
+      const confirmDup = await confirm({
+        title: "Cảnh báo trùng lặp giao dịch",
+        message: `Đã có một khoản "${txDesc.trim()}" (${amountNum.toLocaleString("vi-VN")} đ) ghi nhận ngày ${txTargetDate}. Bạn có muốn thêm tiếp không?`,
+        confirmText: "Vẫn thêm",
+        cancelText: "Hủy bỏ",
+        isDestructive: false,
+      });
+      if (!confirmDup) return;
+    }
+
     try {
       const res = await fetch("/api/transactions", {
         method: "POST",
@@ -595,7 +696,7 @@ export default function DashboardPage() {
           type: txType,
           description: txDesc,
           category_id: txCategoryId || (aiSuggestion ? aiSuggestion.id : 1),
-          date: txDate,
+          date: txTargetDate,
           is_recurring: txRecurring,
           ai_suggested_category: aiSuggestion ? aiSuggestion.id : null,
         }),
@@ -836,12 +937,12 @@ export default function DashboardPage() {
 
   // Lọc các giao dịch của ngày hôm nay (Today Transactions)
   const todayTransactions = useMemo(() => {
-    const targetDate = selectedDay || "2026-09-24";
+    const todayStr = getTodayDateString();
     return transactions.filter((t) => {
       const txDay = t.date.split("T")[0];
-      return txDay === targetDate;
+      return txDay === todayStr;
     });
-  }, [transactions, selectedDay]);
+  }, [transactions]);
 
   // Tổng tiền hôm nay đã tiêu
   const todaySpent = useMemo(() => {
@@ -899,11 +1000,10 @@ export default function DashboardPage() {
   // Danh sách các kỳ tháng tự động tính toán động (Dynamic Month Options)
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
+    // Luôn có kỳ tháng hiện tại
     monthsSet.add(currentMonthKey);
-    // Lưu các kỳ tháng có sẵn trong lịch sử thi TechWiz 7
-    ["2026-09", "2026-08", "2026-07", "2026-06", "2026-05", "2026-04"].forEach((m) => monthsSet.add(m));
 
-    // Quét toàn bộ tháng phát sinh giao dịch thực tế trong CSDL
+    // Chỉ hiển thị các kỳ tháng thực tế mà tài khoản này có phát sinh giao dịch trong CSDL
     transactions.forEach((tx) => {
       if (tx.date) {
         const d = new Date(tx.date);
@@ -928,15 +1028,34 @@ export default function DashboardPage() {
       });
   }, [currentMonthKey, transactions]);
 
-  // Chart Data: 6-Month Comparison (Seed & Real)
-  const chartData = [
-    { month: "T04", Thu: 8000, Chi: 3100 },
-    { month: "T05", Thu: 8000, Chi: 3400 },
-    { month: "T06", Thu: 8000, Chi: 3250 },
-    { month: "T07", Thu: 8000, Chi: 3600 },
-    { month: "T08", Thu: 8000, Chi: 3450 },
-    { month: "T09", Thu: Math.round(monthlyAllowance / 1000), Chi: Math.round(totalExpense / 1000) || 3319 },
-  ];
+  // Chart Data: 6-Month Comparison (SRS 3.6 - Database-driven)
+  const chartData = useMemo(() => {
+    if (sixMonthsData && sixMonthsData.length > 0) {
+      return sixMonthsData.map((item) => {
+        const isCurrent = item.monthKey === selectedMonth;
+        const thuVal = item.Thu > 0 ? item.Thu : (isCurrent ? Math.round(monthlyAllowance / 1000) : 0);
+        return {
+          month: item.month,
+          Thu: thuVal,
+          Chi: item.Chi,
+        };
+      });
+    }
+
+    const [selY, selM] = selectedMonth.split("-").map(Number);
+    const result = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(selY, selM - 1 - i, 1));
+      const m = d.getUTCMonth() + 1;
+      const isCur = i === 0;
+      result.push({
+        month: `T${String(m).padStart(2, "0")}`,
+        Thu: isCur ? Math.round(monthlyAllowance / 1000) : 0,
+        Chi: isCur ? Math.round(totalExpense / 1000) : 0,
+      });
+    }
+    return result;
+  }, [sixMonthsData, selectedMonth, monthlyAllowance, totalExpense]);
 
   if (!mounted) return null;
 
@@ -1534,6 +1653,14 @@ export default function DashboardPage() {
                                 <Sparkles className="w-2.5 h-2.5" /> AI
                               </span>
                             )}
+                            {tx.type === "expense" && Number(tx.amount) >= monthlyAllowance * 0.4 && (
+                              <span
+                                className="text-[9.5px] px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5 border border-amber-500/20"
+                                title="Chi phí lớn bất thường (>40% quỹ tháng)"
+                              >
+                                <AlertTriangle className="w-2.5 h-2.5" /> Chi lớn
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1898,7 +2025,7 @@ export default function DashboardPage() {
       {/* ================= MODAL: CÀI ĐẶT DÒNG TIỀN & CHI PHÍ CỐ ĐỊNH ================= */}
       {isAllowanceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#0f1011] border border-[#e2e8f0] dark:border-[#23252a] rounded-[14px] p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#0f1011] border border-[#e2e8f0] dark:border-[#23252a] rounded-[14px] p-6 max-w-xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#e2e8f0] dark:border-[#23252a]">
               <h3 className="text-[15px] font-semibold text-[#0f1011] dark:text-[#f7f8f8] flex items-center gap-2">
                 <Settings className="w-4 h-4 text-[#5e6ad2]" />
@@ -1924,10 +2051,10 @@ export default function DashboardPage() {
                   Quỹ Lương & Mục Tiêu Tiết Kiệm Hàng Tháng
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] mb-1">
-                      Mức quỹ mỗi tháng (VNĐ)
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] mb-1.5 whitespace-nowrap">
+                      Mức quỹ tháng (VNĐ)
                     </label>
                     <input
                       type="text"
@@ -1936,12 +2063,12 @@ export default function DashboardPage() {
                       onChange={(e) => setNewAllowanceInput(formatCurrencyInput(e.target.value))}
                       placeholder="8.000.000"
                       required
-                      className="w-full px-3 py-1.5 rounded-[8px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-[#5e6ad2]"
+                      className="w-full h-9 px-3 rounded-[8px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-[#5e6ad2]"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] mb-1">
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] mb-1.5 whitespace-nowrap">
                       Mục tiêu tiết kiệm (VNĐ)
                     </label>
                     <input
@@ -1950,18 +2077,18 @@ export default function DashboardPage() {
                       value={settingsSavingsGoalInput}
                       onChange={(e) => setSettingsSavingsGoalInput(formatCurrencyInput(e.target.value))}
                       placeholder="1.500.000"
-                      className="w-full px-3 py-1.5 rounded-[8px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-[#5e6ad2]"
+                      className="w-full h-9 px-3 rounded-[8px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-[#5e6ad2]"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] mb-1">
-                      Ngày nhận lương hàng tháng
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] mb-1.5 whitespace-nowrap">
+                      Ngày nhận lương
                     </label>
                     <select
                       value={settingsSalaryPayDay}
                       onChange={(e) => setSettingsSalaryPayDay(Number(e.target.value))}
-                      className="w-full px-3 py-1.5 rounded-[8px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-[#5e6ad2] cursor-pointer"
+                      className="w-full h-9 px-2.5 rounded-[8px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-[#5e6ad2] cursor-pointer"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                         <option key={day} value={day}>

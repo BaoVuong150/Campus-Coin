@@ -8,22 +8,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    let user = await getCurrentUser();
-
-    // Fallback demo user for judging if no token
-    if (!user) {
-      const demoStudent = await prisma.user.findUnique({
-        where: { email: "student@campuscoin.edu" },
-      });
-      if (demoStudent) {
-        user = {
-          userId: demoStudent.id,
-          email: demoStudent.email,
-          role: demoStudent.role,
-          name: demoStudent.name,
-        };
-      }
-    }
+    const user = await getCurrentUser();
 
     if (!user) {
       return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
@@ -80,22 +65,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    let user = await getCurrentUser();
-
-    // Fallback demo user for judging if no token
-    if (!user) {
-      const demoStudent = await prisma.user.findUnique({
-        where: { email: "student@campuscoin.edu" },
-      });
-      if (demoStudent) {
-        user = {
-          userId: demoStudent.id,
-          email: demoStudent.email,
-          role: demoStudent.role,
-          name: demoStudent.name,
-        };
-      }
-    }
+    const user = await getCurrentUser();
 
     if (!user) {
       return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });

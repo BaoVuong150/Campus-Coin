@@ -20,6 +20,8 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
@@ -31,6 +33,11 @@
   --color-info-soft: var(--info-soft);
   --color-ring: var(--ring);
   --color-overlay: var(--overlay);
+  --color-inverse: var(--inverse);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-inverse-muted: var(--inverse-muted);
+  --color-inverse-border: var(--inverse-border);
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -39,15 +46,22 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 22px;
 
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.04);
-  --shadow-pop: 0 10px 30px -10px rgb(15 23 42 / 0.25), 0 4px 10px -6px rgb(15 23 42 / 0.12);
+  --shadow-card: 0 1px 2px 0 rgb(16 24 20 / 0.04), 0 1px 3px 0 rgb(16 24 20 / 0.03);
+  --shadow-pop: 0 10px 30px -10px rgb(16 24 20 / 0.22), 0 4px 10px -6px rgb(16 24 20 / 0.1);
+  /* Chỉ dùng cho mockup sản phẩm ở hero. */
+  --shadow-mockup: 0 32px 80px -12px rgb(16 24 20 / 0.14), 0 8px 24px -8px rgb(16 24 20 / 0.08);
 
   --animate-fade-in: fade-in 180ms ease-out;
   --animate-scale-in: scale-in 180ms ease-out;
   --animate-slide-up: slide-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-slide-in-left: slide-in-left 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-slide-in-right: slide-in-right 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-rise: rise 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-grow-x: grow-x 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-grow-y: grow-y 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes fade-in {
@@ -70,25 +84,42 @@
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+/* Landing: xuất hiện nhẹ khi tải trang; độ lệch và độ trễ chỉnh qua --rise / --delay. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(var(--rise, 12px)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+}
+@keyframes grow-y {
+  from { transform: scaleY(0); }
+}
 
 @layer base {
   :root {
     color-scheme: light;
-    --background: #f7f8f7;
+    --background: #fafbfa;
     --surface: #ffffff;
-    --surface-secondary: #f2f4f3;
-    --surface-hover: #eef1ef;
-    --border: #e4e7e5;
-    --border-strong: #cfd5d2;
-    --foreground: #101513;
-    --muted: #4f5a55;
-    --subtle: #7a8580;
+    --surface-secondary: #f5f7f5;
+    --surface-hover: #eff2f0;
+    --border: rgb(15 23 20 / 0.08);
+    --border-strong: rgb(15 23 20 / 0.16);
+    --foreground: #101312;
+    --muted: #626966;
+    --subtle: #737b77;
     --primary: #047857;
     --primary-hover: #065f46;
     --primary-foreground: #ffffff;
-    --primary-soft: #e7f6ef;
+    --primary-soft: #ecfdf5;
+    --brand: #059669;
+    --brand-bright: #10b981;
     --success: #047857;
-    --success-soft: #e7f6ef;
+    --success-soft: #ecfdf5;
     --danger: #c9343a;
     --danger-soft: #fdeceb;
     --danger-foreground: #ffffff;
@@ -98,12 +129,18 @@
     --info-soft: #eaf1fe;
     --ring: #10b981;
     --overlay: rgb(10 14 12 / 0.45);
+    /* Section nền tối (bảo mật) – luôn tối ở cả hai chế độ. */
+    --inverse: #0e1311;
+    --inverse-surface: #161c19;
+    --inverse-foreground: #f4f7f5;
+    --inverse-muted: #9aa39e;
+    --inverse-border: rgb(255 255 255 / 0.08);
 
     /* Chart roles – đã kiểm định CVD (dataviz validator) trên nền sáng */
     --chart-income: #0d9488;
     --chart-expense: #e5484d;
     --chart-grid: #e8ebe9;
-    --chart-axis: #7a8580;
+    --chart-axis: #737b77;
     --chart-1: #2a78d6;
     --chart-2: #eb6834;
     --chart-3: #1baf7a;
@@ -117,22 +154,24 @@
 
   :root.dark {
     color-scheme: dark;
-    --background: #0c0e0d;
-    --surface: #141715;
-    --surface-secondary: #1a1d1b;
-    --surface-hover: #202421;
-    --border: #262a28;
-    --border-strong: #353a37;
-    --foreground: #eef2ef;
+    --background: #0b0e0d;
+    --surface: #111513;
+    --surface-secondary: #161b18;
+    --surface-hover: #1c221f;
+    --border: rgb(255 255 255 / 0.08);
+    --border-strong: rgb(255 255 255 / 0.14);
+    --foreground: #f4f7f5;
     --muted: #a7b0ab;
-    --subtle: #7d8681;
+    --subtle: #8b9690;
     --primary: #10b981;
     --primary-hover: #34d399;
     --primary-foreground: #04150e;
     --primary-soft: #0f2a20;
+    --brand: #10b981;
+    --brand-bright: #34d399;
     --success: #34d399;
     --success-soft: #0f2a20;
-    --danger: #f87171;
+    --danger: #f08080;
     --danger-soft: #2c1517;
     --danger-foreground: #1a0a0b;
     --warning: #fbbf24;
@@ -141,11 +180,16 @@
     --info-soft: #14203a;
     --ring: #34d399;
     --overlay: rgb(0 0 0 / 0.6);
+    --inverse: #070908;
+    --inverse-surface: #111513;
+    --inverse-foreground: #f4f7f5;
+    --inverse-muted: #9aa39e;
+    --inverse-border: rgb(255 255 255 / 0.08);
 
     --chart-income: #14a391;
     --chart-expense: #e5484d;
-    --chart-grid: #232725;
-    --chart-axis: #7d8681;
+    --chart-grid: rgb(255 255 255 / 0.06);
+    --chart-axis: #8b9690;
     --chart-1: #3987e5;
     --chart-2: #d95926;
     --chart-3: #199e70;
@@ -162,22 +206,24 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) {
       color-scheme: dark;
-      --background: #0c0e0d;
-      --surface: #141715;
-      --surface-secondary: #1a1d1b;
-      --surface-hover: #202421;
-      --border: #262a28;
-      --border-strong: #353a37;
-      --foreground: #eef2ef;
+      --background: #0b0e0d;
+      --surface: #111513;
+      --surface-secondary: #161b18;
+      --surface-hover: #1c221f;
+      --border: rgb(255 255 255 / 0.08);
+      --border-strong: rgb(255 255 255 / 0.14);
+      --foreground: #f4f7f5;
       --muted: #a7b0ab;
-      --subtle: #7d8681;
+      --subtle: #8b9690;
       --primary: #10b981;
       --primary-hover: #34d399;
       --primary-foreground: #04150e;
       --primary-soft: #0f2a20;
+      --brand: #10b981;
+      --brand-bright: #34d399;
       --success: #34d399;
       --success-soft: #0f2a20;
-      --danger: #f87171;
+      --danger: #f08080;
       --danger-soft: #2c1517;
       --danger-foreground: #1a0a0b;
       --warning: #fbbf24;
@@ -186,11 +232,15 @@
       --info-soft: #14203a;
       --ring: #34d399;
       --overlay: rgb(0 0 0 / 0.6);
-
+      --inverse: #070908;
+      --inverse-surface: #111513;
+      --inverse-foreground: #f4f7f5;
+      --inverse-muted: #9aa39e;
+      --inverse-border: rgb(255 255 255 / 0.08);
       --chart-income: #14a391;
       --chart-expense: #e5484d;
-      --chart-grid: #232725;
-      --chart-axis: #7d8681;
+      --chart-grid: rgb(255 255 255 / 0.06);
+      --chart-axis: #8b9690;
       --chart-1: #3987e5;
       --chart-2: #d95926;
       --chart-3: #199e70;
@@ -210,6 +260,10 @@
   html, body {
     background-color: var(--background);
     color: var(--foreground);
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
@@ -252,8 +306,13 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
     *, *::before, *::after {
       animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0ms !important;
       transition-duration: 1ms !important;
     }
   }
@@ -267,4 +326,9 @@
 @utility scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Quầng sáng emerald rất nhẹ phía sau hero – gần như không thấy rõ gradient. */
+@utility hero-glow {
+  background-image: radial-gradient(circle at 75% 40%, color-mix(in srgb, var(--brand-bright) 9%, transparent), transparent 38%);
 }

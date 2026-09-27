@@ -34,6 +34,7 @@ model User {
   recurring_transactions RecurringTransaction[]
   saving_goals           SavingGoal[]
   category_preferences   CategoryPreference[]
+  point_events           PointEvent[]
 
   @@index([created_at])
   @@map("users")
@@ -227,6 +228,9 @@ model Notification {
   message    String   @db.Text
   type       String   @default("info") // mức độ: "info" | "warning" | "alert" | "success"
   kind       String   @default("system") // budget_warning | budget_exceeded | recurring | goal | unusual | system
+  // Nội dung đa ngôn ngữ: client dựng lại tiêu đề/nội dung từ template + params; title/message là bản tiếng Việt dự phòng.
+  template   String?
+  params     Json?
   link       String?
   dedupe_key String?
   is_read    Boolean  @default(false)
@@ -238,4 +242,21 @@ model Notification {
   @@unique([user_id, dedupe_key])
   @@index([user_id, is_read, created_at])
   @@map("notifications")
+}
+
+// Campus Points: điểm thưởng nội bộ, không phải tiền, không quy đổi.
+model PointEvent {
+  id         Int      @id @default(autoincrement())
+  user_id    String
+  reason     String // firstTransaction | dailyLog | goalDeposit | budgetWeek | monthlySavings | goalCompleted
+  points     Int
+  dedupe_key String
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Mỗi sự kiện chỉ được cộng điểm một lần.
+  @@unique([user_id, dedupe_key])
+  @@index([user_id, created_at])
+  @@map("point_events")
 }

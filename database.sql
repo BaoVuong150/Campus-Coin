@@ -182,12 +182,26 @@ CREATE TABLE "notifications" (
     "message" TEXT NOT NULL,
     "type" TEXT NOT NULL DEFAULT 'info',
     "kind" TEXT NOT NULL DEFAULT 'system',
+    "template" TEXT,
+    "params" JSONB,
     "link" TEXT,
     "dedupe_key" TEXT,
     "is_read" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "point_events" (
+    "id" SERIAL NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "points" INTEGER NOT NULL,
+    "dedupe_key" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "point_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -247,6 +261,12 @@ CREATE INDEX "notifications_user_id_is_read_created_at_idx" ON "notifications"("
 -- CreateIndex
 CREATE UNIQUE INDEX "notifications_user_id_dedupe_key_key" ON "notifications"("user_id", "dedupe_key");
 
+-- CreateIndex
+CREATE INDEX "point_events_user_id_created_at_idx" ON "point_events"("user_id", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "point_events_user_id_dedupe_key_key" ON "point_events"("user_id", "dedupe_key");
+
 -- AddForeignKey
 ALTER TABLE "categories" ADD CONSTRAINT "categories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -291,6 +311,9 @@ ALTER TABLE "saving_tips" ADD CONSTRAINT "saving_tips_user_id_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "point_events" ADD CONSTRAINT "point_events_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 -- ==============================================================================

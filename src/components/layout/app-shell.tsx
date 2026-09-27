@@ -58,7 +58,7 @@ function MobileBottomNav() {
         key={item.href}
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={cn("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", active ? "text-primary" : "text-subtle")}
+        className={cn("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", active ? "text-primary-ink" : "text-subtle")}
       >
         <Icon className="size-5" aria-hidden />
         {t.nav[item.labelKey]}

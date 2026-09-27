@@ -79,7 +79,7 @@ export function GlobalSearch({ className }: { className?: string }) {
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        className="h-9 w-full rounded-md border border-border bg-surface-secondary pr-3 pl-9 text-sm text-foreground placeholder:text-subtle transition-colors focus:border-primary focus:bg-surface focus:ring-2 focus:ring-ring/25 focus:outline-none"
+        className="h-9 w-full rounded-md border border-border bg-surface-secondary pr-3 pl-9 text-sm text-foreground placeholder:text-subtle transition-colors focus:border-primary-ink focus:bg-surface focus:ring-2 focus:ring-ring/25 focus:outline-none"
       />
       {enabled && (
         <div className="absolute top-full right-0 left-0 z-40 mt-2 animate-scale-in overflow-hidden rounded-lg border border-border bg-surface shadow-pop">
@@ -120,7 +120,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                 e.preventDefault();
                 goToAll();
               }}
-              className="w-full border-t border-border px-3 py-2 text-left text-[13px] font-medium text-primary hover:bg-surface-hover"
+              className="w-full border-t border-border px-3 py-2 text-left text-[13px] font-medium text-primary-ink hover:bg-surface-hover"
             >
               {t.header.viewAllResults(query.trim())}
             </button>

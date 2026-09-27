@@ -19,7 +19,7 @@ export function EmptyState({ icon, title, description, action, className, compac
   return (
     <div className={cn("flex flex-col items-center justify-center text-center", compact ? "py-8" : "py-14", className)}>
       {icon && (
-        <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary [&_svg]:size-5">
+        <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary-ink [&_svg]:size-5">
           {icon}
         </div>
       )}

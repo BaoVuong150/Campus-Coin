@@ -20,6 +20,7 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
   --color-brand: var(--brand);
   --color-brand-bright: var(--brand-bright);
   --color-success: var(--success);
@@ -112,14 +113,17 @@
     --foreground: #101312;
     --muted: #626966;
     --subtle: #737b77;
-    --primary: #047857;
-    --primary-hover: #065f46;
-    --primary-foreground: #ffffff;
-    --primary-soft: #ecfdf5;
-    --brand: #059669;
-    --brand-bright: #10b981;
-    --success: #047857;
-    --success-soft: #ecfdf5;
+    /* Màu chủ đạo teal #2dd4bf: nền nút dùng chữ tối để đạt tương phản AA;
+       chữ/icon màu nhấn trên nền sáng dùng --primary-ink (đậm hơn). */
+    --primary: #2dd4bf;
+    --primary-hover: #14b8a6;
+    --primary-foreground: #042f2e;
+    --primary-soft: #f0fdfa;
+    --primary-ink: #0f766e;
+    --brand: #14b8a6;
+    --brand-bright: #2dd4bf;
+    --success: #0f766e;
+    --success-soft: #f0fdfa;
     --danger: #c9343a;
     --danger-soft: #fdeceb;
     --danger-foreground: #ffffff;
@@ -127,7 +131,7 @@
     --warning-soft: #fdf3e2;
     --info: #2563eb;
     --info-soft: #eaf1fe;
-    --ring: #10b981;
+    --ring: #0d9488;
     --overlay: rgb(10 14 12 / 0.45);
     /* Section nền tối (bảo mật) – luôn tối ở cả hai chế độ. */
     --inverse: #0e1311;
@@ -163,14 +167,15 @@
     --foreground: #f4f7f5;
     --muted: #a7b0ab;
     --subtle: #8b9690;
-    --primary: #10b981;
-    --primary-hover: #34d399;
-    --primary-foreground: #04150e;
-    --primary-soft: #0f2a20;
-    --brand: #10b981;
-    --brand-bright: #34d399;
-    --success: #34d399;
-    --success-soft: #0f2a20;
+    --primary: #2dd4bf;
+    --primary-hover: #5eead4;
+    --primary-foreground: #042f2e;
+    --primary-soft: #0d2b28;
+    --primary-ink: #2dd4bf;
+    --brand: #2dd4bf;
+    --brand-bright: #5eead4;
+    --success: #2dd4bf;
+    --success-soft: #0d2b28;
     --danger: #f08080;
     --danger-soft: #2c1517;
     --danger-foreground: #1a0a0b;
@@ -178,7 +183,7 @@
     --warning-soft: #2b2110;
     --info: #60a5fa;
     --info-soft: #14203a;
-    --ring: #34d399;
+    --ring: #5eead4;
     --overlay: rgb(0 0 0 / 0.6);
     --inverse: #070908;
     --inverse-surface: #111513;
@@ -215,14 +220,15 @@
       --foreground: #f4f7f5;
       --muted: #a7b0ab;
       --subtle: #8b9690;
-      --primary: #10b981;
-      --primary-hover: #34d399;
-      --primary-foreground: #04150e;
-      --primary-soft: #0f2a20;
-      --brand: #10b981;
-      --brand-bright: #34d399;
-      --success: #34d399;
-      --success-soft: #0f2a20;
+      --primary: #2dd4bf;
+      --primary-hover: #5eead4;
+      --primary-foreground: #042f2e;
+      --primary-soft: #0d2b28;
+      --primary-ink: #2dd4bf;
+      --brand: #2dd4bf;
+      --brand-bright: #5eead4;
+      --success: #2dd4bf;
+      --success-soft: #0d2b28;
       --danger: #f08080;
       --danger-soft: #2c1517;
       --danger-foreground: #1a0a0b;
@@ -230,7 +236,7 @@
       --warning-soft: #2b2110;
       --info: #60a5fa;
       --info-soft: #14203a;
-      --ring: #34d399;
+      --ring: #5eead4;
       --overlay: rgb(0 0 0 / 0.6);
       --inverse: #070908;
       --inverse-surface: #111513;
@@ -328,7 +334,7 @@
   scrollbar-color: var(--border-strong) transparent;
 }
 
-/* Quầng sáng emerald rất nhẹ phía sau hero – gần như không thấy rõ gradient. */
+/* Quầng sáng teal rất nhẹ phía sau hero – gần như không thấy rõ gradient. */
 @utility hero-glow {
   background-image: radial-gradient(circle at 75% 40%, color-mix(in srgb, var(--brand-bright) 9%, transparent), transparent 38%);
 }

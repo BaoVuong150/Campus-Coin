@@ -33,7 +33,7 @@ export function BudgetSection({ t }: { t: Messages }) {
           <ul className="mt-8 space-y-3">
             {b.points.map((point) => (
               <li key={point} className="flex items-center gap-2.5 text-[15px] text-foreground">
-                <Check className="size-4 text-primary" strokeWidth={2} aria-hidden />
+                <Check className="size-4 text-primary-ink" strokeWidth={2} aria-hidden />
                 {point}
               </li>
             ))}

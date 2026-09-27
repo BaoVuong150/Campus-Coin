@@ -29,7 +29,7 @@ export function SafeToSpendSection({ t }: { t: Messages }) {
           <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
             {s.factors.map((factor) => (
               <li key={factor} className="flex items-center gap-2 text-[15px] text-foreground">
-                <Check className="size-4 text-primary" strokeWidth={2} aria-hidden />
+                <Check className="size-4 text-primary-ink" strokeWidth={2} aria-hidden />
                 {factor}
               </li>
             ))}
@@ -38,7 +38,7 @@ export function SafeToSpendSection({ t }: { t: Messages }) {
         </div>
 
         <SurfaceCard className="p-6 sm:p-8">
-          <p className="text-sm font-medium text-primary">{s.cardTitle}</p>
+          <p className="text-sm font-medium text-primary-ink">{s.cardTitle}</p>
           <p className="tabular mt-2 text-[44px] leading-none font-[650] tracking-[-0.04em] text-foreground sm:text-[52px]">
             {formatVND(d.safeToSpend)}
             <span className="text-lg font-medium tracking-normal text-muted"> {s.perDay}</span>
@@ -51,7 +51,7 @@ export function SafeToSpendSection({ t }: { t: Messages }) {
             <Line label={s.budgetLeft} value={formatVND(DEMO_BUDGET_REMAINING)} />
             <Line label={s.byBudget(d.daysLeft)} value={`= ${formatVND(d.safeToSpend)}`} strong />
           </dl>
-          <p className="mt-4 rounded-lg bg-primary-soft px-3 py-2 text-[13px] font-medium text-primary">
+          <p className="mt-4 rounded-lg bg-primary-soft px-3 py-2 text-[13px] font-medium text-primary-ink">
             {s.result}: {formatVND(d.safeToSpend)} {s.perDay}
           </p>
         </SurfaceCard>

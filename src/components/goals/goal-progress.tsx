@@ -19,7 +19,7 @@ export function GoalProgressRow({ goal }: { goal: GoalDTO }) {
   return (
     <div className="space-y-2 py-3">
       <div className="flex items-center gap-3">
-        <CategoryIcon icon={goal.icon} color="var(--primary)" size="sm" />
+        <CategoryIcon icon={goal.icon} color="var(--primary-ink)" size="sm" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-foreground">{goal.name}</p>
           <p className="text-[12px] text-subtle">{goalMeta(t, goal)}</p>

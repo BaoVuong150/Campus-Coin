@@ -60,7 +60,7 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
   return (
     <Card className="flex flex-col p-5">
       <div className="flex items-start gap-3">
-        <CategoryIcon icon={goal.icon} color="var(--primary)" />
+        <CategoryIcon icon={goal.icon} color="var(--primary-ink)" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[15px] font-semibold text-foreground">{goal.name}</h2>
           <p className="text-[12px] text-muted">

@@ -83,9 +83,9 @@ export function GoalFormDialog({ goal, onClose }: { goal: GoalDTO | null; onClos
                 onClick={() => setIcon(option)}
                 aria-pressed={icon === option}
                 aria-label={option}
-                className={cn("rounded-md border p-1.5 transition-colors", icon === option ? "border-primary bg-primary-soft" : "border-border hover:bg-surface-hover")}
+                className={cn("rounded-md border p-1.5 transition-colors", icon === option ? "border-primary-ink bg-primary-soft" : "border-border hover:bg-surface-hover")}
               >
-                <CategoryIcon icon={option} color="var(--primary)" size="sm" />
+                <CategoryIcon icon={option} color="var(--primary-ink)" size="sm" />
               </button>
             ))}
           </div>

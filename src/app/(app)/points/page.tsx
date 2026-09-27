@@ -85,7 +85,7 @@ export default function PointsPage() {
                   return (
                     <div
                       key={id}
-                      className={cn("flex items-start gap-3 rounded-md border p-3", unlocked ? "border-primary/40 bg-primary-soft" : "border-border opacity-70")}
+                      className={cn("flex items-start gap-3 rounded-md border p-3", unlocked ? "border-primary-ink/40 bg-primary-soft" : "border-border opacity-70")}
                     >
                       <span
                         className={cn(
@@ -114,7 +114,7 @@ export default function PointsPage() {
                   {RULE_ORDER.map((reason) => (
                     <li key={reason} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                       <span className="text-foreground">{l.rules[reason]}</span>
-                      <span className="tabular font-medium text-primary">+{data.values[reason]}</span>
+                      <span className="tabular font-medium text-primary-ink">+{data.values[reason]}</span>
                     </li>
                   ))}
                 </ul>

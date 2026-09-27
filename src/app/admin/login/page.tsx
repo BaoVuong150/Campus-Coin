@@ -17,7 +17,7 @@ export default async function AdminLoginPage() {
       title={t.auth.adminTitle}
       description={t.auth.adminSubtitle}
       footer={
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link href="/login" className="font-medium text-primary-ink hover:underline">
           {t.auth.backToStudent}
         </Link>
       }

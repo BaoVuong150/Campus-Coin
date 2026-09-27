@@ -44,7 +44,7 @@ export function GoalsSection({ t }: { t: Messages }) {
 
         <SurfaceCard className="p-6 sm:p-8">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <span className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary-ink">
               <Laptop className="size-5" strokeWidth={1.75} aria-hidden />
             </span>
             <div>
@@ -64,7 +64,7 @@ export function GoalsSection({ t }: { t: Messages }) {
               </div>
               <div>
                 <dt className="text-[13px] text-muted">{g.monthly}</dt>
-                <dd className="tabular mt-1 text-xl font-semibold tracking-[-0.02em] text-primary">
+                <dd className="tabular mt-1 text-xl font-semibold tracking-[-0.02em] text-primary-ink">
                   {formatVND(goal.monthlyContribution)}
                   <span className="text-base font-normal text-muted">{g.perMonth}</span>
                 </dd>

@@ -21,7 +21,7 @@ export function BudgetOverviewCard({ month }: { month: string }) {
       <CardHeader
         title={l.title}
         action={
-          <Link href="/budgets" className="text-[13px] font-medium text-primary hover:underline">
+          <Link href="/budgets" className="text-[13px] font-medium text-primary-ink hover:underline">
             {t.common.manage}
           </Link>
         }

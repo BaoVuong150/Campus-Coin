@@ -15,7 +15,7 @@ export function SectionHeading({ id, eyebrow, title, body, align = "left", inver
   const lines = Array.isArray(title) ? title : [title];
   return (
     <div className={cn("max-w-2xl", align === "center" && "mx-auto text-center", className)}>
-      {eyebrow && <p className={cn("text-sm font-medium", inverse ? "text-brand-bright" : "text-primary")}>{eyebrow}</p>}
+      {eyebrow && <p className={cn("text-sm font-medium", inverse ? "text-brand-bright" : "text-primary-ink")}>{eyebrow}</p>}
       <h2
         id={id}
         className={cn(

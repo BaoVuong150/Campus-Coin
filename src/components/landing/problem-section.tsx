@@ -16,7 +16,7 @@ export function ProblemSection({ t }: { t: Messages }) {
             return (
               <li key={item.title}>
                 <div className="flex items-center gap-3">
-                  <Icon className="size-5 text-primary" strokeWidth={1.75} aria-hidden />
+                  <Icon className="size-5 text-primary-ink" strokeWidth={1.75} aria-hidden />
                   <span className="tabular font-mono text-[13px] text-subtle">{String(i + 1).padStart(2, "0")}</span>
                 </div>
                 <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">{item.title}</h3>

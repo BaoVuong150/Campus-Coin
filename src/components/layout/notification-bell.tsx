@@ -49,7 +49,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-sm font-semibold text-foreground">{t.header.notifications}</p>
             {unread > 0 && (
-              <button type="button" onClick={() => void markAllRead()} className="text-[12px] font-medium text-primary hover:underline">
+              <button type="button" onClick={() => void markAllRead()} className="text-[12px] font-medium text-primary-ink hover:underline">
                 {t.header.markAllRead}
               </button>
             )}
@@ -75,7 +75,7 @@ export function NotificationBell() {
                       <span className="mt-0.5 line-clamp-2 block text-[12px] text-muted">{view.message}</span>
                       <span className="mt-1 block text-[11px] text-subtle">{fmt.relativeDay(n.createdAt)}</span>
                     </span>
-                    {!n.isRead && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" aria-label={t.header.unreadDot} />}
+                    {!n.isRead && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary-ink" aria-label={t.header.unreadDot} />}
                   </button>
                 </li>
               );
@@ -84,7 +84,7 @@ export function NotificationBell() {
           <Link
             href="/notifications"
             onClick={() => setOpen(false)}
-            className="block border-t border-border px-4 py-2.5 text-center text-[13px] font-medium text-primary hover:bg-surface-hover"
+            className="block border-t border-border px-4 py-2.5 text-center text-[13px] font-medium text-primary-ink hover:bg-surface-hover"
           >
             {t.common.viewAll}
           </Link>

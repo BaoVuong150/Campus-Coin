@@ -27,7 +27,7 @@ export async function AuthShell({ title, description, children, footer }: AuthSh
           <ul className="mt-8 space-y-3">
             {t.auth.points.map((point) => (
               <li key={point} className="flex items-center gap-2.5 text-sm text-foreground">
-                <CheckCircle2 className="size-4 text-primary" aria-hidden /> {point}
+                <CheckCircle2 className="size-4 text-primary-ink" aria-hidden /> {point}
               </li>
             ))}
           </ul>

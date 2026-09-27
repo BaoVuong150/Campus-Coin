@@ -22,7 +22,7 @@ export function GoalsPreviewCard() {
       <CardHeader
         title={l.title}
         action={
-          <Link href="/goals" className="text-[13px] font-medium text-primary hover:underline">
+          <Link href="/goals" className="text-[13px] font-medium text-primary-ink hover:underline">
             {t.common.viewAll}
           </Link>
         }

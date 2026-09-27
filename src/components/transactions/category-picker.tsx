@@ -53,7 +53,7 @@ export function CategoryPicker({ categories, value, onChange, labelledBy, invali
             className={cn(
               "flex min-h-17 flex-col items-center justify-center gap-1.5 rounded-md border px-1.5 py-2 text-center text-[12px] leading-tight transition-colors duration-150",
               selected
-                ? "border-primary bg-primary-soft text-foreground"
+                ? "border-primary-ink bg-primary-soft text-foreground"
                 : "border-border text-muted hover:border-border-strong hover:bg-surface-hover hover:text-foreground"
             )}
           >

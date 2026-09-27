@@ -87,7 +87,7 @@ export function SummaryCards({ summary }: { summary: SummaryDTO | undefined }) {
             <p className="text-[12px] text-muted">{s.budgetUsed(used, formatVND(summary.budget.limit))}</p>
           </div>
         ) : (
-          <Link href="/budgets" className="text-[12px] font-medium text-primary hover:underline">
+          <Link href="/budgets" className="text-[12px] font-medium text-primary-ink hover:underline">
             {s.setBudget}
           </Link>
         )}

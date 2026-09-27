@@ -98,7 +98,7 @@ export default function AdminDashboardPage() {
               <CardHeader
                 title={l.recent}
                 action={
-                  <Link href="/admin/users" className="text-[13px] font-medium text-primary hover:underline">
+                  <Link href="/admin/users" className="text-[13px] font-medium text-primary-ink hover:underline">
                     {l.manageUsers}
                   </Link>
                 }

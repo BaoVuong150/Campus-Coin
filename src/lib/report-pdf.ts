@@ -9,7 +9,8 @@ import type { ReportDTO } from "@/types/finance";
 const INK = "#101513";
 const MUTED = "#4f5a55";
 const LINE = "#e4e7e5";
-const PRIMARY = "#047857";
+const PRIMARY = "#2dd4bf";
+const PRIMARY_INK = "#042f2e";
 const INCOME = "#0d9488";
 const EXPENSE = "#e5484d";
 const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
@@ -66,7 +67,7 @@ function header(w: Writer, report: ReportDTO, userName: string) {
   const { doc, t, fmt } = w;
   doc.setFillColor(PRIMARY);
   doc.roundedRect(M, M, 11, 11, 2.5, 2.5, "F");
-  doc.setDrawColor("#ffffff");
+  doc.setDrawColor(PRIMARY_INK);
   doc.setLineWidth(1.1);
   // Chữ C của logo: cung tròn vẽ bằng nhiều đoạn thẳng ngắn.
   const cx = M + 5.5;

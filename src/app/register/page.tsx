@@ -17,7 +17,7 @@ export default async function RegisterPage() {
       footer={
         <>
           {t.auth.haveAccount}{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href="/login" className="font-medium text-primary-ink hover:underline">
             {t.auth.submitLogin}
           </Link>
         </>

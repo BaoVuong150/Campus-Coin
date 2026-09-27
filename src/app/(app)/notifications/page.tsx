@@ -97,7 +97,7 @@ export default function NotificationsPage() {
                     <span className="mt-0.5 block text-[13px] text-muted">{view.message}</span>
                     <span className="mt-1 block text-[12px] text-subtle">{formatDateTime(n.createdAt)}</span>
                   </span>
-                  {!n.isRead && <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label={t.header.unreadDot} />}
+                  {!n.isRead && <span className="mt-2 size-2 shrink-0 rounded-full bg-primary-ink" aria-label={t.header.unreadDot} />}
                 </button>
               </li>
               );

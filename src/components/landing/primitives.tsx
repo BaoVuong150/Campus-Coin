@@ -85,7 +85,7 @@ export function TransactionRow({ icon, name, meta, amount, type, typeLabel }: Tr
       <span
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-full",
-          income ? "bg-primary-soft text-primary" : "bg-surface-secondary text-muted"
+          income ? "bg-primary-soft text-primary-ink" : "bg-surface-secondary text-muted"
         )}
         aria-hidden
       >

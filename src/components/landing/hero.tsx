@@ -33,7 +33,7 @@ export function Hero({ t, locale, signedIn }: { t: Messages; locale: Locale; sig
             <Link href={signedIn ? "/dashboard" : "/register"} className={buttonClasses("primary", "xl")}>
               {signedIn ? t.landing.nav.openApp : h.primary}
             </Link>
-            <a href="#how" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-foreground transition-colors hover:text-primary">
+            <a href="#how" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-foreground transition-colors hover:text-primary-ink">
               {h.secondary}
               <ArrowRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
             </a>
@@ -41,7 +41,7 @@ export function Hero({ t, locale, signedIn }: { t: Messages; locale: Locale; sig
           <ul className="mt-8 flex animate-rise flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted" style={rise(280, 4)}>
             {h.trust.map((item) => (
               <li key={item} className="flex items-center gap-2">
-                <Check className="size-3.5 text-primary" strokeWidth={2.25} aria-hidden />
+                <Check className="size-3.5 text-primary-ink" strokeWidth={2.25} aria-hidden />
                 {item}
               </li>
             ))}

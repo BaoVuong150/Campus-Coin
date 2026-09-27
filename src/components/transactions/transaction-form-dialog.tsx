@@ -221,7 +221,7 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
                   setCategoryId(suggestion!.categoryId);
                   setCategoryTouched(true);
                 }}
-                className="inline-flex items-center gap-1 rounded text-primary hover:underline"
+                className="inline-flex items-center gap-1 rounded text-primary-ink hover:underline"
               >
                 <Lightbulb className="size-3.5" aria-hidden /> {f.suggestion(suggestionName)}
               </button>

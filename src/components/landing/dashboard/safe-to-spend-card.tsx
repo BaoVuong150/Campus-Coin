@@ -9,7 +9,7 @@ export function SafeToSpendCard({ t }: { t: Messages }) {
   return (
     <div className="flex flex-col justify-between rounded-xl bg-primary-soft p-4 sm:p-5">
       <div>
-        <p className="text-[12px] font-medium text-primary">{d.safe}</p>
+        <p className="text-[12px] font-medium text-primary-ink">{d.safe}</p>
         <p className="tabular mt-1 text-[26px] leading-none font-semibold whitespace-nowrap tracking-[-0.03em] text-foreground">{formatVND(DEMO_FINANCE.safeToSpend)}</p>
         <p className="mt-2 text-[12px] leading-snug text-muted">{d.safeNote}</p>
       </div>

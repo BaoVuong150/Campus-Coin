@@ -39,8 +39,8 @@ function NavList({ items, collapsed, onNavigate, badges }: NavListProps) {
                 active ? "bg-primary-soft font-medium text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"
               )}
             >
-              {active && <span className="absolute top-2 bottom-2 left-0 w-0.5 rounded-full bg-primary" aria-hidden />}
-              <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-subtle group-hover:text-foreground")} aria-hidden />
+              {active && <span className="absolute top-2 bottom-2 left-0 w-0.5 rounded-full bg-primary-ink" aria-hidden />}
+              <Icon className={cn("size-4 shrink-0", active ? "text-primary-ink" : "text-subtle group-hover:text-foreground")} aria-hidden />
               {!collapsed && <span className="truncate">{label}</span>}
               {!!badge && (
                 <span

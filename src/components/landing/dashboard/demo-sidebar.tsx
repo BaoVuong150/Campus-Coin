@@ -17,14 +17,14 @@ export function DemoSidebar({ t }: { t: Messages }) {
             title={t.landing.demo.sidebar[i]}
             className={cn(
               "flex size-10 items-center justify-center rounded-lg",
-              i === 0 ? "bg-primary-soft text-primary" : "text-subtle"
+              i === 0 ? "bg-primary-soft text-primary-ink" : "text-subtle"
             )}
           >
             <Icon className="size-[18px]" strokeWidth={1.75} aria-hidden />
           </li>
         ))}
       </ul>
-      <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-[12px] font-semibold text-primary" aria-hidden>
+      <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-[12px] font-semibold text-primary-ink" aria-hidden>
         A
       </span>
     </div>

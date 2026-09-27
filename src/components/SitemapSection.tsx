@@ -24,7 +24,7 @@ export default function SitemapSection({ t }: { t: Messages }) {
         {GROUPS.map(({ key, icon: Icon, hrefs }) => (
           <div key={key} className="rounded-lg border border-border bg-surface p-5 shadow-card">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Icon className="size-4 text-primary" aria-hidden /> {t.sitemap.groups[key]}
+              <Icon className="size-4 text-primary-ink" aria-hidden /> {t.sitemap.groups[key]}
             </h3>
             <ul className="mt-4 space-y-1 border-l border-border pl-4">
               {hrefs.map((href) => {

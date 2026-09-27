@@ -54,7 +54,7 @@ export function HeroDashboard({ t, locale }: { t: Messages; locale: Locale }) {
         className="absolute top-44 -left-10 hidden animate-float items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-pop xl:flex"
         aria-hidden
       >
-        <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary">
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary-ink">
           <TrendingUp className="size-4" strokeWidth={1.75} />
         </span>
         <span>

@@ -14,9 +14,10 @@ Nguồn sự thật của mọi giá trị bên dưới là `src/app/globals.css
 | `--surface` / `--surface-secondary` | `#ffffff` / `#f5f7f5` | `#111513` / `#161b18` | Card, ô nhập / nền phụ |
 | `--border` | `rgb(15 23 20 / .08)` | `rgb(255 255 255 / .08)` | Đường viền mảnh |
 | `--foreground` / `--muted` / `--subtle` | `#101312` / `#626966` / `#737b77` | `#f4f7f5` / `#a7b0ab` / `#8b9690` | Chữ chính / phụ / chú thích |
-| `--primary` | `#047857` (emerald) | `#10b981` | Nút chính, chữ nhấn (đạt tương phản AA) |
-| `--brand` / `--brand-bright` | `#059669` / `#10b981` | `#10b981` / `#34d399` | Màu thương hiệu cho thanh tiến độ, điểm nhấn, glow |
-| `--success` | `#047857` | `#34d399` | Thu nhập, trạng thái tốt |
+| `--primary` / `--primary-foreground` | `#2dd4bf` (teal) / `#042f2e` | `#2dd4bf` / `#042f2e` | Nền nút chính, CTA, logo; chữ tối trên nền teal (~10:1) |
+| `--primary-ink` | `#0f766e` | `#2dd4bf` | Chữ, icon, viền màu nhấn (đạt tương phản AA) |
+| `--brand` / `--brand-bright` | `#14b8a6` / `#2dd4bf` | `#2dd4bf` / `#5eead4` | Màu thương hiệu cho thanh tiến độ, điểm nhấn, glow |
+| `--success` | `#0f766e` | `#2dd4bf` | Thu nhập, trạng thái tốt |
 | `--danger` | `#c9343a` | `#f08080` | Chi tiêu, vượt ngân sách, xóa |
 | `--warning` | `#b45309` | `#fbbf24` | Chạm 80% ngân sách, bất thường |
 | `--info` | `#2563eb` | `#60a5fa` | Thông tin trung tính |
@@ -67,5 +68,7 @@ Giao diện song ngữ Việt/Anh (`src/i18n`). Mọi chuỗi hiển thị lấy
 ## Landing
 
 - Component nằm trong `src/components/landing` (mockup dashboard ở `landing/dashboard`), dữ liệu mẫu tập trung ở `src/data/demo-finance.ts` và luôn gắn nhãn "Dữ liệu mẫu".
-- Không dùng gradient chữ, neon, glassmorphism hay emoji; chỉ một vầng sáng emerald rất nhẹ sau hero (`hero-glow`).
+- Không dùng gradient chữ, neon, glassmorphism hay emoji; chỉ một vầng sáng teal rất nhẹ sau hero (`hero-glow`).
 - Mọi tuyên bố ở section Bảo mật phải đúng với cài đặt thực tế (không liên kết ngân hàng, dữ liệu tách theo tài khoản, mật khẩu băm + cookie httpOnly).
+
+> Không dùng `text-primary` cho chữ: `#2dd4bf` quá nhạt trên nền sáng – luôn dùng `text-primary-ink`.

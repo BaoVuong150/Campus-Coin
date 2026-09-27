@@ -158,7 +158,7 @@ export function CsvImportDialog({ open, onClose }: { open: boolean; onClose: () 
             htmlFor={inputId}
             className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-strong px-4 py-10 text-center transition-colors hover:bg-surface-hover"
           >
-            <FileUp className="size-6 text-primary" aria-hidden />
+            <FileUp className="size-6 text-primary-ink" aria-hidden />
             <span className="text-sm font-medium text-foreground">{step.kind === "busy" ? step.message : l.chooseFile}</span>
             <span className="max-w-md text-[12px] text-muted">{l.dropHint}</span>
             <span className="max-w-md text-[12px] text-subtle">{l.formatHint}</span>

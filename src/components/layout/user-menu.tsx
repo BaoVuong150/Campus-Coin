@@ -15,7 +15,7 @@ export function initials(name: string): string {
 
 export function Avatar({ name, className = "size-8 text-[12px]" }: { name: string; className?: string }) {
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center rounded-full bg-primary-soft font-semibold text-primary ${className}`} aria-hidden>
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-full bg-primary-soft font-semibold text-primary-ink ${className}`} aria-hidden>
       {initials(name)}
     </span>
   );

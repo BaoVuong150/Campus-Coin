@@ -18,7 +18,7 @@ export default async function LoginPage() {
       footer={
         <>
           {t.auth.noAccount}{" "}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link href="/register" className="font-medium text-primary-ink hover:underline">
             {t.auth.registerFree}
           </Link>
         </>

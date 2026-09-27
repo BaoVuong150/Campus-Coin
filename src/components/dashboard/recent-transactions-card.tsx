@@ -26,7 +26,7 @@ export function RecentTransactionsCard() {
       <CardHeader
         title={l.title}
         action={
-          <Link href="/transactions" className="text-[13px] font-medium text-primary hover:underline">
+          <Link href="/transactions" className="text-[13px] font-medium text-primary-ink hover:underline">
             {t.common.viewAll}
           </Link>
         }

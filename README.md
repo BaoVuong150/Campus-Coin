@@ -151,3 +151,43 @@ Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm 
 - Không dùng `alert/confirm/prompt` của trình duyệt – dùng Toast (tối đa 1 toast) và ConfirmDialog.
 - Mọi `<form>` có `noValidate`, lỗi hiển thị inline.
 - Trước khi push: `npm run lint && npm run typecheck && npm test && npm run build`.
+
+---
+
+## 5. Nhật ký thay đổi
+
+### Giao diện trang chủ (landing) – thiết kế lại
+
+- Trang chủ chia thành các section rõ ràng: Hero có mockup dashboard, Vấn đề, "Có thể chi hôm nay" (kèm bảng
+  giải thích cách tính), Ngân sách, Dòng tiền (chọn 3/6/12 tháng), Mục tiêu, Bảo mật (nền tối), CTA cuối và footer nhiều cột.
+- Thanh điều hướng mới: trong suốt ở đầu trang, mờ nền khi cuộn, có liên kết tới từng section và menu dạng sheet trên mobile.
+- Component nằm trong `src/components/landing` (mockup ở `landing/dashboard`); dữ liệu mẫu gom tại
+  `src/data/demo-finance.ts` và luôn gắn nhãn "Dữ liệu mẫu".
+- Sitemap trực quan vẫn giữ trên trang chủ theo yêu cầu SRS.
+- Nội dung section Bảo mật chỉ nêu những gì hệ thống thực sự làm: không liên kết ngân hàng, dữ liệu tách theo tài khoản,
+  mật khẩu băm một chiều, cookie httpOnly, giới hạn số lần đăng nhập.
+- Thêm favicon SVG, metadata SEO/OpenGraph theo ngôn ngữ, nút cỡ `xl` cho CTA.
+- Hiệu ứng nhẹ (xuất hiện tuần tự, thanh tiến độ, cột biểu đồ); tự tắt khi người dùng bật "giảm chuyển động".
+- Đã kiểm tra hiển thị ở 1440 / 1366 / 1024 / 768 / 430 / 390 / 375px, cả chế độ sáng và tối, không cuộn ngang.
+
+### Màu chủ đạo: đổi từ xanh lá (emerald) sang teal `#2dd4bf`
+
+| Token | Sáng | Tối | Dùng cho |
+| --- | --- | --- | --- |
+| `--primary` | `#2dd4bf` | `#2dd4bf` | Nền nút chính, CTA, logo, thanh tiến độ |
+| `--primary-hover` | `#14b8a6` | `#5eead4` | Trạng thái hover của nút |
+| `--primary-foreground` | `#042f2e` | `#042f2e` | Chữ trên nền teal |
+| `--primary-ink` *(mới)* | `#0f766e` | `#2dd4bf` | Chữ, icon, viền màu nhấn trên nền sáng/tối |
+| `--primary-soft` | `#f0fdfa` | `#0d2b28` | Nền nhạt (thẻ chọn, badge) |
+| `--brand` / `--brand-bright` | `#14b8a6` / `#2dd4bf` | `#2dd4bf` / `#5eead4` | Điểm nhấn, biểu đồ nhỏ, vầng sáng hero |
+| `--success` | `#0f766e` | `#2dd4bf` | Thu nhập, trạng thái tốt |
+| `--ring` | `#0d9488` | `#5eead4` | Viền focus bàn phím |
+
+- **Vì sao nút dùng chữ tối thay vì chữ trắng:** chữ trắng trên `#2dd4bf` chỉ đạt tỉ lệ tương phản ~1.9:1 (không đạt WCAG);
+  chữ `#042f2e` đạt ~10:1.
+- **Vì sao tách `--primary-ink`:** `#2dd4bf` quá nhạt để làm chữ trên nền trắng, nên mọi `text-primary` / `border-primary`
+  được đổi sang `text-primary-ink` / `border-primary-ink` (`#0f766e`, ~5.5:1). Ở chế độ tối, `--primary-ink` chính là `#2dd4bf`.
+- Các chấm "chưa đọc" của thông báo và vạch đánh dấu mục đang chọn ở sidebar dùng `bg-primary-ink` để dễ nhìn.
+- Logo, favicon (`src/app/icon.svg`) và logo trong file PDF xuất báo cáo (`src/lib/report-pdf.ts`) đổi sang nền teal, chữ C màu tối.
+- Màu biểu đồ Thu/Chi, màu cảnh báo (đỏ/vàng) giữ nguyên vì đã được kiểm định cho người mù màu.
+- Nguồn sự thật của mọi màu: `src/app/globals.css` (xem thêm `DESIGN.md`).

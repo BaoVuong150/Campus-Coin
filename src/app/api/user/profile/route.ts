@@ -40,7 +40,26 @@ export async function GET() {
           salaryPayDay = Number(extraRows[0].salary_pay_day);
         }
         if (extraRows[0].fixed_bills) {
-          fixedBills = extraRows[0].fixed_bills;
+          const rawBills = extraRows[0].fixed_bills;
+          if (Array.isArray(rawBills)) {
+            // Đảm bảo category_id của chi phí cố định luôn thuộc nhóm Chi phí (expense >= 6)
+            fixedBills = rawBills.map((b: Record<string, unknown>) => {
+              let catId = Number(b.category_id);
+              if (!catId || catId <= 5) {
+                const lower = String(b.name || "").toLowerCase();
+                if (lower.includes("trọ") || lower.includes("ktx") || lower.includes("ký túc") || lower.includes("phòng") || lower.includes("điện") || lower.includes("nước") || lower.includes("wifi")) {
+                  catId = 8; // Tiền trọ / KTX
+                } else if (lower.includes("4g") || lower.includes("net") || lower.includes("cước") || lower.includes("sim") || lower.includes("antigravity") || lower.includes("dịch vụ")) {
+                  catId = 10; // Dịch vụ số
+                } else {
+                  catId = 12; // Chi tiêu khác
+                }
+              }
+              return { ...b, category_id: catId };
+            });
+          } else {
+            fixedBills = rawBills;
+          }
         }
       }
     } catch (rawErr) {
@@ -95,10 +114,28 @@ export async function PATCH(req: Request) {
     let sDay = 5;
     let fBills = fixed_bills;
 
+    if (Array.isArray(fixed_bills)) {
+      // Đảm bảo category_id luôn là chi phí (>= 6)
+      fBills = fixed_bills.map((b: Record<string, unknown>) => {
+        let catId = Number(b.category_id);
+        if (!catId || catId <= 5) {
+          const lower = String(b.name || "").toLowerCase();
+          if (lower.includes("trọ") || lower.includes("ktx") || lower.includes("ký túc") || lower.includes("phòng") || lower.includes("điện") || lower.includes("nước") || lower.includes("wifi")) {
+            catId = 8;
+          } else if (lower.includes("4g") || lower.includes("net") || lower.includes("cước") || lower.includes("sim") || lower.includes("antigravity") || lower.includes("dịch vụ")) {
+            catId = 10;
+          } else {
+            catId = 12;
+          }
+        }
+        return { ...b, category_id: catId };
+      });
+    }
+
     if (salary_pay_day !== undefined || fixed_bills !== undefined) {
       try {
         sDay = salary_pay_day !== undefined ? Number(salary_pay_day) : 5;
-        const billsJson = fixed_bills !== undefined ? JSON.stringify(fixed_bills) : null;
+        const billsJson = fBills !== undefined ? JSON.stringify(fBills) : null;
         await prisma.$executeRaw`
           UPDATE "users" 
           SET salary_pay_day = ${sDay}, fixed_bills = ${billsJson}::jsonb

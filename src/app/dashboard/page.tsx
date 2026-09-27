@@ -88,9 +88,9 @@ export interface FixedBill {
 }
 
 const DEFAULT_FIXED_BILLS: FixedBill[] = [
-  { id: "bill-1", name: "Tiền trọ / Ký túc xá", amount: 2500000, dueDay: 7, category_id: 3 },
-  { id: "bill-2", name: "Điện, nước, wifi phòng", amount: 400000, dueDay: 10, category_id: 3 },
-  { id: "bill-3", name: "Gói cước di động 4G / Net", amount: 120000, dueDay: 15, category_id: 5 },
+  { id: "bill-1", name: "Tiền trọ / Ký túc xá", amount: 2500000, dueDay: 7, category_id: 8 },
+  { id: "bill-2", name: "Điện, nước, wifi phòng", amount: 400000, dueDay: 10, category_id: 8 },
+  { id: "bill-3", name: "Gói cước di động 4G / Net", amount: 120000, dueDay: 15, category_id: 10 },
 ];
 
 interface SavingTip {
@@ -145,13 +145,14 @@ export default function DashboardPage() {
   const [newBillName, setNewBillName] = useState("");
   const [newBillAmount, setNewBillAmount] = useState("");
   const [newBillDueDay, setNewBillDueDay] = useState<number>(5);
-  const [newBillCatId, setNewBillCatId] = useState<number>(3);
+  const [newBillCatId, setNewBillCatId] = useState<number>(8);
 
   // Inline edit state for fixed bills in settings modal
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [editBillName, setEditBillName] = useState("");
   const [editBillAmount, setEditBillAmount] = useState("");
   const [editBillDueDay, setEditBillDueDay] = useState<number>(5);
+  const [editBillCatId, setEditBillCatId] = useState<number>(8);
   // Monthly Savings Goal State (SRS 3.1 & 3.8)
   const [monthlySavingsGoal, setMonthlySavingsGoal] = useState<number>(1500000);
   const [settingsSavingsGoalInput, setSettingsSavingsGoalInput] = useState<string>(formatCurrencyInput(1500000));
@@ -253,8 +254,22 @@ export default function DashboardPage() {
           setSettingsSalaryPayDay(Number(u.salary_pay_day));
         }
         if (Array.isArray(u.fixed_bills) && u.fixed_bills.length > 0) {
-          setFixedBills(u.fixed_bills);
-          setSettingsFixedBills(u.fixed_bills);
+          const sanitizedBills = u.fixed_bills.map((b: FixedBill) => {
+            let catId = Number(b.category_id);
+            if (!catId || catId <= 5) {
+              const lower = (b.name || "").toLowerCase();
+              if (lower.includes("trọ") || lower.includes("ktx") || lower.includes("ký túc") || lower.includes("phòng") || lower.includes("điện") || lower.includes("nước") || lower.includes("wifi")) {
+                catId = 8;
+              } else if (lower.includes("4g") || lower.includes("net") || lower.includes("cước") || lower.includes("sim") || lower.includes("antigravity") || lower.includes("dịch vụ")) {
+                catId = 10;
+              } else {
+                catId = 12;
+              }
+            }
+            return { ...b, category_id: catId };
+          });
+          setFixedBills(sanitizedBills);
+          setSettingsFixedBills(sanitizedBills);
         }
       }
 
@@ -504,6 +519,25 @@ export default function DashboardPage() {
       const dueDayPadded = String(Math.min(30, Math.max(1, bill.dueDay))).padStart(2, "0");
       const billDate = `${selectedMonth}-${dueDayPadded}T09:00:00.000Z`;
 
+      // Đảm bảo category_id luôn thuộc nhóm Chi phí (expense >= 6), không bao giờ rơi vào nhóm Thu nhập (1 - 5)
+      let targetCatId = Number(bill.category_id);
+      if (!targetCatId || targetCatId <= 5) {
+        const lower = (bill.name || "").toLowerCase();
+        if (lower.includes("trọ") || lower.includes("ktx") || lower.includes("ký túc") || lower.includes("phòng") || lower.includes("điện") || lower.includes("nước") || lower.includes("wifi")) {
+          targetCatId = 8; // Tiền trọ / KTX
+        } else if (lower.includes("4g") || lower.includes("net") || lower.includes("cước") || lower.includes("sim") || lower.includes("antigravity") || lower.includes("dịch vụ")) {
+          targetCatId = 10; // Dịch vụ số
+        } else if (lower.includes("học") || lower.includes("sách")) {
+          targetCatId = 9; // Học tập
+        } else if (lower.includes("xe") || lower.includes("xăng")) {
+          targetCatId = 7; // Đi lại
+        } else if (lower.includes("ăn") || lower.includes("cơm")) {
+          targetCatId = 6; // Ăn uống
+        } else {
+          targetCatId = 12; // Chi tiêu khác
+        }
+      }
+
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -511,7 +545,7 @@ export default function DashboardPage() {
           amount: bill.amount,
           type: "expense",
           description: bill.name,
-          category_id: bill.category_id,
+          category_id: targetCatId,
           date: billDate,
           is_recurring: true,
           recurrence_period: "monthly",
@@ -546,12 +580,30 @@ export default function DashboardPage() {
       return;
     }
 
+    let detectedCatId = Number(newBillCatId);
+    if (!detectedCatId || detectedCatId <= 5) {
+      const lower = newBillName.toLowerCase();
+      if (lower.includes("trọ") || lower.includes("ktx") || lower.includes("ký túc") || lower.includes("phòng") || lower.includes("nhà") || lower.includes("điện") || lower.includes("nước") || lower.includes("wifi")) {
+        detectedCatId = 8;
+      } else if (lower.includes("4g") || lower.includes("net") || lower.includes("cước") || lower.includes("sim") || lower.includes("antigravity") || lower.includes("dịch vụ")) {
+        detectedCatId = 10;
+      } else if (lower.includes("học") || lower.includes("sách")) {
+        detectedCatId = 9;
+      } else if (lower.includes("xe") || lower.includes("xăng")) {
+        detectedCatId = 7;
+      } else if (lower.includes("ăn")) {
+        detectedCatId = 6;
+      } else {
+        detectedCatId = 12;
+      }
+    }
+
     const newBill: FixedBill = {
       id: `bill-${Date.now()}`,
       name: newBillName.trim(),
       amount: amt,
       dueDay: Number(newBillDueDay) || 5,
-      category_id: Number(newBillCatId) || 3,
+      category_id: detectedCatId,
     };
 
     setSettingsFixedBills((prev) => [...prev, newBill]);
@@ -571,6 +623,7 @@ export default function DashboardPage() {
     setEditBillName(bill.name);
     setEditBillAmount(formatCurrencyInput(bill.amount));
     setEditBillDueDay(bill.dueDay);
+    setEditBillCatId(bill.category_id && bill.category_id >= 6 ? bill.category_id : 8);
   };
 
   // Lưu nội dung vừa sửa
@@ -593,6 +646,7 @@ export default function DashboardPage() {
               name: editBillName.trim(),
               amount: amt,
               dueDay: editBillDueDay,
+              category_id: Number(editBillCatId) && Number(editBillCatId) >= 6 ? Number(editBillCatId) : 8,
             }
           : b
       )
@@ -2125,7 +2179,7 @@ export default function DashboardPage() {
                           key={b.id}
                           className="p-2 rounded-[8px] bg-white dark:bg-[#0f1011] border-2 border-[#5e6ad2] shadow-xs space-y-2 text-xs"
                         >
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-1.5">
                             <input
                               type="text"
                               value={editBillName}
@@ -2141,6 +2195,20 @@ export default function DashboardPage() {
                               placeholder="Số tiền"
                               className="px-2 py-1 rounded-[6px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#141516] text-[#0f1011] dark:text-[#f7f8f8] text-xs focus:outline-none focus:ring-1 focus:ring-[#5e6ad2]"
                             />
+                            <select
+                              value={editBillCatId}
+                              onChange={(e) => setEditBillCatId(Number(e.target.value))}
+                              className="px-2 py-1 rounded-[6px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#141516] text-[#0f1011] dark:text-[#f7f8f8] text-xs cursor-pointer"
+                              title="Danh mục chi phí"
+                            >
+                              <option value={8}>Tiền trọ / KTX</option>
+                              <option value={10}>Dịch vụ số (4G, Net)</option>
+                              <option value={9}>Học tập</option>
+                              <option value={7}>Đi lại</option>
+                              <option value={6}>Ăn uống</option>
+                              <option value={11}>Giải trí</option>
+                              <option value={12}>Chi tiêu khác</option>
+                            </select>
                             <div className="flex items-center gap-1">
                               <select
                                 value={editBillDueDay}
@@ -2180,6 +2248,9 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2 truncate mr-2">
                             <span className="font-medium text-[#0f1011] dark:text-[#f7f8f8] truncate">{b.name}</span>
                             <span className="text-[10px] text-[#94a3b8] shrink-0">Hạn ngày {b.dueDay}</span>
+                            <span className="text-[9.5px] px-1.5 py-0.5 rounded-[4px] bg-[#5e6ad2]/10 text-[#5e6ad2] font-medium shrink-0">
+                              {categories.find((c) => c.id === b.category_id)?.name || (b.category_id === 8 ? "Tiền trọ / KTX" : b.category_id === 10 ? "Dịch vụ số" : "Khoản chi")}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="font-semibold text-[#5e6ad2]">{b.amount.toLocaleString("vi-VN")} đ</span>
@@ -2211,12 +2282,27 @@ export default function DashboardPage() {
                   <span className="text-[11px] font-medium text-[#475569] dark:text-[#94a3b8] block">
                     + Thêm khoản chi cố định mới:
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                     <input
                       type="text"
                       placeholder="Tên khoản (vd: Tiền trọ)"
                       value={newBillName}
-                      onChange={(e) => setNewBillName(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewBillName(val);
+                        const lower = val.toLowerCase();
+                        if (lower.includes("trọ") || lower.includes("ktx") || lower.includes("ký túc") || lower.includes("phòng") || lower.includes("nhà") || lower.includes("điện") || lower.includes("nước") || lower.includes("wifi")) {
+                          setNewBillCatId(8);
+                        } else if (lower.includes("4g") || lower.includes("net") || lower.includes("cước") || lower.includes("sim") || lower.includes("antigravity") || lower.includes("dịch vụ")) {
+                          setNewBillCatId(10);
+                        } else if (lower.includes("học") || lower.includes("sách")) {
+                          setNewBillCatId(9);
+                        } else if (lower.includes("xe") || lower.includes("xăng")) {
+                          setNewBillCatId(7);
+                        } else if (lower.includes("ăn")) {
+                          setNewBillCatId(6);
+                        }
+                      }}
                       className="px-2.5 py-1.5 rounded-[6px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-xs focus:outline-none focus:ring-1 focus:ring-[#5e6ad2]"
                     />
                     <input
@@ -2227,6 +2313,20 @@ export default function DashboardPage() {
                       onChange={(e) => setNewBillAmount(formatCurrencyInput(e.target.value))}
                       className="px-2.5 py-1.5 rounded-[6px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-xs focus:outline-none focus:ring-1 focus:ring-[#5e6ad2]"
                     />
+                    <select
+                      value={newBillCatId}
+                      onChange={(e) => setNewBillCatId(Number(e.target.value))}
+                      className="px-2.5 py-1.5 rounded-[6px] border border-[#cbd5e1] dark:border-[#23252a] bg-white dark:bg-[#0f1011] text-[#0f1011] dark:text-[#f7f8f8] text-xs cursor-pointer"
+                      title="Danh mục chi phí"
+                    >
+                      <option value={8}>Tiền trọ / KTX</option>
+                      <option value={10}>Dịch vụ số (4G, Net)</option>
+                      <option value={9}>Học tập</option>
+                      <option value={7}>Đi lại</option>
+                      <option value={6}>Ăn uống</option>
+                      <option value={11}>Giải trí</option>
+                      <option value={12}>Chi tiêu khác</option>
+                    </select>
                     <div className="flex items-center gap-1.5">
                       <select
                         value={newBillDueDay}

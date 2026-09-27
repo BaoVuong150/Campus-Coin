@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useIsClient } from "@/hooks/use-client-store";
+import { useI18n } from "@/i18n/provider";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -31,6 +32,7 @@ const SIZES = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl" };
  * chiều cao không vượt viewport (nội dung tự cuộn).
  */
 export function Dialog({ open, onClose, title, description, children, footer, variant = "modal", size = "md", role = "dialog" }: DialogProps) {
+  const { t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
@@ -126,7 +128,7 @@ export function Dialog({ open, onClose, title, description, children, footer, va
             <button
               type="button"
               onClick={onClose}
-              aria-label="Đóng"
+              aria-label={t.common.close}
               className="-mr-1.5 rounded-md p-1.5 text-subtle transition-colors hover:bg-surface-hover hover:text-foreground"
             >
               <X className="size-4" />

@@ -22,6 +22,7 @@ import { useReport } from "@/hooks/use-dashboard";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { currentMonthKey, formatDate, parseMonthKey, shiftMonthKey } from "@/lib/utils/date";
 import { formatPercent, formatVND } from "@/lib/utils/money";
+import { useI18n } from "@/i18n/provider";
 import type { BudgetItemDTO, ReportPeriod } from "@/types/finance";
 
 const STEP: Record<ReportPeriod, number> = { month: 1, quarter: 3, year: 12 };
@@ -47,6 +48,8 @@ export default function ReportsPage() {
   const user = useSessionUser();
   const { toast } = useToast();
   const { openDetail } = useTransactionUI();
+  const { t, fmt } = useI18n();
+  const l = t.reports;
   const colors = useChartColors();
   const order = useExpenseCategoryOrder();
   const [period, setPeriod] = useState<ReportPeriod>("month");
@@ -61,49 +64,50 @@ export default function ReportsPage() {
     if (!data) return;
     setExporting(true);
     try {
-      await exportReportPdf(data, user.name);
-      toast.success("Đã xuất báo cáo PDF");
+      await exportReportPdf(data, user.name, t, fmt);
+      toast.success(l.exported);
     } catch {
-      toast.error("Không thể xuất PDF", "Vui lòng thử lại.");
+      toast.error(l.exportFailed, t.errors.INTERNAL_ERROR);
     } finally {
       setExporting(false);
     }
   };
 
   const hasData = !!data && data.totals.transactionCount > 0;
+  const label = fmt.period(period, anchor);
 
   return (
     <div>
       <PageHeader
-        title="Báo cáo"
-        description={data ? `${data.label} · ${data.from} – ${data.to}` : "Phân tích thu chi theo kỳ."}
+        title={l.title}
+        description={data ? `${label} · ${formatDate(data.from)} – ${formatDate(data.to)}` : l.description}
         actions={
           <>
             <Segmented
-              label="Kỳ báo cáo"
+              label={l.period}
               value={period}
               onChange={(p) => {
                 setPeriod(p);
                 setAnchor(current);
               }}
               options={[
-                { value: "month", label: "Tháng" },
-                { value: "quarter", label: "Quý" },
-                { value: "year", label: "Năm" },
+                { value: "month", label: l.periods.month },
+                { value: "quarter", label: l.periods.quarter },
+                { value: "year", label: l.periods.year },
               ]}
               size="md"
             />
             <div className="flex items-center rounded-md border border-border bg-surface p-0.5">
-              <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, -STEP[period]))} aria-label="Kỳ trước">
+              <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, -STEP[period]))} aria-label={l.prev}>
                 <ChevronLeft />
               </Button>
-              <span className="min-w-24 text-center text-sm font-medium text-foreground">{data?.label ?? "…"}</span>
-              <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, STEP[period]))} disabled={!canNext} aria-label="Kỳ sau">
+              <span className="min-w-24 text-center text-sm font-medium text-foreground">{label}</span>
+              <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, STEP[period]))} disabled={!canNext} aria-label={l.next}>
                 <ChevronRight />
               </Button>
             </div>
             <Button onClick={handleExport} loading={exporting} disabled={!hasData}>
-              <Download /> Xuất PDF
+              <Download /> {l.export}
             </Button>
           </>
         }
@@ -111,7 +115,7 @@ export default function ReportsPage() {
 
       {error ? (
         <Card>
-          <ErrorState message="Không thể tải báo cáo." onRetry={reload} />
+          <ErrorState message={l.error} onRetry={reload} />
         </Card>
       ) : !data ? (
         <div className="space-y-4">
@@ -126,19 +130,19 @@ export default function ReportsPage() {
         </div>
       ) : !hasData ? (
         <Card>
-          <EmptyState icon={<FileBarChart />} title="Không có giao dịch trong kỳ này" description="Chọn kỳ khác hoặc thêm giao dịch để xem báo cáo." />
+          <EmptyState icon={<FileBarChart />} title={l.emptyTitle} description={l.emptyBody} />
         </Card>
       ) : (
         <div className="space-y-4">
-          <section aria-label="Tóm tắt tài chính" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Kpi label="Tổng thu" value={formatVND(data.totals.income)} />
-            <Kpi label="Tổng chi" value={formatVND(data.totals.expense)} />
-            <Kpi label="Chênh lệch" value={`${data.totals.net < 0 ? "− " : "+ "}${formatVND(Math.abs(data.totals.net))}`} tone={data.totals.net < 0 ? "danger" : "success"} />
-            <Kpi label="Chi trung bình / ngày" value={formatVND(data.totals.averageDailySpend)} />
+          <section aria-label={l.summaryLabel} className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi label={l.income} value={formatVND(data.totals.income)} />
+            <Kpi label={l.expense} value={formatVND(data.totals.expense)} />
+            <Kpi label={l.net} value={`${data.totals.net < 0 ? "− " : "+ "}${formatVND(Math.abs(data.totals.net))}`} tone={data.totals.net < 0 ? "danger" : "success"} />
+            <Kpi label={l.avgDaily} value={formatVND(data.totals.averageDailySpend)} />
           </section>
 
           <Card>
-            <CardHeader title="Thu nhập và chi tiêu" description={period === "month" ? "Theo ngày" : "Theo tháng"} />
+            <CardHeader title={l.trend} description={period === "month" ? l.byDay : l.byMonth} />
             <CardContent>
               <CashFlowBars data={data.trend} />
             </CardContent>
@@ -146,25 +150,25 @@ export default function ReportsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="min-w-0">
-              <CardHeader title="Chi tiêu theo danh mục" />
+              <CardHeader title={l.categories} />
               <CardContent>
                 {data.categories.length === 0 ? (
-                  <p className="text-[13px] text-muted">Không có khoản chi trong kỳ.</p>
+                  <p className="text-[13px] text-muted">{l.noExpense}</p>
                 ) : (
                   <CategoryDonut slices={slices} total={data.totals.expense} />
                 )}
               </CardContent>
             </Card>
             <Card className="min-w-0">
-              <CardHeader title="Danh mục chi nhiều nhất" />
+              <CardHeader title={l.topCategories} />
               <CardContent className="pt-2">
                 <table className="w-full text-sm">
-                  <caption className="sr-only">Danh mục chi nhiều nhất</caption>
+                  <caption className="sr-only">{l.topCategories}</caption>
                   <thead className="text-left text-[12px] text-muted">
                     <tr>
-                      <th scope="col" className="py-2 font-medium">Danh mục</th>
-                      <th scope="col" className="py-2 text-right font-medium">Tỷ trọng</th>
-                      <th scope="col" className="py-2 text-right font-medium">Số tiền</th>
+                      <th scope="col" className="py-2 font-medium">{t.transactions.table.category}</th>
+                      <th scope="col" className="py-2 text-right font-medium">{l.share}</th>
+                      <th scope="col" className="py-2 text-right font-medium">{t.transactions.table.amount}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -173,7 +177,7 @@ export default function ReportsPage() {
                         <td className="py-2.5">
                           <span className="flex items-center gap-2.5">
                             <CategoryIcon icon={c.icon} color={c.color} size="sm" />
-                            <span className="truncate text-foreground">{c.name}</span>
+                            <span className="truncate text-foreground">{fmt.category(c.name)}</span>
                           </span>
                         </td>
                         <td className="tabular py-2.5 text-right text-muted">{formatPercent(c.percentage, 0)}</td>
@@ -188,20 +192,20 @@ export default function ReportsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="min-w-0">
-              <CardHeader title="Giao dịch chi lớn nhất" />
+              <CardHeader title={l.largest} />
               <CardContent className="pt-2">
                 <ul className="divide-y divide-border">
-                  {data.largestTransactions.map((t) => (
-                    <li key={t.id}>
-                      <button type="button" onClick={() => openDetail(t)} className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-surface-hover">
-                        <CategoryIcon icon={t.category.icon} color={t.category.color} size="sm" />
+                  {data.largestTransactions.map((tx) => (
+                    <li key={tx.id}>
+                      <button type="button" onClick={() => openDetail(tx)} className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-surface-hover">
+                        <CategoryIcon icon={tx.category.icon} color={tx.category.color} size="sm" />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm text-foreground">{t.description}</span>
+                          <span className="block truncate text-sm text-foreground">{tx.description}</span>
                           <span className="block text-[12px] text-subtle">
-                            {t.category.name} · {formatDate(t.date)}
+                            {fmt.category(tx.category.name)} · {formatDate(tx.date)}
                           </span>
                         </span>
-                        <Amount value={t.amount} type={t.type} className="text-sm" />
+                        <Amount value={tx.amount} type={tx.type} className="text-sm" />
                       </button>
                     </li>
                   ))}
@@ -209,10 +213,10 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
             <Card className="min-w-0">
-              <CardHeader title="Hiệu quả ngân sách" />
+              <CardHeader title={l.budgetPerformance} />
               <CardContent className="pt-1">
                 {data.budgetPerformance.length === 0 ? (
-                  <p className="text-[13px] text-muted">Chưa đặt ngân sách trong kỳ này.</p>
+                  <p className="text-[13px] text-muted">{l.noBudget}</p>
                 ) : (
                   <div className="divide-y divide-border">
                     {data.budgetPerformance.map((b) => {

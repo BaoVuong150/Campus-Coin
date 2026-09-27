@@ -2,8 +2,7 @@ import type { Prisma, Transaction } from "@prisma/client";
 import { prisma } from "@/lib/database/prisma";
 import { Errors } from "@/lib/api/errors";
 import { detectAnomaly } from "@/lib/finance/anomaly";
-import { dayRange, formatDate, toMonthKey, ymdToStorageDate } from "@/lib/utils/date";
-import { formatVND } from "@/lib/utils/money";
+import { dayRange, toMonthKey, ymdToStorageDate } from "@/lib/utils/date";
 import type {
   CreateTransactionInput,
   TransactionQuery,
@@ -13,6 +12,7 @@ import type { Paginated, TransactionDTO, TransactionWarnings } from "@/types/fin
 import { getUsableCategory, rememberCategoryChoice } from "./category.service";
 import { evaluateBudgetAlerts } from "./budget.service";
 import { notify } from "./notification.service";
+import { onTransactionLogged } from "./points.service";
 import { toNumber, toTransactionDTO } from "./mappers";
 
 const notFound = () => Errors.notFound("TRANSACTION_NOT_FOUND", "Không tìm thấy giao dịch.");
@@ -136,6 +136,7 @@ export async function createTransaction(userId: string, input: CreateTransaction
 
   await rememberCategoryChoice(userId, input.description, input.category_id);
   await runPostWriteChecks(userId, created);
+  await onTransactionLogged(userId);
   return toTransactionDTO(created);
 }
 
@@ -235,8 +236,14 @@ async function runPostWriteChecks(userId: string, t: Transaction & { category: {
     await notify(userId, {
       kind: "unusual",
       type: "warning",
-      title: "Khoản chi cao hơn thường lệ",
-      message: `"${t.description}" (${formatVND(amount)}) ngày ${formatDate(t.date)} cao hơn mức thường thấy của ${t.category.name} (khoảng ${formatVND(result.typicalAmount)}).`,
+      template: "unusualExpense",
+      params: {
+        description: t.description,
+        amount,
+        date: t.date.toISOString(),
+        category: t.category.name,
+        typical: result.typicalAmount,
+      },
       link: `/transactions?focus=${t.id}`,
       dedupeKey: `unusual:${t.id}`,
     });

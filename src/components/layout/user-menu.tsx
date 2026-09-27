@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { LogOut, Settings, ShieldCheck } from "lucide-react";
 import { useDismiss } from "@/hooks/use-dismiss";
+import { useI18n } from "@/i18n/provider";
 import { apiFetch } from "@/lib/api-client";
 import { useSessionUser } from "./session-context";
 
@@ -30,10 +31,13 @@ export async function logout() {
 
 export function UserMenu() {
   const user = useSessionUser();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismiss(ref, open, close);
+
+  const itemClass = "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm text-foreground hover:bg-surface-hover";
 
   return (
     <div ref={ref} className="relative">
@@ -42,7 +46,7 @@ export function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Mở menu tài khoản"
+        aria-label={t.header.openAccountMenu}
         className="flex items-center rounded-full ring-offset-2 ring-offset-background transition-shadow hover:ring-2 hover:ring-border"
       >
         <Avatar name={user.name} />
@@ -54,12 +58,12 @@ export function UserMenu() {
             <p className="truncate text-[12px] text-muted">{user.email}</p>
           </div>
           <div className="my-1 border-t border-border" />
-          <Link role="menuitem" href="/settings" onClick={close} className="flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm text-foreground hover:bg-surface-hover">
-            <Settings className="size-4 text-subtle" aria-hidden /> Cài đặt
+          <Link role="menuitem" href="/settings" onClick={close} className={itemClass}>
+            <Settings className="size-4 text-subtle" aria-hidden /> {t.nav.settings}
           </Link>
           {user.role === "admin" && (
-            <Link role="menuitem" href="/admin" onClick={close} className="flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm text-foreground hover:bg-surface-hover">
-              <ShieldCheck className="size-4 text-subtle" aria-hidden /> Quản trị
+            <Link role="menuitem" href="/admin" onClick={close} className={itemClass}>
+              <ShieldCheck className="size-4 text-subtle" aria-hidden /> {t.header.admin}
             </Link>
           )}
           <button
@@ -68,7 +72,7 @@ export function UserMenu() {
             onClick={() => void logout()}
             className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm text-danger hover:bg-danger-soft"
           >
-            <LogOut className="size-4" aria-hidden /> Đăng xuất
+            <LogOut className="size-4" aria-hidden /> {t.header.logout}
           </button>
         </div>
       )}

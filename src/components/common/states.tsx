@@ -1,7 +1,10 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { useI18n } from "@/i18n/provider";
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -33,14 +36,15 @@ interface ErrorStateProps {
   className?: string;
 }
 
-export function ErrorState({ message = "Không thể tải dữ liệu.", onRetry, className }: ErrorStateProps) {
+export function ErrorState({ message, onRetry, className }: ErrorStateProps) {
+  const { t } = useI18n();
   return (
     <div role="alert" className={cn("flex flex-col items-center justify-center py-10 text-center", className)}>
       <AlertCircle className="mb-2 size-5 text-danger" aria-hidden />
-      <p className="text-sm text-foreground">{message}</p>
+      <p className="text-sm text-foreground">{message ?? t.common.loadError}</p>
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
-          <RefreshCw /> Thử lại
+          <RefreshCw /> {t.common.retry}
         </Button>
       )}
     </div>

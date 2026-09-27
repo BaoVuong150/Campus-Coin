@@ -3,13 +3,15 @@
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/context/ThemeContext";
+import { useI18n } from "@/i18n/provider";
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-  const dark = theme === "dark";
+  const { t } = useI18n();
+  const label = theme === "dark" ? t.header.toLight : t.header.toDark;
   return (
-    <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>
-      {dark ? <Sun /> : <Moon />}
+    <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={label} title={label}>
+      {theme === "dark" ? <Sun /> : <Moon />}
     </Button>
   );
 }

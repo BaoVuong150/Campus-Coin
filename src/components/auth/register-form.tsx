@@ -6,7 +6,8 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
-import { ApiClientError, apiFetch, errorMessage } from "@/lib/api-client";
+import { ApiClientError, apiFetch } from "@/lib/api-client";
+import { useI18n } from "@/i18n/provider";
 import { parseCurrencyInput } from "@/lib/utils/money";
 import { PASSWORD_MIN_LENGTH } from "@/constants/finance";
 
@@ -14,6 +15,8 @@ type Errors = Partial<Record<"name" | "email" | "password" | "confirm", string>>
 
 export function RegisterForm() {
   const router = useRouter();
+  const { t, fmt, locale } = useI18n();
+  const l = t.auth;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,13 +29,13 @@ export function RegisterForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: Errors = {
-      name: name.trim().length >= 2 ? undefined : "Họ tên cần ít nhất 2 ký tự.",
-      email: /^\S+@\S+\.\S+$/.test(email.trim()) ? undefined : "Nhập email hợp lệ.",
+      name: name.trim().length >= 2 ? undefined : t.validation.nameMin,
+      email: /^\S+@\S+\.\S+$/.test(email.trim()) ? undefined : t.validation.emailInvalid,
       password:
         password.length >= PASSWORD_MIN_LENGTH && /[A-Za-z]/.test(password) && /\d/.test(password)
           ? undefined
-          : `Tối thiểu ${PASSWORD_MIN_LENGTH} ký tự, gồm cả chữ và số.`,
-      confirm: password === confirm ? undefined : "Mật khẩu nhập lại không khớp.",
+          : t.validation.passwordRule(PASSWORD_MIN_LENGTH),
+      confirm: password === confirm ? undefined : t.validation.passwordMismatch,
     };
     setErrors(next);
     setFormError(null);
@@ -53,9 +56,9 @@ export function RegisterForm() {
       router.replace("/dashboard");
       router.refresh();
     } catch (error) {
-      if (error instanceof ApiClientError && error.code === "EMAIL_TAKEN") setErrors({ email: error.message });
-      else if (error instanceof ApiClientError && error.fields) setErrors(error.fields as Errors);
-      setFormError(errorMessage(error, "Không thể tạo tài khoản."));
+      if (error instanceof ApiClientError && error.code === "EMAIL_TAKEN") setErrors({ email: t.errors.EMAIL_TAKEN });
+      else if (error instanceof ApiClientError && error.fields && locale === "vi") setErrors(error.fields as Errors);
+      setFormError(fmt.error(error) || l.registerFailed);
       setLoading(false);
     }
   };
@@ -67,23 +70,23 @@ export function RegisterForm() {
           <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden /> {formError}
         </p>
       )}
-      <Field label="Họ tên" error={errors.name}>
+      <Field label={l.fullName} error={errors.name}>
         {(p) => <Input {...p} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />}
       </Field>
-      <Field label="Email" error={errors.email}>
+      <Field label={l.email} error={errors.email}>
         {(p) => <Input {...p} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
       </Field>
-      <Field label="Mật khẩu" error={errors.password} hint={`Tối thiểu ${PASSWORD_MIN_LENGTH} ký tự, gồm chữ và số.`}>
+      <Field label={l.password} error={errors.password} hint={l.passwordHint(PASSWORD_MIN_LENGTH)}>
         {(p) => <Input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
       </Field>
-      <Field label="Nhập lại mật khẩu" error={errors.confirm}>
+      <Field label={l.confirmPassword} error={errors.confirm}>
         {(p) => <Input {...p} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />}
       </Field>
-      <Field label="Thu nhập mỗi tháng (không bắt buộc)" hint="Trợ cấp, lương làm thêm – có thể sửa sau trong Cài đặt.">
+      <Field label={l.monthlyIncome} hint={l.monthlyIncomeHint}>
         {(p) => <MoneyInput {...p} value={allowance} onValueChange={setAllowance} placeholder="0" />}
       </Field>
       <Button type="submit" size="lg" className="w-full" loading={loading}>
-        Tạo tài khoản
+        {l.submitRegister}
       </Button>
     </form>
   );

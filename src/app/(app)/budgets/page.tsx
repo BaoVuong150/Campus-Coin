@@ -15,8 +15,8 @@ import { SkeletonCard, SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useBudgetMutations, useBudgets } from "@/hooks/use-budget";
 import { useCategories } from "@/hooks/use-categories";
-import { errorMessage } from "@/lib/api-client";
-import { currentMonthKey, isValidMonthKey, monthLabel, shiftMonthKey } from "@/lib/utils/date";
+import { currentMonthKey, isValidMonthKey, shiftMonthKey } from "@/lib/utils/date";
+import { useI18n } from "@/i18n/provider";
 import { formatVND } from "@/lib/utils/money";
 import type { BudgetItemDTO } from "@/types/finance";
 
@@ -39,6 +39,9 @@ function BudgetsView() {
   const { data: categories } = useCategories();
   const { remove, copy } = useBudgetMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.budgets;
+  const monthName = fmt.month(month);
   const [dialog, setDialog] = useState<{ key: number; editing: BudgetItemDTO | null } | null>(null);
   const [copying, setCopying] = useState(false);
 
@@ -47,17 +50,17 @@ function BudgetsView() {
 
   const handleDelete = async (item: BudgetItemDTO) => {
     const ok = await confirm({
-      title: "Xóa ngân sách?",
-      message: `Ngân sách ${item.category.name} của ${monthLabel(month).toLowerCase()} sẽ bị xóa. Giao dịch không bị ảnh hưởng.`,
-      confirmText: "Xóa ngân sách",
+      title: l.deleteTitle,
+      message: l.deleteMessage(fmt.category(item.category.name), monthName),
+      confirmText: l.deleteConfirm,
       isDestructive: true,
     });
     if (!ok) return;
     try {
       await remove(item.id);
-      toast.success("Đã xóa ngân sách");
+      toast.success(l.deleted);
     } catch (e) {
-      toast.error("Không thể xóa ngân sách", errorMessage(e));
+      toast.error(l.deleteFailed, fmt.error(e));
     }
   };
 
@@ -65,10 +68,10 @@ function BudgetsView() {
     setCopying(true);
     try {
       const copied = await copy(shiftMonthKey(month, -1), month);
-      if (copied > 0) toast.success(`Đã sao chép ${copied} ngân sách từ tháng trước`);
-      else toast.info("Tháng trước chưa có ngân sách để sao chép");
+      if (copied > 0) toast.success(l.copied(copied));
+      else toast.info(l.nothingToCopy);
     } catch (e) {
-      toast.error("Không thể sao chép", errorMessage(e));
+      toast.error(l.copyFailed, fmt.error(e));
     } finally {
       setCopying(false);
     }
@@ -80,13 +83,13 @@ function BudgetsView() {
   return (
     <div>
       <PageHeader
-        title="Ngân sách"
-        description="Đặt hạn mức cho từng danh mục chi tiêu và theo dõi mức sử dụng."
+        title={l.title}
+        description={l.description}
         actions={
           <>
             <MonthPicker value={month} onChange={setMonth} />
             <Button onClick={() => openDialog(null)}>
-              <Plus /> Thêm ngân sách
+              <Plus /> {l.add}
             </Button>
           </>
         }
@@ -94,7 +97,7 @@ function BudgetsView() {
 
       {error ? (
         <Card>
-          <ErrorState message="Không thể tải ngân sách." onRetry={reload} />
+          <ErrorState message={l.error} onRetry={reload} />
         </Card>
       ) : !data ? (
         <div className="space-y-4">
@@ -107,15 +110,15 @@ function BudgetsView() {
         <Card>
           <EmptyState
             icon={<Wallet />}
-            title="Bạn chưa đặt ngân sách"
-            description={`Đặt hạn mức cho ${monthLabel(month).toLowerCase()} để nhận cảnh báo khi sắp tiêu quá tay.`}
+            title={l.emptyTitle}
+            description={l.emptyBody(monthName)}
             action={
               <div className="flex flex-wrap justify-center gap-2">
                 <Button size="sm" onClick={() => openDialog(null)}>
-                  <Plus /> Thêm ngân sách
+                  <Plus /> {l.add}
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleCopy} loading={copying}>
-                  <Copy /> Sao chép từ tháng trước
+                  <Copy /> {l.copy}
                 </Button>
               </div>
             }
@@ -125,26 +128,26 @@ function BudgetsView() {
         <div className="space-y-4">
           <Card className="p-5">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Stat label="Tổng ngân sách" value={formatVND(totals!.limit)} />
-              <Stat label="Đã chi" value={formatVND(totals!.spent)} />
-              <Stat label="Còn lại" value={formatVND(totals!.remaining)} />
-              <Stat label="Đã dùng" value={`${totals!.percentage}%`} tone={totals!.percentage > 100 ? "danger" : undefined} />
+              <Stat label={l.total} value={formatVND(totals!.limit)} />
+              <Stat label={l.spent} value={formatVND(totals!.spent)} />
+              <Stat label={l.remaining} value={formatVND(totals!.remaining)} />
+              <Stat label={l.used} value={`${totals!.percentage}%`} tone={totals!.percentage > 100 ? "danger" : undefined} />
             </div>
             <Progress
               className="mt-4"
               value={totals!.percentage}
               tone={totals!.percentage > 100 ? "danger" : totals!.percentage >= 80 ? "warning" : "primary"}
-              label="Tổng ngân sách đã dùng"
+              label={l.totalUsed}
             />
             {overCount > 0 && (
               <p className="mt-3 text-[13px] text-danger">
-                {overCount} danh mục đã vượt ngân sách trong {monthLabel(month).toLowerCase()}.
+                {l.overCount(overCount, monthName)}
               </p>
             )}
           </Card>
 
           <Card>
-            <CardHeader title="Theo danh mục" description={`${data.items.length} danh mục có ngân sách`} />
+            <CardHeader title={l.byCategory} description={l.categoriesCount(data.items.length)} />
             <CardContent className="divide-y divide-border pt-1">
               {data.items.map((item) => (
                 <BudgetRow
@@ -152,10 +155,10 @@ function BudgetsView() {
                   item={item}
                   actions={
                     <div className="flex shrink-0 items-center">
-                      <Button variant="ghost" size="icon-sm" onClick={() => openDialog(item)} aria-label={`Sửa ngân sách ${item.category.name}`}>
+                      <Button variant="ghost" size="icon-sm" onClick={() => openDialog(item)} aria-label={l.editLabel(fmt.category(item.category.name))}>
                         <Pencil />
                       </Button>
-                      <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(item)} aria-label={`Xóa ngân sách ${item.category.name}`}>
+                      <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(item)} aria-label={l.deleteLabel(fmt.category(item.category.name))}>
                         <Trash2 />
                       </Button>
                     </div>

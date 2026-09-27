@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import type { TransactionDTO } from "@/types/finance";
 import type { TransactionFilters } from "@/hooks/use-transactions";
+import { useI18n } from "@/i18n/provider";
 
 type Sort = NonNullable<TransactionFilters["sort"]>;
 
@@ -35,23 +36,25 @@ function SortHeader({ label, field, sort, onSort, className }: { label: string; 
 
 /** Bảng giao dịch cho desktop (mobile dùng TransactionListItem). */
 export function TransactionTable({ items, unusual, sort, onSort, onOpen }: Props) {
+  const { t, fmt } = useI18n();
+  const l = t.transactions.table;
   return (
     <table className="w-full text-sm">
       <thead className="border-b border-border text-left text-[12px] text-muted">
         <tr>
           <th scope="col" className="px-4 py-2.5 font-medium">
-            Giao dịch
+            {l.transaction}
           </th>
           <th scope="col" className="px-4 py-2.5 font-medium">
-            Danh mục
+            {l.category}
           </th>
-          <SortHeader label="Ngày" field="date" sort={sort} onSort={onSort} />
+          <SortHeader label={l.date} field="date" sort={sort} onSort={onSort} />
           <th scope="col" className="px-4 py-2.5 font-medium">
-            Loại
+            {l.type}
           </th>
-          <SortHeader label="Số tiền" field="amount" sort={sort} onSort={onSort} className="text-right [&>button]:ml-auto [&>button]:flex" />
+          <SortHeader label={l.amount} field="amount" sort={sort} onSort={onSort} className="text-right [&>button]:ml-auto [&>button]:flex" />
           <th scope="col" className="w-10 px-2 py-2.5">
-            <span className="sr-only">Thao tác</span>
+            <span className="sr-only">{l.actions}</span>
           </th>
         </tr>
       </thead>
@@ -66,18 +69,18 @@ export function TransactionTable({ items, unusual, sort, onSort, onOpen }: Props
               <div className="flex items-center gap-3">
                 <CategoryIcon icon={tx.category.icon} color={tx.category.color} size="sm" />
                 <span className="truncate font-medium text-foreground">{tx.description}</span>
-                {tx.isRecurring && <Repeat className="size-3.5 shrink-0 text-subtle" aria-label="Định kỳ" />}
+                {tx.isRecurring && <Repeat className="size-3.5 shrink-0 text-subtle" aria-label={l.recurring} />}
                 {unusual.has(tx.id) && (
-                  <span title="Khoản chi này cao hơn mức thường thấy">
-                    <AlertTriangle className="size-3.5 shrink-0 text-warning" aria-label="Cao hơn thường lệ" />
+                  <span title={l.unusualHint}>
+                    <AlertTriangle className="size-3.5 shrink-0 text-warning" aria-label={l.unusual} />
                   </span>
                 )}
               </div>
             </td>
-            <td className="px-4 py-3 whitespace-nowrap text-muted">{tx.category.name}</td>
+            <td className="px-4 py-3 whitespace-nowrap text-muted">{fmt.category(tx.category.name)}</td>
             <td className="tabular px-4 py-3 whitespace-nowrap text-muted">{formatDate(tx.date)}</td>
             <td className="px-4 py-3">
-              <Badge tone={tx.type === "income" ? "success" : "neutral"}>{tx.type === "income" ? "Thu" : "Chi"}</Badge>
+              <Badge tone={tx.type === "income" ? "success" : "neutral"}>{tx.type === "income" ? t.common.incomeShort : t.common.expenseShort}</Badge>
             </td>
             <td className="px-4 py-3 text-right">
               <Amount value={tx.amount} type={tx.type} />
@@ -89,7 +92,7 @@ export function TransactionTable({ items, unusual, sort, onSort, onOpen }: Props
                   e.stopPropagation();
                   onOpen(tx);
                 }}
-                aria-label={`Xem chi tiết ${tx.description}`}
+                aria-label={l.viewDetail(tx.description)}
                 className="rounded-md p-1 text-subtle opacity-60 transition hover:bg-surface-secondary hover:text-foreground group-hover:opacity-100"
               >
                 <ChevronRight className="size-4" />

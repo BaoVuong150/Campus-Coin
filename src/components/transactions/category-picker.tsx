@@ -4,6 +4,7 @@ import { useRef, type KeyboardEvent } from "react";
 import { CategoryIcon } from "@/components/common/category-icon";
 import { cn } from "@/lib/utils/cn";
 import type { CategoryDTO } from "@/types/finance";
+import { useI18n } from "@/i18n/provider";
 
 interface CategoryPickerProps {
   categories: CategoryDTO[];
@@ -16,6 +17,7 @@ interface CategoryPickerProps {
 /** Lưới chọn danh mục (icon + tên), dạng radiogroup hỗ trợ phím mũi tên. */
 export function CategoryPicker({ categories, value, onChange, labelledBy, invalid }: CategoryPickerProps) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { fmt } = useI18n();
   const activeIndex = Math.max(0, categories.findIndex((c) => c.id === value));
 
   const onKeyDown = (e: KeyboardEvent, index: number) => {
@@ -56,7 +58,7 @@ export function CategoryPicker({ categories, value, onChange, labelledBy, invali
             )}
           >
             <CategoryIcon icon={c.icon} color={c.color} size="sm" />
-            <span className="line-clamp-2">{c.name}</span>
+            <span className="line-clamp-2">{fmt.category(c.name)}</span>
           </button>
         );
       })}

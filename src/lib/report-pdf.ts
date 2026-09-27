@@ -1,6 +1,8 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import { formatDate } from "@/lib/utils/date";
-import { formatCompact, formatPercent, formatVND } from "@/lib/utils/money";
+import { formatPercent, formatVND } from "@/lib/utils/money";
+import type { Messages } from "@/i18n";
+import type { Formatters } from "@/i18n/format";
 import type { ReportDTO } from "@/types/finance";
 
 /** Màu in cố định (PDF luôn nền trắng, không phụ thuộc theme). */
@@ -29,7 +31,11 @@ async function loadFont(url: string): Promise<string> {
 
 class Writer {
   y = M;
-  constructor(public doc: JsPDF) {}
+  constructor(
+    public doc: JsPDF,
+    public t: Messages,
+    public fmt: Formatters
+  ) {}
 
   font(weight: "normal" | "bold", size: number, color = INK) {
     this.doc.setFont(FONT, weight);
@@ -57,7 +63,7 @@ class Writer {
 }
 
 function header(w: Writer, report: ReportDTO, userName: string) {
-  const { doc } = w;
+  const { doc, t, fmt } = w;
   doc.setFillColor(PRIMARY);
   doc.roundedRect(M, M, 11, 11, 2.5, 2.5, "F");
   doc.setDrawColor("#ffffff");
@@ -77,13 +83,13 @@ function header(w: Writer, report: ReportDTO, userName: string) {
   w.font("bold", 13);
   doc.text("Campus Coin", M + 14, M + 4.5);
   w.font("normal", 8.5, MUTED);
-  doc.text("Quản lý tiền thông minh cho đời sống sinh viên", M + 14, M + 9);
+  doc.text(t.brand.subtitle, M + 14, M + 9);
 
   w.font("bold", 10);
-  doc.text("BÁO CÁO TÀI CHÍNH", PAGE_W - M, M + 3.5, { align: "right" });
+  doc.text(t.pdf.title, PAGE_W - M, M + 3.5, { align: "right" });
   w.font("normal", 8.5, MUTED);
-  doc.text(`${userName} · ${report.label}`, PAGE_W - M, M + 8, { align: "right" });
-  doc.text(`${report.from} – ${report.to} · Xuất ngày ${formatDate(new Date())}`, PAGE_W - M, M + 12, { align: "right" });
+  doc.text(`${userName} · ${fmt.period(report.period, report.anchor)}`, PAGE_W - M, M + 8, { align: "right" });
+  doc.text(`${formatDate(report.from)} – ${formatDate(report.to)} · ${t.pdf.exportedOn(formatDate(new Date()))}`, PAGE_W - M, M + 12, { align: "right" });
 
   w.y = M + 18;
   doc.setDrawColor(LINE);
@@ -92,11 +98,12 @@ function header(w: Writer, report: ReportDTO, userName: string) {
 }
 
 function kpis(w: Writer, report: ReportDTO) {
+  const { t } = w;
   const items = [
-    ["Thu nhập", formatVND(report.totals.income)],
-    ["Chi tiêu", formatVND(report.totals.expense)],
-    ["Chênh lệch", `${report.totals.net < 0 ? "−" : ""}${formatVND(Math.abs(report.totals.net))}`],
-    ["Chi TB / ngày", formatVND(report.totals.averageDailySpend)],
+    [t.pdf.income, formatVND(report.totals.income)],
+    [t.pdf.expense, formatVND(report.totals.expense)],
+    [t.pdf.net, `${report.totals.net < 0 ? "−" : ""}${formatVND(Math.abs(report.totals.net))}`],
+    [t.pdf.avgDaily, formatVND(report.totals.averageDailySpend)],
   ];
   const gap = 3;
   const boxW = (CONTENT_W - gap * (items.length - 1)) / items.length;
@@ -111,14 +118,14 @@ function kpis(w: Writer, report: ReportDTO) {
   });
   w.y += 21;
   w.font("normal", 8.5, MUTED);
-  w.doc.text(`${report.totals.transactionCount} giao dịch trong kỳ.`, M, w.y);
+  w.doc.text(t.pdf.transactionCount(report.totals.transactionCount), M, w.y);
   w.y += 4;
 }
 
 function trendChart(w: Writer, report: ReportDTO) {
   const data = report.trend;
   if (data.every((d) => d.income === 0 && d.expense === 0)) return;
-  w.heading("Thu nhập và chi tiêu");
+  w.heading(w.t.pdf.trend);
   const chartH = 52;
   w.ensure(chartH + 12);
   const { doc } = w;
@@ -132,7 +139,7 @@ function trendChart(w: Writer, report: ReportDTO) {
   for (let i = 0; i <= 4; i++) {
     const y = top + chartH - (chartH * i) / 4;
     doc.line(left, y, left + width, y);
-    doc.text(formatCompact((max * i) / 4), left - 2, y + 1, { align: "right" });
+    doc.text(w.fmt.compact((max * i) / 4), left - 2, y + 1, { align: "right" });
   }
 
   const slot = width / data.length;
@@ -146,7 +153,7 @@ function trendChart(w: Writer, report: ReportDTO) {
     if (hIn > 0) doc.rect(x - barW, top + chartH - hIn, barW - 0.3, hIn, "F");
     doc.setFillColor(EXPENSE);
     if (hEx > 0) doc.rect(x + 0.3, top + chartH - hEx, barW - 0.3, hEx, "F");
-    if (i % labelEvery === 0) doc.text(d.label, x, top + chartH + 4, { align: "center" });
+    if (i % labelEvery === 0) doc.text(w.fmt.bucket(d.key), x, top + chartH + 4, { align: "center" });
   });
 
   w.y = top + chartH + 9;
@@ -156,14 +163,14 @@ function trendChart(w: Writer, report: ReportDTO) {
     w.font("normal", 8, MUTED);
     doc.text(text, x + 4, w.y);
   };
-  legend(left, INCOME, "Thu nhập");
-  legend(left + 24, EXPENSE, "Chi tiêu");
+  legend(left, INCOME, w.t.pdf.income);
+  legend(left + 24, EXPENSE, w.t.pdf.expense);
   w.y += 5;
 }
 
 function categoryTable(w: Writer, report: ReportDTO) {
   if (report.categories.length === 0) return;
-  w.heading("Chi tiêu theo danh mục");
+  w.heading(w.t.pdf.categories);
   const { doc } = w;
   const barX = M + 62;
   const barW = CONTENT_W - 62 - 50;
@@ -173,7 +180,7 @@ function categoryTable(w: Writer, report: ReportDTO) {
     doc.setFillColor(color);
     doc.rect(M, w.y - 2.6, 2.8, 2.8, "F");
     w.font("normal", 9);
-    doc.text(c.name, M + 5, w.y);
+    doc.text(w.fmt.category(c.name), M + 5, w.y);
     doc.setFillColor("#f2f4f3");
     doc.rect(barX, w.y - 2.6, barW, 3, "F");
     doc.setFillColor(color);
@@ -187,7 +194,7 @@ function categoryTable(w: Writer, report: ReportDTO) {
 
 function largestTable(w: Writer, report: ReportDTO) {
   if (report.largestTransactions.length === 0) return;
-  w.heading("Giao dịch chi lớn nhất");
+  w.heading(w.t.pdf.largest);
   report.largestTransactions.forEach((t) => {
     w.ensure(7);
     w.font("normal", 9, MUTED);
@@ -195,7 +202,7 @@ function largestTable(w: Writer, report: ReportDTO) {
     w.font("normal", 9);
     w.doc.text(w.doc.splitTextToSize(t.description, 90)[0] as string, M + 24, w.y);
     w.font("normal", 9, MUTED);
-    w.doc.text(t.category.name, M + 118, w.y);
+    w.doc.text(w.fmt.category(t.category.name), M + 118, w.y);
     w.font("bold", 9);
     w.doc.text(formatVND(t.amount), PAGE_W - M, w.y, { align: "right" });
     w.y += 7;
@@ -204,33 +211,33 @@ function largestTable(w: Writer, report: ReportDTO) {
 
 function budgetTable(w: Writer, report: ReportDTO) {
   if (report.budgetPerformance.length === 0) return;
-  w.heading("Hiệu quả ngân sách");
+  w.heading(w.t.pdf.budgets);
   report.budgetPerformance.forEach((b) => {
     w.ensure(7);
     w.font("normal", 9);
-    w.doc.text(b.categoryName, M, w.y);
+    w.doc.text(w.fmt.category(b.categoryName), M, w.y);
     w.font("normal", 9, MUTED);
     w.doc.text(`${formatVND(b.spent)} / ${formatVND(b.limit)}`, M + 110, w.y, { align: "right" });
     w.font("bold", 9, b.percentage > 100 ? EXPENSE : INK);
-    w.doc.text(`${b.percentage}%${b.percentage > 100 ? " (vượt)" : ""}`, PAGE_W - M, w.y, { align: "right" });
+    w.doc.text(`${b.percentage}%${b.percentage > 100 ? w.t.pdf.exceeded : ""}`, PAGE_W - M, w.y, { align: "right" });
     w.y += 7;
   });
 }
 
-function footer(doc: JsPDF) {
+function footer(doc: JsPDF, t: Messages) {
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
     doc.setFont(FONT, "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(MUTED);
-    doc.text("Campus Coin – báo cáo được tạo từ dữ liệu bạn ghi nhận.", M, PAGE_H - 8);
-    doc.text(`Trang ${i}/${pages}`, PAGE_W - M, PAGE_H - 8, { align: "right" });
+    doc.text(t.pdf.footer, M, PAGE_H - 8);
+    doc.text(t.pdf.page(i, pages), PAGE_W - M, PAGE_H - 8, { align: "right" });
   }
 }
 
 /** Dựng PDF báo cáo từ dữ liệu (không chụp màn hình): chữ tiếng Việt dạng vector, biểu đồ vẽ bằng hình khối. */
-export async function exportReportPdf(report: ReportDTO, userName: string): Promise<void> {
+export async function exportReportPdf(report: ReportDTO, userName: string, t: Messages, fmt: Formatters): Promise<void> {
   const [{ jsPDF }, regular, bold] = await Promise.all([
     import("jspdf"),
     loadFont("/fonts/BeVietnamPro-Regular.ttf"),
@@ -241,17 +248,18 @@ export async function exportReportPdf(report: ReportDTO, userName: string): Prom
   doc.addFont("BeVietnamPro-Regular.ttf", FONT, "normal");
   doc.addFileToVFS("BeVietnamPro-SemiBold.ttf", bold);
   doc.addFont("BeVietnamPro-SemiBold.ttf", FONT, "bold");
-  doc.setProperties({ title: `Campus Coin – ${report.label}`, author: userName });
+  const label = fmt.period(report.period, report.anchor);
+  doc.setProperties({ title: `Campus Coin – ${label}`, author: userName });
 
-  const w = new Writer(doc);
+  const w = new Writer(doc, t, fmt);
   header(w, report, userName);
   kpis(w, report);
   trendChart(w, report);
   categoryTable(w, report);
   largestTable(w, report);
   budgetTable(w, report);
-  footer(doc);
+  footer(doc, t);
 
-  const safeLabel = report.label.replace(/[^\p{L}\p{N}]+/gu, "-");
-  doc.save(`CampusCoin-BaoCao-${safeLabel}.pdf`);
+  const safeLabel = label.replace(/[^\p{L}\p{N}]+/gu, "-");
+  doc.save(`${t.pdf.fileName}-${safeLabel}.pdf`);
 }

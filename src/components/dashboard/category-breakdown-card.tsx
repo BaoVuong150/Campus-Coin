@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/use-categories";
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { useCategoryBreakdown } from "@/hooks/use-dashboard";
-import { monthLabel, monthRange, toYmd } from "@/lib/utils/date";
+import { monthRange, toYmd } from "@/lib/utils/date";
+import { useI18n } from "@/i18n/provider";
 
 /** Thứ tự cố định của danh mục chi để gán màu theo danh mục (không theo thứ hạng). */
 export function useExpenseCategoryOrder(): number[] {
@@ -19,6 +20,8 @@ export function useExpenseCategoryOrder(): number[] {
 }
 
 export function CategoryBreakdownCard({ month }: { month: string }) {
+  const { t, fmt } = useI18n();
+  const l = t.dashboard.categories;
   const router = useRouter();
   const colors = useChartColors();
   const order = useExpenseCategoryOrder();
@@ -32,7 +35,7 @@ export function CategoryBreakdownCard({ month }: { month: string }) {
 
   return (
     <Card className="min-w-0">
-      <CardHeader title="Chi tiêu theo danh mục" description={monthLabel(month)} />
+      <CardHeader title={l.title} description={fmt.month(month)} />
       <CardContent>
         {error ? (
           <ErrorState onRetry={reload} />
@@ -46,7 +49,7 @@ export function CategoryBreakdownCard({ month }: { month: string }) {
             </div>
           </div>
         ) : data.length === 0 ? (
-          <EmptyState compact icon={<PieChart />} title="Chưa có khoản chi nào" description="Chi tiêu tháng này sẽ được phân tích theo danh mục tại đây." />
+          <EmptyState compact icon={<PieChart />} title={l.emptyTitle} description={l.emptyBody} />
         ) : (
           <CategoryDonut
             slices={slices}

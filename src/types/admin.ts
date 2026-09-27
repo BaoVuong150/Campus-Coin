@@ -20,8 +20,8 @@ export interface AdminOverviewDTO {
     transactionsThisMonth: number;
     volumeThisMonth: number;
   };
-  userGrowth: { key: string; label: string; newUsers: number; totalUsers: number }[];
-  transactionVolume: { key: string; label: string; count: number; volume: number }[];
+  userGrowth: { key: string; newUsers: number; totalUsers: number }[];
+  transactionVolume: { key: string; count: number; volume: number }[];
   categoryDistribution: { name: string; amount: number; percentage: number; color: string | null }[];
   recentUsers: AdminUserDTO[];
 }

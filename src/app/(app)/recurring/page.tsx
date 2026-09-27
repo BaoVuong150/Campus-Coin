@@ -11,10 +11,10 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SkeletonRows } from "@/components/ui/skeleton";
-import { FREQUENCY_LABELS, RECURRING_STATUS_LABELS, type RecurringStatus } from "@/constants/finance";
+import type { RecurringStatus } from "@/constants/finance";
+import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/context/ToastContext";
 import { useRecurring, useRecurringMutations } from "@/hooks/use-recurring";
-import { errorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils/date";
 import { formatVND } from "@/lib/utils/money";
 import type { RecurringDTO } from "@/types/finance";
@@ -24,14 +24,16 @@ const STATUS_TONE: Record<RecurringStatus, BadgeTone> = { active: "success", pau
 function RecurringRow({ item, onEdit }: { item: RecurringDTO; onEdit: (item: RecurringDTO) => void }) {
   const { update, remove } = useRecurringMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.recurring;
   const [busy, setBusy] = useState(false);
 
   const setStatus = async (status: RecurringStatus) => {
     if (status === "cancelled") {
       const ok = await confirm({
-        title: "Hủy khoản định kỳ?",
-        message: `"${item.name}" sẽ không tự ghi giao dịch nữa. Các giao dịch đã ghi vẫn được giữ lại.`,
-        confirmText: "Hủy định kỳ",
+        title: l.cancelTitle,
+        message: l.cancelMessage(item.name),
+        confirmText: l.cancelConfirm,
         isDestructive: true,
       });
       if (!ok) return;
@@ -39,9 +41,9 @@ function RecurringRow({ item, onEdit }: { item: RecurringDTO; onEdit: (item: Rec
     setBusy(true);
     try {
       await update(item.id, { status });
-      toast.success(`Đã chuyển sang "${RECURRING_STATUS_LABELS[status]}"`);
+      toast.success(l.statusChanged(l.statuses[status]));
     } catch (e) {
-      toast.error("Không thể cập nhật", errorMessage(e));
+      toast.error(l.failed, fmt.error(e));
     } finally {
       setBusy(false);
     }
@@ -49,17 +51,17 @@ function RecurringRow({ item, onEdit }: { item: RecurringDTO; onEdit: (item: Rec
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: "Xóa khoản định kỳ?",
-      message: `Xóa "${item.name}". Các giao dịch đã ghi trước đó vẫn được giữ lại.`,
-      confirmText: "Xóa",
+      title: l.deleteTitle,
+      message: l.deleteMessage(item.name),
+      confirmText: t.common.delete,
       isDestructive: true,
     });
     if (!ok) return;
     try {
       await remove(item.id);
-      toast.success("Đã xóa khoản định kỳ");
+      toast.success(l.deleted);
     } catch (e) {
-      toast.error("Không thể xóa", errorMessage(e));
+      toast.error(l.deleteFailed, fmt.error(e));
     }
   };
 
@@ -70,11 +72,11 @@ function RecurringRow({ item, onEdit }: { item: RecurringDTO; onEdit: (item: Rec
         <div className="min-w-0">
           <p className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
             <span className="truncate">{item.name}</span>
-            <Badge tone={STATUS_TONE[item.status]}>{RECURRING_STATUS_LABELS[item.status]}</Badge>
+            <Badge tone={STATUS_TONE[item.status]}>{l.statuses[item.status]}</Badge>
           </p>
           <p className="text-[12px] text-muted">
-            {FREQUENCY_LABELS[item.frequency]} · {item.category.name}
-            {item.status === "active" && <> · Kỳ tới {formatDate(item.nextRunDate)}</>}
+            {l.frequencies[item.frequency]} · {fmt.category(item.category.name)}
+            {item.status === "active" && <> · {l.nextRun(formatDate(item.nextRunDate))}</>}
           </p>
         </div>
       </div>
@@ -82,24 +84,24 @@ function RecurringRow({ item, onEdit }: { item: RecurringDTO; onEdit: (item: Rec
         <Amount value={item.amount} type={item.type} className="text-sm sm:mr-2" />
         <div className="flex items-center">
           {item.status === "active" && (
-            <Button variant="ghost" size="icon-sm" onClick={() => setStatus("paused")} disabled={busy} aria-label={`Tạm dừng ${item.name}`} title="Tạm dừng">
+            <Button variant="ghost" size="icon-sm" onClick={() => setStatus("paused")} disabled={busy} aria-label={l.actionLabel(l.pause, item.name)} title={l.pause}>
               <Pause />
             </Button>
           )}
           {item.status !== "active" && (
-            <Button variant="ghost" size="icon-sm" onClick={() => setStatus("active")} disabled={busy} aria-label={`Tiếp tục ${item.name}`} title="Tiếp tục">
+            <Button variant="ghost" size="icon-sm" onClick={() => setStatus("active")} disabled={busy} aria-label={l.actionLabel(l.resume, item.name)} title={l.resume}>
               <Play />
             </Button>
           )}
           {item.status !== "cancelled" && (
-            <Button variant="ghost" size="icon-sm" onClick={() => setStatus("cancelled")} disabled={busy} aria-label={`Hủy ${item.name}`} title="Hủy">
+            <Button variant="ghost" size="icon-sm" onClick={() => setStatus("cancelled")} disabled={busy} aria-label={l.actionLabel(l.cancel, item.name)} title={l.cancel}>
               <XCircle />
             </Button>
           )}
-          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(item)} aria-label={`Sửa ${item.name}`} title="Sửa">
+          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(item)} aria-label={l.actionLabel(t.common.edit, item.name)} title={t.common.edit}>
             <Pencil />
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={handleDelete} aria-label={`Xóa ${item.name}`} title="Xóa">
+          <Button variant="ghost" size="icon-sm" onClick={handleDelete} aria-label={l.actionLabel(t.common.delete, item.name)} title={t.common.delete}>
             <Trash2 />
           </Button>
         </div>
@@ -109,6 +111,8 @@ function RecurringRow({ item, onEdit }: { item: RecurringDTO; onEdit: (item: Rec
 }
 
 export default function RecurringPage() {
+  const { t } = useI18n();
+  const l = t.recurring;
   const { data, error, reload } = useRecurring();
   const [dialog, setDialog] = useState<{ item: RecurringDTO | null } | null>(null);
 
@@ -133,11 +137,11 @@ export default function RecurringPage() {
   return (
     <div>
       <PageHeader
-        title="Định kỳ & chi phí cố định"
-        description="Khoản thu chi lặp lại được tự động ghi nhận và dùng để dự báo cuối tháng."
+        title={l.title}
+        description={l.description}
         actions={
           <Button onClick={() => setDialog({ item: null })}>
-            <Plus /> Khoản định kỳ mới
+            <Plus /> {l.new}
           </Button>
         }
       />
@@ -154,11 +158,11 @@ export default function RecurringPage() {
         <Card>
           <EmptyState
             icon={<Repeat />}
-            title="Chưa có khoản định kỳ"
-            description="Thêm tiền nhà, học phí, Netflix hay tiền trợ cấp hàng tháng để app tự ghi nhận và dự báo chính xác hơn."
+            title={l.emptyTitle}
+            description={l.emptyBody}
             action={
               <Button size="sm" onClick={() => setDialog({ item: null })}>
-                <Plus /> Thêm khoản định kỳ
+                <Plus /> {l.add}
               </Button>
             }
           />
@@ -167,16 +171,16 @@ export default function RecurringPage() {
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="p-5">
-              <p className="text-[13px] text-muted">Chi phí cố định mỗi tháng</p>
+              <p className="text-[13px] text-muted">{l.fixedMonthly}</p>
               <p className="tabular mt-1 text-2xl font-semibold tracking-tight text-foreground">{formatVND(fixedMonthly)}</p>
             </Card>
             <Card className="p-5">
-              <p className="text-[13px] text-muted">Thu nhập định kỳ mỗi tháng</p>
+              <p className="text-[13px] text-muted">{l.incomeMonthly}</p>
               <p className="tabular mt-1 text-2xl font-semibold tracking-tight text-foreground">{formatVND(incomeMonthly)}</p>
             </Card>
           </div>
-          {fixed.length > 0 && section("Chi phí cố định", "Tiền nhà, internet, học phí, điện thoại…", fixed)}
-          {others.length > 0 && section("Khoản định kỳ khác", "Thu nhập và các khoản lặp lại không cố định", others)}
+          {fixed.length > 0 && section(l.fixedSection, l.fixedSectionHint, fixed)}
+          {others.length > 0 && section(l.otherSection, l.otherSectionHint, others)}
         </div>
       )}
 

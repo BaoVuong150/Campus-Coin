@@ -2,9 +2,10 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Plus, Receipt, SearchX } from "lucide-react";
+import { FileUp, Plus, Receipt, SearchX } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { PageHeader } from "@/components/layout/page-header";
+import { CsvImportDialog } from "@/components/transactions/csv-import-dialog";
 import { TransactionFiltersBar } from "@/components/transactions/transaction-filters";
 import { TransactionListItem } from "@/components/transactions/transaction-list-item";
 import { useTransactionUI } from "@/components/transactions/transaction-provider";
@@ -18,6 +19,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useTransactions, type TransactionFilters } from "@/hooks/use-transactions";
 import { apiFetch } from "@/lib/api-client";
 import { formatVND } from "@/lib/utils/money";
+import { useI18n } from "@/i18n/provider";
 import type { TransactionDTO } from "@/types/finance";
 
 const SORTS = ["date_desc", "date_asc", "amount_desc", "amount_asc"] as const;
@@ -51,6 +53,9 @@ function TransactionsView() {
   const { data, error, reload, isValidating } = useTransactions(filters);
   const { data: categories } = useCategories();
   const { openCreate, openDetail } = useTransactionUI();
+  const { t } = useI18n();
+  const l = t.transactions;
+  const [importOpen, setImportOpen] = useState(false);
   const unusual = useMemo(() => new Set(data?.unusualIds ?? []), [data]);
   const [resetKey, setResetKey] = useState(0);
   const reset = useCallback(() => {
@@ -90,12 +95,17 @@ function TransactionsView() {
   return (
     <div>
       <PageHeader
-        title="Giao dịch"
-        description="Toàn bộ khoản thu chi của bạn."
+        title={l.title}
+        description={l.description}
         actions={
-          <Button onClick={() => openCreate()}>
-            <Plus /> Thêm giao dịch
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <FileUp /> {l.import}
+            </Button>
+            <Button onClick={() => openCreate()}>
+              <Plus /> {l.add}
+            </Button>
+          </>
         }
       />
 
@@ -111,36 +121,50 @@ function TransactionsView() {
       {data && data.total > 0 && (
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-muted" aria-live="polite">
           <span>
-            <span className="tabular font-medium text-foreground">{data.total}</span> giao dịch
+            <span className="tabular font-medium text-foreground">{data.total}</span> {l.count}
           </span>
           <span>
-            Thu <span className="tabular font-medium text-success">{formatVND(data.totals.income)}</span>
+            {t.common.incomeShort} <span className="tabular font-medium text-success">{formatVND(data.totals.income)}</span>
           </span>
           <span>
-            Chi <span className="tabular font-medium text-danger">{formatVND(data.totals.expense)}</span>
+            {t.common.expenseShort} <span className="tabular font-medium text-danger">{formatVND(data.totals.expense)}</span>
           </span>
         </div>
       )}
 
       <Card className="mt-3 overflow-hidden">
         {error ? (
-          <ErrorState message="Không thể tải giao dịch." onRetry={reload} />
+          <ErrorState message={l.error} onRetry={reload} />
         ) : !data ? (
           <div className="px-4">
             <SkeletonRows rows={8} />
           </div>
         ) : data.items.length === 0 ? (
           hasFilters ? (
-            <EmptyState icon={<SearchX />} title="Không có giao dịch phù hợp" description="Thử đổi từ khóa hoặc bỏ bớt bộ lọc." action={<Button variant="outline" size="sm" onClick={reset}>Xóa bộ lọc</Button>} />
+            <EmptyState
+              icon={<SearchX />}
+              title={l.noMatchTitle}
+              description={l.noMatchBody}
+              action={
+                <Button variant="outline" size="sm" onClick={reset}>
+                  {l.clearFilters}
+                </Button>
+              }
+            />
           ) : (
             <EmptyState
               icon={<Receipt />}
-              title="Chưa có giao dịch nào"
-              description="Theo dõi khoản thu chi đầu tiên để bắt đầu."
+              title={l.emptyTitle}
+              description={l.emptyBody}
               action={
-                <Button size="sm" onClick={() => openCreate()}>
-                  <Plus /> Thêm giao dịch
-                </Button>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button size="sm" onClick={() => openCreate()}>
+                    <Plus /> {l.add}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                    <FileUp /> {l.import}
+                  </Button>
+                </div>
               }
             />
           )
@@ -162,6 +186,8 @@ function TransactionsView() {
           </div>
         )}
       </Card>
+
+      {importOpen && <CsvImportDialog open onClose={() => setImportOpen(false)} />}
     </div>
   );
 }

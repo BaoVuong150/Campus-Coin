@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/context/ToastContext";
 import { useTransactionMutations } from "@/hooks/use-transactions";
-import { errorMessage } from "@/lib/api-client";
+import { useI18n } from "@/i18n/provider";
 import { formatDate, formatDateTime } from "@/lib/utils/date";
 import type { TransactionDTO } from "@/types/finance";
 
@@ -32,24 +32,26 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export function TransactionDetailSheet({ transaction, unusual, onClose, onEdit }: Props) {
   const { remove } = useTransactionMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const d = t.transactions.detail;
   const [deleting, setDeleting] = useState(false);
 
   const handleDelete = async () => {
     if (!transaction) return;
     const ok = await confirm({
-      title: "Xóa giao dịch?",
-      message: `"${transaction.description}" sẽ bị xóa khỏi sổ thu chi. Lịch sử thay đổi vẫn được lưu để đối soát.`,
-      confirmText: "Xóa giao dịch",
+      title: d.deleteTitle,
+      message: d.deleteMessage(transaction.description),
+      confirmText: d.deleteConfirm,
       isDestructive: true,
     });
     if (!ok) return;
     setDeleting(true);
     try {
       await remove(transaction.id);
-      toast.success("Đã xóa giao dịch");
+      toast.success(d.deleted);
       onClose();
     } catch (error) {
-      toast.error("Không thể xóa giao dịch", errorMessage(error));
+      toast.error(d.deleteFailed, fmt.error(error));
     } finally {
       setDeleting(false);
     }
@@ -60,15 +62,15 @@ export function TransactionDetailSheet({ transaction, unusual, onClose, onEdit }
       open={!!transaction}
       onClose={onClose}
       variant="sheet"
-      title="Chi tiết giao dịch"
+      title={d.title}
       footer={
         transaction && (
           <>
             <Button variant="danger" onClick={handleDelete} loading={deleting} className="sm:mr-auto">
-              <Trash2 /> Xóa
+              <Trash2 /> {t.common.delete}
             </Button>
             <Button variant="outline" onClick={() => onEdit(transaction)}>
-              <Pencil /> Chỉnh sửa
+              <Pencil /> {d.edit}
             </Button>
           </>
         )
@@ -82,29 +84,29 @@ export function TransactionDetailSheet({ transaction, unusual, onClose, onEdit }
             <p className="text-sm text-muted">{transaction.description}</p>
             {unusual && (
               <Badge tone="warning">
-                <AlertTriangle /> Khoản chi này cao hơn mức thường thấy
+                <AlertTriangle /> {d.unusual}
               </Badge>
             )}
           </div>
           <dl className="divide-y divide-border">
-            <Row label="Loại">
+            <Row label={d.type}>
               <Badge tone={transaction.type === "income" ? "success" : "danger"}>
-                {transaction.type === "income" ? "Thu nhập" : "Chi tiêu"}
+                {transaction.type === "income" ? t.common.income : t.common.expense}
               </Badge>
             </Row>
-            <Row label="Danh mục">{transaction.category.name}</Row>
-            <Row label="Ngày">{formatDate(transaction.date)}</Row>
-            <Row label="Định kỳ">
+            <Row label={d.category}>{fmt.category(transaction.category.name)}</Row>
+            <Row label={d.date}>{formatDate(transaction.date)}</Row>
+            <Row label={d.recurring}>
               {transaction.isRecurring ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <Repeat className="size-3.5 text-subtle" aria-hidden /> Có
+                  <Repeat className="size-3.5 text-subtle" aria-hidden /> {t.common.yes}
                 </span>
               ) : (
-                "Không"
+                t.common.no
               )}
             </Row>
-            <Row label="Tạo lúc">{formatDateTime(transaction.createdAt)}</Row>
-            {transaction.updatedAt !== transaction.createdAt && <Row label="Cập nhật">{formatDateTime(transaction.updatedAt)}</Row>}
+            <Row label={d.createdAt}>{formatDateTime(transaction.createdAt)}</Row>
+            {transaction.updatedAt !== transaction.createdAt && <Row label={d.updatedAt}>{formatDateTime(transaction.updatedAt)}</Row>}
           </dl>
         </div>
       )}

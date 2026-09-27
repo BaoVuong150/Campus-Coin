@@ -13,6 +13,7 @@ import { SkeletonCard, SkeletonChart } from "@/components/ui/skeleton";
 import { useAdminOverview } from "@/hooks/use-admin";
 import { formatDate } from "@/lib/utils/date";
 import { formatNumber, formatPercent, formatVND } from "@/lib/utils/money";
+import { useI18n } from "@/i18n/provider";
 
 function Kpi({ label, value, hint, icon: Icon }: { label: string; value: string; hint?: string; icon: typeof Users }) {
   return (
@@ -29,10 +30,12 @@ function Kpi({ label, value, hint, icon: Icon }: { label: string; value: string;
 
 export default function AdminDashboardPage() {
   const { data, error, reload } = useAdminOverview();
+  const { t, fmt } = useI18n();
+  const l = t.admin;
 
   return (
     <div>
-      <PageHeader title="Admin Dashboard" description="Tình hình hoạt động toàn hệ thống. Không hiển thị dữ liệu xác thực của người dùng." />
+      <PageHeader title={t.nav.adminDashboard} description={l.dashboardDescription} />
       {error ? (
         <Card>
           <ErrorState onRetry={reload} />
@@ -51,41 +54,41 @@ export default function AdminDashboardPage() {
       ) : (
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Kpi label="Tổng sinh viên" value={formatNumber(data.totals.users)} icon={Users} />
-            <Kpi label="Hoạt động (30 ngày)" value={formatNumber(data.totals.activeUsers)} hint={data.totals.users ? `${formatPercent((data.totals.activeUsers / data.totals.users) * 100, 0)} tổng số` : undefined} icon={Activity} />
-            <Kpi label="Người dùng mới tháng này" value={formatNumber(data.totals.newUsersThisMonth)} icon={UserPlus} />
-            <Kpi label="Giao dịch tháng này" value={formatNumber(data.totals.transactionsThisMonth)} hint={`Tổng: ${formatNumber(data.totals.transactions)} · Giá trị ${formatVND(data.totals.volumeThisMonth)}`} icon={ArrowRightLeft} />
+            <Kpi label={l.totalStudents} value={formatNumber(data.totals.users)} icon={Users} />
+            <Kpi label={l.active30} value={formatNumber(data.totals.activeUsers)} hint={data.totals.users ? l.ofTotal(formatPercent((data.totals.activeUsers / data.totals.users) * 100, 0)) : undefined} icon={Activity} />
+            <Kpi label={l.newThisMonth} value={formatNumber(data.totals.newUsersThisMonth)} icon={UserPlus} />
+            <Kpi label={l.txThisMonth} value={formatNumber(data.totals.transactionsThisMonth)} hint={l.txHint(formatNumber(data.totals.transactions), formatVND(data.totals.volumeThisMonth))} icon={ArrowRightLeft} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="min-w-0">
-              <CardHeader title="Tăng trưởng người dùng" description="Tổng số sinh viên theo tháng" />
+              <CardHeader title={l.growth} description={l.growthHint} />
               <CardContent>
-                <SingleSeriesChart data={data.userGrowth} dataKey="totalUsers" name="Tổng người dùng" kind="area" />
+                <SingleSeriesChart data={data.userGrowth} dataKey="totalUsers" name={l.totalUsers} kind="area" />
               </CardContent>
             </Card>
             <Card className="min-w-0">
-              <CardHeader title="Khối lượng giao dịch" description="Tổng giá trị giao dịch theo tháng" icon={<Banknote />} />
+              <CardHeader title={l.volume} description={l.volumeHint} icon={<Banknote />} />
               <CardContent>
-                <SingleSeriesChart data={data.transactionVolume} dataKey="volume" name="Giá trị" kind="bar" format="money" />
+                <SingleSeriesChart data={data.transactionVolume} dataKey="volume" name={l.value} kind="bar" format="money" />
               </CardContent>
             </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-5">
             <Card className="min-w-0 lg:col-span-2">
-              <CardHeader title="Phân bổ chi tiêu theo danh mục" description="6 tháng gần nhất, toàn hệ thống" />
+              <CardHeader title={l.distribution} description={l.distributionHint} />
               <CardContent className="space-y-3">
                 {data.categoryDistribution.length === 0 ? (
-                  <p className="text-[13px] text-muted">Chưa có dữ liệu.</p>
+                  <p className="text-[13px] text-muted">{l.noData}</p>
                 ) : (
                   data.categoryDistribution.slice(0, 8).map((c) => (
                     <div key={c.name} className="space-y-1">
                       <div className="flex justify-between text-[13px]">
-                        <span className="text-foreground">{c.name}</span>
+                        <span className="text-foreground">{fmt.category(c.name)}</span>
                         <span className="tabular text-muted">{formatPercent(c.percentage, 0)}</span>
                       </div>
-                      <Progress value={c.percentage} label={`Tỷ trọng ${c.name}`} size="sm" tone="info" />
+                      <Progress value={c.percentage} label={l.share(fmt.category(c.name))} size="sm" tone="info" />
                     </div>
                   ))
                 )}
@@ -93,21 +96,21 @@ export default function AdminDashboardPage() {
             </Card>
             <Card className="min-w-0 lg:col-span-3">
               <CardHeader
-                title="Đăng ký gần đây"
+                title={l.recent}
                 action={
                   <Link href="/admin/users" className="text-[13px] font-medium text-primary hover:underline">
-                    Quản lý người dùng
+                    {l.manageUsers}
                   </Link>
                 }
               />
               <CardContent className="overflow-x-auto pt-2">
-                <table className="w-full min-w-[480px] text-sm">
+                <table className="w-full min-w-120 text-sm">
                   <thead className="text-left text-[12px] text-muted">
                     <tr>
-                      <th scope="col" className="py-2 font-medium">Người dùng</th>
-                      <th scope="col" className="py-2 font-medium">Vai trò</th>
-                      <th scope="col" className="py-2 font-medium">Giao dịch</th>
-                      <th scope="col" className="py-2 text-right font-medium">Ngày tạo</th>
+                      <th scope="col" className="py-2 font-medium">{l.user}</th>
+                      <th scope="col" className="py-2 font-medium">{l.role}</th>
+                      <th scope="col" className="py-2 font-medium">{l.transactions}</th>
+                      <th scope="col" className="py-2 text-right font-medium">{l.createdAt}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -123,7 +126,7 @@ export default function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="py-2.5">
-                          <Badge tone={u.role === "admin" ? "info" : "neutral"}>{u.role === "admin" ? "Admin" : "Sinh viên"}</Badge>
+                          <Badge tone={u.role === "admin" ? "info" : "neutral"}>{l.roles[u.role]}</Badge>
                         </td>
                         <td className="tabular py-2.5 text-muted">{formatNumber(u.transactionCount)}</td>
                         <td className="tabular py-2.5 text-right text-muted">{formatDate(u.createdAt)}</td>

@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useGoalMutations, useGoals } from "@/hooks/use-goals";
-import { errorMessage } from "@/lib/api-client";
+import { useI18n } from "@/i18n/provider";
 import { formatDate } from "@/lib/utils/date";
 import { formatVND } from "@/lib/utils/money";
 import type { GoalDTO } from "@/types/finance";
@@ -28,30 +28,32 @@ type DialogState =
 function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState) => void }) {
   const { update, remove } = useGoalMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.goals;
   const completed = goal.status === "completed";
 
   const setStatus = async (status: "active" | "completed") => {
     try {
       await update(goal.id, { status });
-      toast.success(status === "completed" ? `Chúc mừng! Đã hoàn thành "${goal.name}"` : "Đã mở lại mục tiêu");
+      toast.success(status === "completed" ? l.completedToast(goal.name) : l.reopened);
     } catch (e) {
-      toast.error("Không thể cập nhật", errorMessage(e));
+      toast.error(l.updateFailed, fmt.error(e));
     }
   };
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: "Xóa mục tiêu?",
-      message: `"${goal.name}" và lịch sử nạp/rút sẽ bị xóa vĩnh viễn.`,
-      confirmText: "Xóa mục tiêu",
+      title: l.deleteTitle,
+      message: l.deleteMessage(goal.name),
+      confirmText: l.deleteConfirm,
       isDestructive: true,
     });
     if (!ok) return;
     try {
       await remove(goal.id);
-      toast.success("Đã xóa mục tiêu");
+      toast.success(l.deleted);
     } catch (e) {
-      toast.error("Không thể xóa mục tiêu", errorMessage(e));
+      toast.error(l.deleteFailed, fmt.error(e));
     }
   };
 
@@ -62,16 +64,16 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[15px] font-semibold text-foreground">{goal.name}</h2>
           <p className="text-[12px] text-muted">
-            {goal.deadline ? `Hạn ${formatDate(goal.deadline)} · ` : ""}
-            {goalMeta(goal)}
+            {goal.deadline ? `${l.deadline(formatDate(goal.deadline))} · ` : ""}
+            {goalMeta(t, goal)}
           </p>
         </div>
         {completed ? (
           <Badge tone="success">
-            <CheckCircle2 /> Hoàn thành
+            <CheckCircle2 /> {l.completed}
           </Badge>
         ) : goal.overdue ? (
-          <Badge tone="warning">Quá hạn</Badge>
+          <Badge tone="warning">{l.overdue}</Badge>
         ) : null}
       </div>
 
@@ -80,15 +82,16 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
           <p className="tabular text-xl font-semibold tracking-tight text-foreground">{formatVND(goal.currentAmount)}</p>
           <p className="tabular text-[13px] text-muted">/ {formatVND(goal.targetAmount)}</p>
         </div>
-        <Progress className="mt-2" value={goal.percentage} label={`Tiến độ ${goal.name}`} />
+        <Progress className="mt-2" value={goal.percentage} label={l.progressLabel(goal.name)} />
         <div className="mt-2 flex justify-between text-[12px] text-muted">
           <span className="tabular">{goal.percentage}%</span>
           {!completed && goal.monthlyContribution !== null && goal.remaining > 0 && (
             <span>
-              Cần <span className="tabular font-medium text-foreground">{formatVND(goal.monthlyContribution)}</span>/tháng
+              {l.need} <span className="tabular font-medium text-foreground">{formatVND(goal.monthlyContribution)}</span>
+              {l.perMonth}
             </span>
           )}
-          {!completed && goal.remaining === 0 && <span className="text-success">Đã đủ số tiền</span>}
+          {!completed && goal.remaining === 0 && <span className="text-success">{l.reached}</span>}
         </div>
       </div>
 
@@ -96,25 +99,25 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
         {!completed ? (
           <>
             <Button size="sm" onClick={() => onDialog({ kind: "contribution", goal, direction: "deposit" })}>
-              <Plus /> Thêm tiền
+              <Plus /> {l.deposit}
             </Button>
             <Button size="sm" variant="outline" onClick={() => onDialog({ kind: "contribution", goal, direction: "withdraw" })} disabled={goal.currentAmount <= 0}>
-              <Minus /> Rút
+              <Minus /> {l.withdraw}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setStatus("completed")}>
-              <CheckCircle2 /> Hoàn thành
+              <CheckCircle2 /> {l.complete}
             </Button>
           </>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setStatus("active")}>
-            <RotateCcw /> Mở lại
+            <RotateCcw /> {l.reopen}
           </Button>
         )}
         <div className="ml-auto flex">
-          <Button size="icon-sm" variant="ghost" onClick={() => onDialog({ kind: "form", goal })} aria-label={`Sửa ${goal.name}`}>
+          <Button size="icon-sm" variant="ghost" onClick={() => onDialog({ kind: "form", goal })} aria-label={l.editLabel(goal.name)}>
             <Pencil />
           </Button>
-          <Button size="icon-sm" variant="ghost" onClick={handleDelete} aria-label={`Xóa ${goal.name}`}>
+          <Button size="icon-sm" variant="ghost" onClick={handleDelete} aria-label={l.deleteLabel(goal.name)}>
             <Trash2 />
           </Button>
         </div>
@@ -127,6 +130,8 @@ function GoalsView() {
   const params = useSearchParams();
   const router = useRouter();
   const { data, error, reload } = useGoals();
+  const { t } = useI18n();
+  const l = t.goals;
   const [dialog, setDialog] = useState<DialogState>(params.get("new") === "1" ? { kind: "form", goal: null } : null);
 
   const close = () => {
@@ -141,18 +146,18 @@ function GoalsView() {
   return (
     <div>
       <PageHeader
-        title="Mục tiêu tiết kiệm"
-        description={data && active.length > 0 ? `Đang để dành ${formatVND(totalSaved)} cho ${active.length} mục tiêu.` : "Để dành cho những điều quan trọng."}
+        title={l.title}
+        description={data && active.length > 0 ? l.saving(formatVND(totalSaved), active.length) : l.description}
         actions={
           <Button onClick={() => setDialog({ kind: "form", goal: null })}>
-            <Plus /> Mục tiêu mới
+            <Plus /> {l.new}
           </Button>
         }
       />
 
       {error ? (
         <Card>
-          <ErrorState message="Không thể tải mục tiêu." onRetry={reload} />
+          <ErrorState message={l.error} onRetry={reload} />
         </Card>
       ) : !data ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -164,11 +169,11 @@ function GoalsView() {
         <Card>
           <EmptyState
             icon={<Target />}
-            title="Tạo mục tiêu tiết kiệm đầu tiên"
-            description="Laptop mới, chuyến du lịch hay quỹ khẩn cấp – theo dõi tiến độ và số tiền cần để dành mỗi tháng."
+            title={l.emptyTitle}
+            description={l.emptyBody}
             action={
               <Button size="sm" onClick={() => setDialog({ kind: "form", goal: null })}>
-                <Plus /> Tạo mục tiêu
+                <Plus /> {l.create}
               </Button>
             }
           />
@@ -184,7 +189,7 @@ function GoalsView() {
           )}
           {completed.length > 0 && (
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-muted">Đã hoàn thành</h2>
+              <h2 className="mb-3 text-sm font-semibold text-muted">{l.completedSection}</h2>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {completed.map((g) => (
                   <GoalCard key={g.id} goal={g} onDialog={setDialog} />

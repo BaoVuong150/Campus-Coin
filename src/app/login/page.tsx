@@ -3,19 +3,23 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
+import { getServerMessages } from "@/i18n/server";
 
-export const metadata: Metadata = { title: "Đăng nhập" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getServerMessages()).meta.login };
+}
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getServerMessages();
   return (
     <AuthShell
-      title="Đăng nhập"
-      description="Chào mừng trở lại Campus Coin."
+      title={t.auth.loginTitle}
+      description={t.auth.loginSubtitle}
       footer={
         <>
-          Chưa có tài khoản?{" "}
+          {t.auth.noAccount}{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">
-            Đăng ký miễn phí
+            {t.auth.registerFree}
           </Link>
         </>
       }

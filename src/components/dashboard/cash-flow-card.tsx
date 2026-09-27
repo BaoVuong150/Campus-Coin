@@ -10,16 +10,13 @@ import { SkeletonChart } from "@/components/ui/skeleton";
 import { useCashFlow } from "@/hooks/use-dashboard";
 import type { CashFlowPreset } from "@/lib/utils/date";
 import { formatVND } from "@/lib/utils/money";
+import { useI18n } from "@/i18n/provider";
 
-const RANGES: { value: CashFlowPreset; label: string }[] = [
-  { value: "7d", label: "7 ngày" },
-  { value: "30d", label: "30 ngày" },
-  { value: "3m", label: "3 tháng" },
-  { value: "6m", label: "6 tháng" },
-  { value: "12m", label: "12 tháng" },
-];
+const RANGES: CashFlowPreset[] = ["7d", "30d", "3m", "6m", "12m"];
 
 export function CashFlowCard() {
+  const { t } = useI18n();
+  const l = t.dashboard.cashFlow;
   const [range, setRange] = useState<CashFlowPreset>("6m");
   const { data, error, reload } = useCashFlow(range);
   const income = data?.reduce((a, p) => a + p.income, 0) ?? 0;
@@ -29,22 +26,22 @@ export function CashFlowCard() {
   return (
     <Card className="min-w-0">
       <CardHeader
-        title="Dòng tiền"
-        description={data && !empty ? `Thu ${formatVND(income)} · Chi ${formatVND(expense)}` : "Thu nhập và chi tiêu theo thời gian"}
+        title={l.title}
+        description={data && !empty ? l.totals(formatVND(income), formatVND(expense)) : l.description}
         action={
           <div className="max-w-full overflow-x-auto">
-            <Segmented label="Khoảng thời gian" value={range} onChange={setRange} options={RANGES} />
+            <Segmented label={l.range} value={range} onChange={setRange} options={RANGES.map((value) => ({ value, label: l.ranges[value] }))} />
           </div>
         }
         className="flex-col sm:flex-row"
       />
       <CardContent>
         {error ? (
-          <ErrorState message="Không thể tải dòng tiền." onRetry={reload} />
+          <ErrorState message={l.error} onRetry={reload} />
         ) : !data ? (
           <SkeletonChart />
         ) : empty ? (
-          <EmptyState compact icon={<BarChart3 />} title="Chưa có giao dịch trong khoảng này" description="Thêm giao dịch để xem dòng tiền của bạn." />
+          <EmptyState compact icon={<BarChart3 />} title={l.emptyTitle} description={l.emptyBody} />
         ) : (
           <CashFlowBars data={data} />
         )}

@@ -9,13 +9,10 @@ import {
   dayRange,
   daysInMonth,
   elapsedDaysInMonth,
-  formatDate,
-  monthLabel,
   monthRange,
   parseMonthKey,
   quarterRange,
   shiftMonthKey,
-  shortMonthLabel,
   todayYmd,
   vnParts,
   vnStartOfDay,
@@ -110,12 +107,7 @@ async function sumsByPeriod(userId: string, range: DateRange, granularity: "day"
     GROUP BY 1, 2`;
 }
 
-function dayLabel(ymd: string) {
-  const [, m, d] = ymd.split("-");
-  return `${d}/${m}`;
-}
-
-function toPoints(keys: string[], rows: KeyedSum[], granularity: "day" | "month"): CashFlowPoint[] {
+function toPoints(keys: string[], rows: KeyedSum[]): CashFlowPoint[] {
   const map = new Map(keys.map((k) => [k, { income: 0, expense: 0 }]));
   for (const r of rows) {
     const slot = map.get(r.key);
@@ -123,14 +115,13 @@ function toPoints(keys: string[], rows: KeyedSum[], granularity: "day" | "month"
   }
   return keys.map((key) => ({
     key,
-    label: granularity === "day" ? dayLabel(key) : shortMonthLabel(key),
     ...map.get(key)!,
   }));
 }
 
 export async function getCashFlow(userId: string, preset: CashFlowPreset, now = new Date()): Promise<CashFlowPoint[]> {
   const { range, granularity, keys } = cashFlowBuckets(preset, now);
-  return toPoints(keys, await sumsByPeriod(userId, range, granularity), granularity);
+  return toPoints(keys, await sumsByPeriod(userId, range, granularity));
 }
 
 export async function getCategoryBreakdown(
@@ -268,29 +259,27 @@ export async function getInsights(userId: string, now = new Date()): Promise<Fin
 
 const LARGEST_TRANSACTIONS = 5;
 
-function reportRange(period: ReportPeriod, anchor: string): { range: DateRange; label: string; months: string[] } {
+function reportRange(period: ReportPeriod, anchor: string): { range: DateRange; months: string[] } {
   const { year, month } = parseMonthKey(anchor);
   if (period === "month") {
-    return { range: monthRange(anchor), label: monthLabel(anchor), months: [anchor] };
+    return { range: monthRange(anchor), months: [anchor] };
   }
   if (period === "quarter") {
     const quarter = Math.ceil(month / 3);
     const first = `${year}-${String((quarter - 1) * 3 + 1).padStart(2, "0")}`;
     return {
       range: quarterRange(year, quarter),
-      label: `Quý ${quarter}/${year}`,
       months: [0, 1, 2].map((i) => shiftMonthKey(first, i)),
     };
   }
   return {
     range: yearRange(year),
-    label: `Năm ${year}`,
     months: Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`),
   };
 }
 
 export async function getReport(userId: string, period: ReportPeriod, anchor: string, now = new Date()): Promise<ReportDTO> {
-  const { range, label, months } = reportRange(period, anchor);
+  const { range, months } = reportRange(period, anchor);
   const granularity = period === "month" ? "day" : "month";
   const { year, month } = parseMonthKey(anchor);
   const keys =
@@ -332,9 +321,9 @@ export async function getReport(userId: string, period: ReportPeriod, anchor: st
 
   return {
     period,
-    label,
-    from: formatDate(range.start),
-    to: formatDate(new Date(range.end.getTime() - 1)),
+    anchor,
+    from: range.start.toISOString(),
+    to: new Date(range.end.getTime() - 1).toISOString(),
     totals: {
       income: totals.income,
       expense: totals.expense,
@@ -342,7 +331,7 @@ export async function getReport(userId: string, period: ReportPeriod, anchor: st
       transactionCount: totals.count,
       averageDailySpend: effectiveEnd > range.start.getTime() ? Math.round(totals.expense / days) : 0,
     },
-    trend: toPoints(keys, trendRows, granularity),
+    trend: toPoints(keys, trendRows),
     categories,
     largestTransactions: largest.map(toTransactionDTO),
     budgetPerformance: [...perf.values()]

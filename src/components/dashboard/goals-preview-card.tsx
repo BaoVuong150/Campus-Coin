@@ -8,19 +8,22 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useGoals } from "@/hooks/use-goals";
+import { useI18n } from "@/i18n/provider";
 
 const PREVIEW = 3;
 
 export function GoalsPreviewCard() {
   const { data, error, reload } = useGoals();
+  const { t } = useI18n();
+  const l = t.dashboard.goals;
   const active = (data ?? []).filter((g) => g.status === "active");
   return (
     <Card className="min-w-0">
       <CardHeader
-        title="Mục tiêu tiết kiệm"
+        title={l.title}
         action={
           <Link href="/goals" className="text-[13px] font-medium text-primary hover:underline">
-            Xem tất cả
+            {t.common.viewAll}
           </Link>
         }
       />
@@ -33,11 +36,11 @@ export function GoalsPreviewCard() {
           <EmptyState
             compact
             icon={<Target />}
-            title="Tạo mục tiêu tiết kiệm đầu tiên"
-            description="Laptop mới, chuyến du lịch hay quỹ khẩn cấp – đặt mục tiêu để theo dõi tiến độ."
+            title={l.emptyTitle}
+            description={l.emptyBody}
             action={
               <Link href="/goals?new=1" className={buttonClasses("primary", "sm")}>
-                Tạo mục tiêu
+                {l.create}
               </Link>
             }
           />

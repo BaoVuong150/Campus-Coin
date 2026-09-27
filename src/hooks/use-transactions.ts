@@ -60,5 +60,14 @@ export function useTransactionMutations() {
     []
   );
 
-  return { create, update, remove, check };
+  const importRows = useCallback(async (rows: Omit<TransactionInput, "suggested_category_id">[], skipDuplicates: boolean) => {
+    const result = await apiFetch<{ imported: number; skipped: number }>("/api/transactions/import", {
+      method: "POST",
+      body: { rows, skip_duplicates: skipDuplicates },
+    });
+    invalidate(...FINANCE_KEYS);
+    return result;
+  }, []);
+
+  return { create, update, remove, check, importRows };
 }

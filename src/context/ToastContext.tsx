@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { cn } from "@/lib/utils/cn";
+import { useI18n } from "@/i18n/provider";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -58,6 +59,7 @@ const ICON_COLOR: Record<ToastType, string> = {
  * Toast dạng singleton: luôn chỉ một toast trên màn hình, toast mới thay thế toast cũ (quy tắc chống spam trong AGENTS.md).
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [active, setActive] = useState<ToastItem | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seq = useRef(0);
@@ -132,7 +134,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={dismiss}
-              aria-label="Đóng thông báo"
+              aria-label={t.common.closeToast}
               className="rounded-md p-1 text-subtle transition-colors hover:bg-surface-hover hover:text-foreground"
             >
               <X className="size-3.5" />

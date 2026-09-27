@@ -8,7 +8,7 @@ import { Field, Input } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useToast } from "@/context/ToastContext";
 import { useGoalMutations } from "@/hooks/use-goals";
-import { errorMessage } from "@/lib/api-client";
+import { useI18n } from "@/i18n/provider";
 import { todayYmd, toYmd } from "@/lib/utils/date";
 import { formatCurrencyInput, formatVND, parseCurrencyInput } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
@@ -17,6 +17,8 @@ import type { GoalDTO } from "@/types/finance";
 export function GoalFormDialog({ goal, onClose }: { goal: GoalDTO | null; onClose: () => void }) {
   const { create, update } = useGoalMutations();
   const { toast } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.goals.form;
   const [name, setName] = useState(goal?.name ?? "");
   const [target, setTarget] = useState(goal ? formatCurrencyInput(goal.targetAmount) : "");
   const [deadline, setDeadline] = useState(goal?.deadline ? toYmd(new Date(goal.deadline)) : "");
@@ -27,7 +29,7 @@ export function GoalFormDialog({ goal, onClose }: { goal: GoalDTO | null; onClos
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseCurrencyInput(target);
-    const next = { name: name.trim() ? undefined : "Nhập tên mục tiêu.", target: amount > 0 ? undefined : "Nhập số tiền mục tiêu." };
+    const next = { name: name.trim() ? undefined : l.nameRequired, target: amount > 0 ? undefined : l.targetRequired };
     setErrors(next);
     if (next.name || next.target) return;
     setSaving(true);
@@ -35,10 +37,10 @@ export function GoalFormDialog({ goal, onClose }: { goal: GoalDTO | null; onClos
       const input = { name: name.trim(), target_amount: amount, deadline: deadline || null, icon };
       if (goal) await update(goal.id, input);
       else await create(input);
-      toast.success(goal ? "Đã cập nhật mục tiêu" : "Đã tạo mục tiêu");
+      toast.success(goal ? l.updated : l.created);
       onClose();
     } catch (error) {
-      toast.error("Không thể lưu mục tiêu", errorMessage(error));
+      toast.error(l.failed, fmt.error(error));
     } finally {
       setSaving(false);
     }
@@ -49,30 +51,30 @@ export function GoalFormDialog({ goal, onClose }: { goal: GoalDTO | null; onClos
       open
       onClose={onClose}
       size="sm"
-      title={goal ? "Sửa mục tiêu" : "Mục tiêu tiết kiệm mới"}
+      title={goal ? l.editTitle : l.newTitle}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            Hủy
+            {t.common.cancel}
           </Button>
           <Button type="submit" form="goal-form" loading={saving}>
-            Lưu
+            {t.common.save}
           </Button>
         </>
       }
     >
       <form id="goal-form" noValidate onSubmit={submit} className="space-y-4">
-        <Field label="Tên mục tiêu" error={errors.name} required>
-          {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} placeholder="VD: Laptop mới" maxLength={80} data-autofocus />}
+        <Field label={l.name} error={errors.name} required>
+          {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} placeholder={l.namePlaceholder} maxLength={80} data-autofocus />}
         </Field>
-        <Field label="Số tiền cần đạt" error={errors.target} required>
+        <Field label={l.target} error={errors.target} required>
           {(p) => <MoneyInput {...p} value={target} onValueChange={setTarget} placeholder="25.000.000" />}
         </Field>
-        <Field label="Hạn chót" hint="Không bắt buộc – dùng để tính số tiền cần để dành mỗi tháng.">
+        <Field label={l.deadline} hint={l.deadlineHint}>
           {(p) => <Input {...p} type="date" value={deadline} min={todayYmd()} onChange={(e) => setDeadline(e.target.value)} />}
         </Field>
         <fieldset>
-          <legend className="mb-1.5 text-[13px] font-medium text-foreground">Biểu tượng</legend>
+          <legend className="mb-1.5 text-[13px] font-medium text-foreground">{l.icon}</legend>
           <div className="flex flex-wrap gap-1.5">
             {GOAL_ICON_OPTIONS.map((option) => (
               <button
@@ -104,6 +106,8 @@ export function ContributionDialog({
 }) {
   const { contribute } = useGoalMutations();
   const { toast } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.goals.contribution;
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
@@ -112,15 +116,15 @@ export function ContributionDialog({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = parseCurrencyInput(amount);
-    if (value <= 0) return setError("Nhập số tiền lớn hơn 0.");
-    if (!deposit && value > goal.currentAmount) return setError(`Tối đa ${formatVND(goal.currentAmount)}.`);
+    if (value <= 0) return setError(t.validation.amountPositive);
+    if (!deposit && value > goal.currentAmount) return setError(t.validation.maxAmount(formatVND(goal.currentAmount)));
     setSaving(true);
     try {
       await contribute(goal.id, value, direction);
-      toast.success(deposit ? `Đã thêm ${formatVND(value)} vào "${goal.name}"` : `Đã rút ${formatVND(value)} từ "${goal.name}"`);
+      toast.success(deposit ? l.deposited(formatVND(value), goal.name) : l.withdrawn(formatVND(value), goal.name));
       onClose();
     } catch (err) {
-      toast.error("Không thể cập nhật mục tiêu", errorMessage(err));
+      toast.error(l.failed, fmt.error(err));
     } finally {
       setSaving(false);
     }
@@ -131,21 +135,21 @@ export function ContributionDialog({
       open
       onClose={onClose}
       size="sm"
-      title={deposit ? "Thêm tiền vào mục tiêu" : "Rút tiền khỏi mục tiêu"}
-      description={`${goal.name} · đang có ${formatVND(goal.currentAmount)}`}
+      title={deposit ? l.depositTitle : l.withdrawTitle}
+      description={l.current(goal.name, formatVND(goal.currentAmount))}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            Hủy
+            {t.common.cancel}
           </Button>
           <Button type="submit" form="contribution-form" loading={saving}>
-            {deposit ? "Thêm tiền" : "Rút tiền"}
+            {deposit ? l.submitDeposit : l.submitWithdraw}
           </Button>
         </>
       }
     >
       <form id="contribution-form" noValidate onSubmit={submit}>
-        <Field label="Số tiền" error={error} required hint={deposit && goal.monthlyContribution ? `Gợi ý mỗi tháng: ${formatVND(goal.monthlyContribution)}` : undefined}>
+        <Field label={l.amount} error={error} required hint={deposit && goal.monthlyContribution ? l.suggestion(formatVND(goal.monthlyContribution)) : undefined}>
           {(p) => <MoneyInput {...p} size="xl" value={amount} onValueChange={setAmount} placeholder="0" data-autofocus />}
         </Field>
       </form>

@@ -11,8 +11,7 @@ import {
   occurrencesRemainingInMonth,
   type Schedule,
 } from "@/lib/finance/recurring";
-import { dayRange, formatDate, todayYmd, toYmd, ymdToStorageDate } from "@/lib/utils/date";
-import { formatVND } from "@/lib/utils/money";
+import { dayRange, todayYmd, toYmd, ymdToStorageDate } from "@/lib/utils/date";
 import type { createRecurringSchema, updateRecurringSchema } from "@/lib/validations/recurring.schema";
 import type { RecurringDTO, TransactionType } from "@/types/finance";
 import { getUsableCategory } from "./category.service";
@@ -175,8 +174,8 @@ export async function processDueRecurring(userId?: string, now = new Date()): Pr
       await notify(rec.user_id, {
         kind: "recurring",
         type: "info",
-        title: rec.type === "income" ? "Đã ghi nhận khoản thu định kỳ" : "Đã ghi nhận khoản chi định kỳ",
-        message: `${rec.name}: ${formatVND(toNumber(rec.amount))} (${formatDate(last)}). Kỳ tiếp theo: ${formatDate(nextRunDate)}.`,
+        template: rec.type === "income" ? "recurringIncome" : "recurringExpense",
+        params: { name: rec.name, amount: toNumber(rec.amount), date: last.toISOString(), next: nextRunDate.toISOString() },
         link: "/recurring",
         dedupeKey: `recurring:${rec.id}:${toYmd(last)}`,
       });

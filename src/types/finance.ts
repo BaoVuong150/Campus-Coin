@@ -85,9 +85,9 @@ export interface SummaryDTO {
   budget: { limit: number; remaining: number; percentage: number } | null;
 }
 
+/** key: "YYYY-MM-DD" (theo ngày) hoặc "YYYY-MM" (theo tháng); nhãn hiển thị do client dịch. */
 export interface CashFlowPoint {
   key: string;
-  label: string;
   income: number;
   expense: number;
 }
@@ -167,6 +167,8 @@ export interface NotificationDTO {
   message: string;
   type: "info" | "warning" | "alert" | "success";
   kind: NotificationKind;
+  template: string | null;
+  params: Record<string, unknown> | null;
   link: string | null;
   isRead: boolean;
   createdAt: string;
@@ -189,7 +191,9 @@ export type ReportPeriod = "month" | "quarter" | "year";
 
 export interface ReportDTO {
   period: ReportPeriod;
-  label: string;
+  /** Tháng đại diện của kỳ ("YYYY-MM"); client dựng nhãn kỳ theo ngôn ngữ. */
+  anchor: string;
+  /** ISO – ngày đầu và ngày cuối của kỳ. */
   from: string;
   to: string;
   totals: { income: number; expense: number; net: number; transactionCount: number; averageDailySpend: number };

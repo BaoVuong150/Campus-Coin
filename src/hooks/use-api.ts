@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiFetch, errorMessage } from "@/lib/api-client";
+import { ApiClientError, apiFetch } from "@/lib/api-client";
 
 /**
  * Cache nhỏ trong bộ nhớ (stale-while-revalidate): quay lại trang cũ thấy dữ liệu ngay,
@@ -29,10 +29,12 @@ export const FINANCE_KEYS = [
   "/api/notifications",
   "/api/goals",
   "/api/recurring",
+  "/api/points",
 ];
 
 export interface ApiState<T> {
   data: T | undefined;
+  /** Mã lỗi (ErrorCode) nếu lần tải gần nhất thất bại. */
   error: string | null;
   isLoading: boolean;
   isValidating: boolean;
@@ -68,7 +70,7 @@ export function useApi<T>(url: string | null): ApiState<T> {
       setError(null);
     } catch (e) {
       if (id !== requestId.current) return;
-      setError(errorMessage(e, "Không thể tải dữ liệu."));
+      setError(e instanceof ApiClientError ? e.code : "INTERNAL_ERROR");
     } finally {
       if (id === requestId.current) setIsValidating(false);
     }

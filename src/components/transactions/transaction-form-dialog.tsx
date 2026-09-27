@@ -14,8 +14,9 @@ import { useCategories, suggestCategory } from "@/hooks/use-categories";
 import { useTransactionMutations } from "@/hooks/use-transactions";
 import { useRecurringMutations } from "@/hooks/use-recurring";
 import { useDebounce } from "@/hooks/use-debounce";
-import { ApiClientError, errorMessage } from "@/lib/api-client";
-import { FREQUENCY_LABELS, MAX_DESCRIPTION_LENGTH, type RecurringFrequency } from "@/constants/finance";
+import { ApiClientError } from "@/lib/api-client";
+import { MAX_DESCRIPTION_LENGTH, RECURRING_FREQUENCIES, type RecurringFrequency } from "@/constants/finance";
+import { useI18n } from "@/i18n/provider";
 import { formatCurrencyInput, formatVND, parseCurrencyInput } from "@/lib/utils/money";
 import { formatDate, todayYmd, toYmd } from "@/lib/utils/date";
 import type { CategorySuggestion, TransactionDTO, TransactionType } from "@/types/finance";
@@ -34,16 +35,13 @@ interface Props {
 
 type Errors = Partial<Record<"amount" | "description" | "category" | "date", string>>;
 
-const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
-  { value: "expense", label: "Chi tiêu" },
-  { value: "income", label: "Thu nhập" },
-];
-
 const SUGGEST_MIN_CHARS = 2;
 
 export function TransactionFormDialog({ open, onClose, transaction, defaults }: Props) {
   const editing = !!transaction;
   const { toast, confirm } = useToast();
+  const { t, fmt, locale } = useI18n();
+  const f = t.transactions.form;
   const { data: categories, isLoading: loadingCategories } = useCategories();
   const { create, update, check } = useTransactionMutations();
   const { create: createRecurring } = useRecurringMutations();
@@ -96,10 +94,10 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
 
   const validate = (): Errors => {
     const next: Errors = {};
-    if (parseCurrencyInput(amount) <= 0) next.amount = "Nhập số tiền lớn hơn 0.";
-    if (!description.trim()) next.description = "Nhập mô tả ngắn cho giao dịch.";
-    if (!categoryId) next.category = "Chọn một danh mục.";
-    if (!date) next.date = "Chọn ngày giao dịch.";
+    if (parseCurrencyInput(amount) <= 0) next.amount = t.validation.amountPositive;
+    if (!description.trim()) next.description = t.validation.descriptionRequired;
+    if (!categoryId) next.category = t.validation.categoryRequired;
+    if (!date) next.date = t.validation.dateRequired;
     return next;
   };
 
@@ -123,19 +121,19 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
         const warnings = await check(input, transaction?.id);
         if (warnings.duplicate) {
           const proceed = await confirm({
-            title: "Có thể bị trùng",
-            message: `Bạn đã ghi "${input.description}" ${formatVND(input.amount)} vào ngày ${formatDate(warnings.duplicate.date)}. Vẫn lưu giao dịch này?`,
-            confirmText: "Vẫn lưu",
-            cancelText: "Kiểm tra lại",
+            title: f.duplicateTitle,
+            message: f.duplicateMessage(input.description, formatVND(input.amount), formatDate(warnings.duplicate.date)),
+            confirmText: f.duplicateConfirm,
+            cancelText: f.checkAgain,
           });
           if (!proceed) return;
         }
         if (warnings.unusual) {
           const proceed = await confirm({
-            title: "Khoản chi cao hơn thường lệ",
-            message: `Khoản chi này cao hơn mức thường thấy (khoảng ${formatVND(warnings.unusual.typicalAmount)}). Kiểm tra lại số tiền trước khi lưu nhé.`,
-            confirmText: "Số tiền đúng, lưu",
-            cancelText: "Sửa lại",
+            title: f.unusualTitle,
+            message: f.unusualMessage(formatVND(warnings.unusual.typicalAmount)),
+            confirmText: f.unusualConfirm,
+            cancelText: f.fixIt,
           });
           if (!proceed) return;
         }
@@ -143,7 +141,7 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
 
       if (editing && transaction) {
         await update(transaction.id, input);
-        toast.success("Đã cập nhật giao dịch");
+        toast.success(f.updated);
       } else if (recurring) {
         await createRecurring({
           name: input.description,
@@ -153,56 +151,68 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
           frequency,
           start_date: date,
         });
-        toast.success("Đã tạo khoản định kỳ", `${FREQUENCY_LABELS[frequency]} · ${formatVND(input.amount)}`);
+        toast.success(f.recurringCreated, `${t.recurring.frequencies[frequency]} · ${formatVND(input.amount)}`);
       } else {
         await create({ ...input, suggested_category_id: suggestion?.categoryId ?? null });
-        toast.success(type === "income" ? "Đã ghi khoản thu" : "Đã ghi khoản chi", `${formatVND(input.amount)} · ${input.description}`);
+        toast.success(type === "income" ? f.savedIncome : f.savedExpense, `${formatVND(input.amount)} · ${input.description}`);
       }
       onClose();
     } catch (error) {
       if (error instanceof ApiClientError && error.fields) {
+        // Thông điệp chi tiết của server là tiếng Việt; ngôn ngữ khác dùng thông báo chung.
+        const field = (message?: string) => message && (locale === "vi" ? message : t.errors.VALIDATION_ERROR);
         setErrors({
-          amount: error.fields.amount,
-          description: error.fields.description,
-          category: error.fields.category_id,
-          date: error.fields.date,
+          amount: field(error.fields.amount),
+          description: field(error.fields.description),
+          category: field(error.fields.category_id),
+          date: field(error.fields.date),
         });
       }
-      toast.error("Không thể lưu giao dịch", errorMessage(error));
+      toast.error(f.saveFailed, fmt.error(error));
     } finally {
       setSaving(false);
     }
   };
 
-  const suggestionName = suggestion && suggestion.categoryId !== categoryId ? suggestion.categoryName : null;
+  const suggestionName = suggestion && suggestion.categoryId !== categoryId ? fmt.category(suggestion.categoryName) : null;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title={editing ? "Sửa giao dịch" : "Thêm giao dịch"}
+      title={editing ? f.editTitle : f.addTitle}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Hủy
+            {t.common.cancel}
           </Button>
           <Button type="submit" form="transaction-form" loading={saving}>
-            {editing ? "Lưu thay đổi" : "Lưu giao dịch"}
+            {editing ? t.common.saveChanges : f.submitAdd}
           </Button>
         </>
       }
     >
       <form id="transaction-form" noValidate onSubmit={submit} className="space-y-5">
-        <Segmented label="Loại giao dịch" value={type} onChange={changeType} options={TYPE_OPTIONS} size="md" fullWidth />
+        <Segmented
+          label={f.type}
+          value={type}
+          onChange={changeType}
+          options={[
+            { value: "expense", label: t.common.expense },
+            { value: "income", label: t.common.income },
+          ]}
+          size="md"
+          fullWidth
+        />
 
-        <Field label="Số tiền" error={errors.amount} required>
+        <Field label={f.amount} error={errors.amount} required>
           {(p) => (
             <MoneyInput {...p} size="xl" value={amount} onValueChange={setAmount} placeholder="0" data-autofocus />
           )}
         </Field>
 
         <Field
-          label="Mô tả"
+          label={f.description}
           error={errors.description}
           required
           hint={
@@ -215,7 +225,7 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
                 }}
                 className="inline-flex items-center gap-1 rounded text-primary hover:underline"
               >
-                <Lightbulb className="size-3.5" aria-hidden /> Gợi ý: {suggestionName}
+                <Lightbulb className="size-3.5" aria-hidden /> {f.suggestion(suggestionName)}
               </button>
             ) : undefined
           }
@@ -226,7 +236,7 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={MAX_DESCRIPTION_LENGTH}
-              placeholder={type === "expense" ? "VD: Highlands Coffee, Grab Bike…" : "VD: Trợ cấp tháng, lương gia sư…"}
+              placeholder={type === "expense" ? f.expensePlaceholder : f.incomePlaceholder}
             />
           )}
         </Field>
@@ -234,10 +244,10 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span id={categoryLabelId} className="text-[13px] font-medium text-foreground">
-              Danh mục<span className="ml-0.5 text-danger" aria-hidden>*</span>
+              {f.category}<span className="ml-0.5 text-danger" aria-hidden>*</span>
             </span>
             {suggestion && suggestion.categoryId === categoryId && !categoryTouched && (
-              <span className="text-[12px] text-subtle">Gợi ý theo mô tả – bạn có thể đổi</span>
+              <span className="text-[12px] text-subtle">{f.suggestedNote}</span>
             )}
           </div>
           {loadingCategories ? (
@@ -266,16 +276,16 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={recurring ? "Bắt đầu từ" : "Ngày"} error={errors.date} required>
+          <Field label={recurring ? f.startFrom : f.date} error={errors.date} required>
             {(p) => <Input {...p} type="date" value={date} onChange={(e) => setDate(e.target.value)} />}
           </Field>
           {!editing && recurring && (
-            <Field label="Chu kỳ">
+            <Field label={f.frequency}>
               {(p) => (
                 <Select {...p} value={frequency} onChange={(e) => setFrequency(e.target.value as RecurringFrequency)}>
-                  {Object.entries(FREQUENCY_LABELS).map(([value, label]) => (
+                  {RECURRING_FREQUENCIES.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t.recurring.frequencies[value]}
                     </option>
                   ))}
                 </Select>
@@ -287,7 +297,7 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
         {editing ? (
           transaction?.isRecurring && (
             <p className="flex items-center gap-2 text-[13px] text-muted">
-              <Repeat className="size-4" aria-hidden /> Giao dịch được sinh từ một khoản định kỳ.
+              <Repeat className="size-4" aria-hidden /> {f.recurringFromSchedule}
             </p>
           )
         ) : (
@@ -299,9 +309,9 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
               className="mt-0.5 size-4 accent-primary"
             />
             <span>
-              <span className="block text-sm font-medium text-foreground">Lặp lại định kỳ</span>
+              <span className="block text-sm font-medium text-foreground">{f.recurringLabel}</span>
               <span className="block text-[12px] text-muted">
-                Tự động ghi nhận theo chu kỳ (tiền nhà, Netflix, trợ cấp…) và tính vào dự báo cuối tháng.
+                {f.recurringHint}
               </span>
             </span>
           </label>

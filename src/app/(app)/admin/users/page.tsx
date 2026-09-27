@@ -15,14 +15,16 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useAdminMutations, useAdminUsers, type AdminUserDTO } from "@/hooks/use-admin";
 import { useDebounce } from "@/hooks/use-debounce";
-import { errorMessage } from "@/lib/api-client";
-import { formatDate, relativeDay } from "@/lib/utils/date";
+import { formatDate } from "@/lib/utils/date";
+import { useI18n } from "@/i18n/provider";
 import { formatNumber } from "@/lib/utils/money";
 
 function UserActions({ user }: { user: AdminUserDTO }) {
   const me = useSessionUser();
   const { updateUser } = useAdminMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.admin.users;
   const [busy, setBusy] = useState(false);
   const self = me.id === user.id;
 
@@ -34,13 +36,13 @@ function UserActions({ user }: { user: AdminUserDTO }) {
       await updateUser(user.id, input);
       toast.success(done);
     } catch (e) {
-      toast.error("Không thể cập nhật người dùng", errorMessage(e));
+      toast.error(l.failed, fmt.error(e));
     } finally {
       setBusy(false);
     }
   };
 
-  if (self) return <span className="text-[12px] text-subtle">Tài khoản của bạn</span>;
+  if (self) return <span className="text-[12px] text-subtle">{l.you}</span>;
 
   return (
     <div className="flex justify-end gap-1.5">
@@ -52,16 +54,21 @@ function UserActions({ user }: { user: AdminUserDTO }) {
           onClick={() =>
             run(
               { is_active: false },
-              { title: "Vô hiệu hóa tài khoản?", message: `${user.name} sẽ bị đăng xuất và không thể đăng nhập cho đến khi được kích hoạt lại. Dữ liệu vẫn được giữ nguyên.`, confirmText: "Vô hiệu hóa", destructive: true },
-              "Đã vô hiệu hóa tài khoản"
+              { title: l.disableTitle, message: l.disableMessage(user.name), confirmText: l.disable, destructive: true },
+              l.disabledToast
             )
           }
         >
-          Vô hiệu hóa
+          {l.disable}
         </Button>
       ) : (
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => run({ is_active: true }, { title: "Kích hoạt lại tài khoản?", message: `${user.name} sẽ có thể đăng nhập trở lại.`, confirmText: "Kích hoạt" }, "Đã kích hoạt tài khoản")}>
-          Kích hoạt
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => run({ is_active: true }, { title: l.enableTitle, message: l.enableMessage(user.name), confirmText: l.enable }, l.enabledToast)}
+        >
+          {l.enable}
         </Button>
       )}
       <Button
@@ -72,16 +79,16 @@ function UserActions({ user }: { user: AdminUserDTO }) {
           run(
             { role: user.role === "admin" ? "student" : "admin" },
             {
-              title: user.role === "admin" ? "Gỡ quyền quản trị?" : "Cấp quyền quản trị?",
-              message: user.role === "admin" ? `${user.name} sẽ trở thành tài khoản sinh viên.` : `${user.name} sẽ có toàn quyền quản trị hệ thống.`,
-              confirmText: "Xác nhận",
+              title: user.role === "admin" ? l.removeAdminTitle : l.makeAdminTitle,
+              message: user.role === "admin" ? l.removeAdminMessage(user.name) : l.makeAdminMessage(user.name),
+              confirmText: t.common.confirm,
               destructive: user.role !== "admin",
             },
-            "Đã đổi vai trò"
+            l.roleToast
           )
         }
       >
-        {user.role === "admin" ? "Gỡ admin" : "Cấp admin"}
+        {user.role === "admin" ? l.removeAdmin : l.makeAdmin}
       </Button>
     </div>
   );
@@ -93,10 +100,12 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const debounced = useDebounce(q.trim(), 300);
   const { data, error, reload } = useAdminUsers(debounced, status, page);
+  const { t, fmt } = useI18n();
+  const l = t.admin.users;
 
   return (
     <div>
-      <PageHeader title="Người dùng" description="Xem, vô hiệu hóa tài khoản và phân quyền. Mật khẩu và token không bao giờ được hiển thị." />
+      <PageHeader title={t.nav.adminUsers} description={l.description} />
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" aria-hidden />
@@ -107,8 +116,8 @@ export default function AdminUsersPage() {
               setQ(e.target.value);
               setPage(1);
             }}
-            placeholder="Tìm theo tên hoặc email"
-            aria-label="Tìm người dùng"
+            placeholder={l.search}
+            aria-label={l.searchLabel}
             className="pl-9"
           />
         </div>
@@ -118,12 +127,12 @@ export default function AdminUsersPage() {
             setStatus(e.target.value);
             setPage(1);
           }}
-          aria-label="Lọc trạng thái"
+          aria-label={l.statusFilter}
           className="sm:w-48"
         >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="active">Đang hoạt động</option>
-          <option value="disabled">Đã vô hiệu hóa</option>
+          <option value="all">{l.allStatuses}</option>
+          <option value="active">{l.active}</option>
+          <option value="disabled">{l.disabled}</option>
         </Select>
       </div>
 
@@ -135,18 +144,18 @@ export default function AdminUsersPage() {
             <SkeletonRows rows={6} />
           </div>
         ) : data.items.length === 0 ? (
-          <EmptyState icon={<UserX />} title="Không tìm thấy người dùng" />
+          <EmptyState icon={<UserX />} title={l.notFound} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">
               <thead className="border-b border-border text-left text-[12px] text-muted">
                 <tr>
-                  <th scope="col" className="px-5 py-2.5 font-medium">Người dùng</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Vai trò</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Trạng thái</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Giao dịch</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium">Đăng nhập gần nhất</th>
-                  <th scope="col" className="px-5 py-2.5 text-right font-medium">Thao tác</th>
+                  <th scope="col" className="px-5 py-2.5 font-medium">{t.admin.user}</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">{t.admin.role}</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">{l.status}</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">{t.admin.transactions}</th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">{l.lastLogin}</th>
+                  <th scope="col" className="px-5 py-2.5 text-right font-medium">{l.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -158,19 +167,19 @@ export default function AdminUsersPage() {
                         <span className="min-w-0">
                           <span className="block truncate font-medium text-foreground">{u.name}</span>
                           <span className="block truncate text-[12px] text-subtle">
-                            {u.email} · tạo {formatDate(u.createdAt)}
+                            {u.email} · {l.createdOn(formatDate(u.createdAt))}
                           </span>
                         </span>
                       </span>
                     </td>
                     <td className="px-3 py-3">
-                      <Badge tone={u.role === "admin" ? "info" : "neutral"}>{u.role === "admin" ? "Admin" : "Sinh viên"}</Badge>
+                      <Badge tone={u.role === "admin" ? "info" : "neutral"}>{t.admin.roles[u.role]}</Badge>
                     </td>
                     <td className="px-3 py-3">
-                      <Badge tone={u.isActive ? "success" : "danger"}>{u.isActive ? "Hoạt động" : "Vô hiệu hóa"}</Badge>
+                      <Badge tone={u.isActive ? "success" : "danger"}>{u.isActive ? l.activeBadge : l.disabledBadge}</Badge>
                     </td>
                     <td className="tabular px-3 py-3 text-muted">{formatNumber(u.transactionCount)}</td>
-                    <td className="px-3 py-3 text-muted">{u.lastLoginAt ? relativeDay(u.lastLoginAt) : "—"}</td>
+                    <td className="px-3 py-3 text-muted">{u.lastLoginAt ? fmt.relativeDay(u.lastLoginAt) : "—"}</td>
                     <td className="px-5 py-3">
                       <UserActions user={u} />
                     </td>

@@ -39,14 +39,3 @@ export const ANOMALY_MIN_SAMPLES = 5;
 
 export const PASSWORD_MIN_LENGTH = 8;
 
-export const FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
-  weekly: "Hàng tuần",
-  monthly: "Hàng tháng",
-  yearly: "Hàng năm",
-};
-
-export const RECURRING_STATUS_LABELS: Record<RecurringStatus, string> = {
-  active: "Đang chạy",
-  paused: "Tạm dừng",
-  cancelled: "Đã hủy",
-};

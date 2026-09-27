@@ -3,16 +3,29 @@ import { prisma } from "@/lib/database/prisma";
 import type { NotificationKind } from "@/constants/finance";
 import type { NotificationPreferences } from "@/lib/validations/profile.schema";
 import type { NotificationDTO, Paginated } from "@/types/finance";
+import { vi } from "@/i18n/messages/vi";
+import type { NotificationParams, NotificationTemplate } from "@/i18n/templates";
 import { toNotificationDTO } from "./mappers";
 
-export interface NotifyInput {
-  kind: NotificationKind;
-  type: NotificationDTO["type"];
-  title: string;
-  message: string;
-  link?: string;
-  /** Cùng dedupeKey chỉ tạo một lần cho mỗi user (chống spam). */
-  dedupeKey?: string;
+export type NotifyInput = {
+  [K in NotificationTemplate]: {
+    kind: NotificationKind;
+    type: NotificationDTO["type"];
+    template: K;
+    params: NotificationParams[K];
+    link?: string;
+    /** Cùng dedupeKey chỉ tạo một lần cho mỗi user (chống spam). */
+    dedupeKey?: string;
+  };
+}[NotificationTemplate];
+
+/** Bản tiếng Việt lưu kèm làm dự phòng (xem DB, dữ liệu cũ); giao diện dựng lại theo ngôn ngữ từ template + params. */
+function renderFallback(input: NotifyInput) {
+  const entry = vi.notifications.templates[input.template] as {
+    title: (p: NotifyInput["params"]) => string;
+    message: (p: NotifyInput["params"]) => string;
+  };
+  return { title: entry.title(input.params), message: entry.message(input.params) };
 }
 
 const KIND_TO_PREFERENCE: Partial<Record<NotificationKind, keyof NotificationPreferences>> = {
@@ -58,8 +71,9 @@ export async function notify(userId: string, input: NotifyInput): Promise<void> 
         user_id: userId,
         kind: input.kind,
         type: input.type,
-        title: input.title,
-        message: input.message,
+        ...renderFallback(input),
+        template: input.template,
+        params: input.params as unknown as Prisma.InputJsonObject,
         link: input.link ?? null,
         dedupe_key: input.dedupeKey ?? null,
       },

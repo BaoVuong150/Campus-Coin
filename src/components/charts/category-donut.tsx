@@ -4,6 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { formatPercent, formatVND } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
+import { useI18n } from "@/i18n/provider";
 import type { CategoryBreakdownItem } from "@/types/finance";
 
 export interface DonutSlice extends CategoryBreakdownItem {
@@ -13,6 +14,8 @@ export interface DonutSlice extends CategoryBreakdownItem {
 /** Tối đa 5 danh mục lớn nhất + "Khác" để donut không vụn. */
 export const MAX_SLICES = 5;
 const OTHER_ID = -1;
+/** Nhóm gộp; tên hiển thị lấy từ từ điển (t.common.other). */
+const OTHER_NAME = "__other__";
 
 /**
  * Màu gắn với danh mục (theo id), không theo thứ hạng: lọc tháng khác cũng không đổi màu của danh mục.
@@ -29,7 +32,7 @@ export function buildSlices(items: CategoryBreakdownItem[], orderedIds: number[]
   if (rest.length === 0) return top;
   const amount = rest.reduce((a, b) => a + b.amount, 0);
   const percentage = rest.reduce((a, b) => a + b.percentage, 0);
-  return [...top, { categoryId: OTHER_ID, name: "Khác", icon: null, color: other, amount, percentage }];
+  return [...top, { categoryId: OTHER_ID, name: OTHER_NAME, icon: null, color: other, amount, percentage }];
 }
 
 interface Props {
@@ -40,6 +43,8 @@ interface Props {
 
 export function CategoryDonut({ slices, total, onSelect }: Props) {
   const colors = useChartColors();
+  const { t, fmt } = useI18n();
+  const label = (s: DonutSlice) => (s.categoryId === OTHER_ID ? t.common.other : fmt.category(s.name));
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
       <div className="relative size-44 shrink-0">
@@ -65,7 +70,7 @@ export function CategoryDonut({ slices, total, onSelect }: Props) {
               content={({ active, payload }) =>
                 active && payload?.[0] ? (
                   <div className="rounded-md border border-border bg-surface px-3 py-2 text-[12px] shadow-pop">
-                    <p className="font-medium text-foreground">{payload[0].name}</p>
+                    <p className="font-medium text-foreground">{label(payload[0].payload as DonutSlice)}</p>
                     <p className="tabular text-muted">
                       {formatVND(Number(payload[0].value))} · {formatPercent((payload[0].payload as DonutSlice).percentage)}
                     </p>
@@ -76,7 +81,7 @@ export function CategoryDonut({ slices, total, onSelect }: Props) {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] text-subtle">Tổng chi</span>
+          <span className="text-[11px] text-subtle">{t.dashboard.categories.total}</span>
           <span className="tabular text-sm font-semibold text-foreground">{formatVND(total)}</span>
         </div>
       </div>
@@ -87,7 +92,7 @@ export function CategoryDonut({ slices, total, onSelect }: Props) {
           const content = (
             <>
               <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: s.color }} aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-left text-foreground">{s.name}</span>
+              <span className="min-w-0 flex-1 truncate text-left text-foreground">{label(s)}</span>
               <span className="tabular text-muted">{formatPercent(s.percentage, 0)}</span>
             </>
           );
@@ -98,7 +103,7 @@ export function CategoryDonut({ slices, total, onSelect }: Props) {
                   type="button"
                   onClick={() => onSelect?.(s)}
                   className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors hover:bg-surface-hover")}
-                  aria-label={`${s.name}: ${formatVND(s.amount)}, ${formatPercent(s.percentage, 0)}. Xem giao dịch`}
+                  aria-label={t.dashboard.categories.sliceLabel(label(s), formatVND(s.amount), formatPercent(s.percentage, 0))}
                 >
                   {content}
                 </button>

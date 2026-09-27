@@ -8,18 +8,21 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useBudgets } from "@/hooks/use-budget";
+import { useI18n } from "@/i18n/provider";
 
 const PREVIEW = 4;
 
 export function BudgetOverviewCard({ month }: { month: string }) {
   const { data, error, reload } = useBudgets(month);
+  const { t } = useI18n();
+  const l = t.dashboard.budget;
   return (
     <Card className="min-w-0">
       <CardHeader
-        title="Ngân sách tháng"
+        title={l.title}
         action={
           <Link href="/budgets" className="text-[13px] font-medium text-primary hover:underline">
-            Quản lý
+            {t.common.manage}
           </Link>
         }
       />
@@ -32,11 +35,11 @@ export function BudgetOverviewCard({ month }: { month: string }) {
           <EmptyState
             compact
             icon={<Wallet />}
-            title="Bạn chưa đặt ngân sách"
-            description="Đặt hạn mức cho từng danh mục để nhận cảnh báo khi sắp tiêu quá tay."
+            title={l.emptyTitle}
+            description={l.emptyBody}
             action={
               <Link href="/budgets" className={buttonClasses("primary", "sm")}>
-                Đặt ngân sách
+                {l.setBudget}
               </Link>
             }
           />

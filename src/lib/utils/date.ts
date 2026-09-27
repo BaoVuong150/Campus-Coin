@@ -110,15 +110,7 @@ export function shiftMonthKey(key: string, delta: number): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`;
 }
 
-export function monthLabel(key: string): string {
-  const { year, month } = parseMonthKey(key);
-  return `Tháng ${month}/${year}`;
-}
 
-export function shortMonthLabel(key: string): string {
-  const { year, month } = parseMonthKey(key);
-  return `T${month}/${String(year).slice(2)}`;
-}
 
 /** Số ngày còn lại trong tháng tính cả hôm nay (tháng quá khứ = 0, tháng tương lai = cả tháng). */
 export function remainingDaysInMonth(key: string, now = new Date()): number {
@@ -150,22 +142,11 @@ export function formatDateTime(value: Date | string): string {
   return `${formatDate(date)} ${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`;
 }
 
-const WEEKDAYS = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-export const weekdayName = (weekday: number) => WEEKDAYS[weekday] ?? "";
 
-export function relativeDay(value: Date | string, now = new Date()): string {
-  const ymd = toYmd(new Date(value));
-  if (ymd === todayYmd(now)) return "Hôm nay";
-  if (ymd === toYmd(new Date(now.getTime() - DAY_MS))) return "Hôm qua";
-  return formatDate(value);
-}
 
-export function greeting(now = new Date()): string {
-  const hour = new Date(now.getTime() + VN_OFFSET_MS).getUTCHours();
-  if (hour < 11) return "Chào buổi sáng";
-  if (hour < 14) return "Chào buổi trưa";
-  if (hour < 18) return "Chào buổi chiều";
-  return "Chào buổi tối";
+/** Giờ hiện tại (0-23) theo giờ Việt Nam. */
+export function vnHour(date: Date): number {
+  return new Date(date.getTime() + VN_OFFSET_MS).getUTCHours();
 }
 
 /** Số ngày (theo lịch VN) từ hôm nay đến ngày đích; âm nếu đã qua. */

@@ -13,7 +13,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useAdminCategories, useAdminMutations } from "@/hooks/use-admin";
-import { errorMessage } from "@/lib/api-client";
+import { useI18n } from "@/i18n/provider";
 import { formatNumber } from "@/lib/utils/money";
 import type { TransactionType } from "@/types/finance";
 
@@ -21,6 +21,8 @@ function DefaultCategories() {
   const { data, error, reload } = useAdminCategories();
   const { createCategory, deleteCategory } = useAdminMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.admin.system;
   const [name, setName] = useState("");
   const [type, setType] = useState<TransactionType>("expense");
   const [saving, setSaving] = useState(false);
@@ -32,9 +34,9 @@ function DefaultCategories() {
     try {
       await createCategory({ name: name.trim(), type });
       setName("");
-      toast.success("Đã thêm danh mục hệ thống");
+      toast.success(l.added);
     } catch (err) {
-      toast.error("Không thể thêm danh mục", errorMessage(err));
+      toast.error(l.addFailed, fmt.error(err));
     } finally {
       setSaving(false);
     }
@@ -42,28 +44,37 @@ function DefaultCategories() {
 
   const remove = async (id: number, label: string, usage: number) => {
     if (usage > 0) {
-      toast.warning("Không thể xóa", `"${label}" đang được dùng trong ${formatNumber(usage)} giao dịch.`);
+      toast.warning(l.inUseTitle, l.inUse(label, formatNumber(usage)));
       return;
     }
-    const ok = await confirm({ title: "Xóa danh mục hệ thống?", message: `"${label}" sẽ biến mất khỏi danh sách của mọi người dùng.`, confirmText: "Xóa", isDestructive: true });
+    const ok = await confirm({ title: l.deleteTitle, message: l.deleteMessage(label), confirmText: t.common.delete, isDestructive: true });
     if (!ok) return;
     try {
       await deleteCategory(id);
-      toast.success("Đã xóa danh mục");
+      toast.success(l.deleted);
     } catch (err) {
-      toast.error("Không thể xóa danh mục", errorMessage(err));
+      toast.error(l.deleteFailed, fmt.error(err));
     }
   };
 
   return (
     <Card>
-      <CardHeader title="Danh mục mặc định" description="Áp dụng cho toàn bộ người dùng." />
+      <CardHeader title={l.categories} description={l.categoriesHint} />
       <CardContent className="space-y-4">
         <form noValidate onSubmit={add} className="flex flex-col gap-2 sm:flex-row">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên danh mục" aria-label="Tên danh mục" maxLength={80} className="sm:flex-1" />
-          <Segmented label="Loại" value={type} onChange={setType} options={[{ value: "expense", label: "Chi" }, { value: "income", label: "Thu" }]} size="md" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={l.categoryName} aria-label={l.categoryName} maxLength={80} className="sm:flex-1" />
+          <Segmented
+            label={l.type}
+            value={type}
+            onChange={setType}
+            options={[
+              { value: "expense", label: t.common.expenseShort },
+              { value: "income", label: t.common.incomeShort },
+            ]}
+            size="md"
+          />
           <Button type="submit" loading={saving} disabled={!name.trim()}>
-            Thêm
+            {t.common.add}
           </Button>
         </form>
         {error ? (
@@ -75,10 +86,10 @@ function DefaultCategories() {
             {data.map((c) => (
               <li key={c.id} className="flex items-center gap-3 py-2.5">
                 <CategoryIcon icon={c.icon} color={c.color} size="sm" />
-                <span className="flex-1 text-sm text-foreground">{c.name}</span>
-                <span className="tabular text-[12px] text-subtle">{formatNumber(c.usage)} giao dịch</span>
-                <Badge tone={c.type === "income" ? "success" : "neutral"}>{c.type === "income" ? "Thu" : "Chi"}</Badge>
-                <Button variant="ghost" size="icon-sm" onClick={() => remove(c.id, c.name, c.usage)} aria-label={`Xóa ${c.name}`}>
+                <span className="flex-1 text-sm text-foreground">{fmt.category(c.name)}</span>
+                <span className="tabular text-[12px] text-subtle">{l.usage(formatNumber(c.usage))}</span>
+                <Badge tone={c.type === "income" ? "success" : "neutral"}>{c.type === "income" ? t.common.incomeShort : t.common.expenseShort}</Badge>
+                <Button variant="ghost" size="icon-sm" onClick={() => remove(c.id, fmt.category(c.name), c.usage)} aria-label={`${t.common.delete} ${fmt.category(c.name)}`}>
                   <Trash2 />
                 </Button>
               </li>
@@ -93,6 +104,8 @@ function DefaultCategories() {
 function Announcement() {
   const { announce } = useAdminMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.admin.system;
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<{ title?: string; message?: string }>({});
@@ -100,19 +113,19 @@ function Announcement() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const next = { title: title.trim() ? undefined : "Nhập tiêu đề.", message: message.trim() ? undefined : "Nhập nội dung." };
+    const next = { title: title.trim() ? undefined : t.validation.titleRequired, message: message.trim() ? undefined : t.validation.messageRequired };
     setErrors(next);
     if (next.title || next.message) return;
-    const ok = await confirm({ title: "Gửi thông báo?", message: "Thông báo sẽ được gửi tới tất cả sinh viên đang hoạt động.", confirmText: "Gửi" });
+    const ok = await confirm({ title: l.sendTitle, message: l.sendMessage, confirmText: l.sendConfirm });
     if (!ok) return;
     setSending(true);
     try {
       const { sent } = await announce(title.trim(), message.trim());
       setTitle("");
       setMessage("");
-      toast.success(`Đã gửi tới ${formatNumber(sent)} người dùng`);
+      toast.success(l.sent(formatNumber(sent)));
     } catch (err) {
-      toast.error("Không thể gửi thông báo", errorMessage(err));
+      toast.error(l.sendFailed, fmt.error(err));
     } finally {
       setSending(false);
     }
@@ -120,17 +133,17 @@ function Announcement() {
 
   return (
     <Card>
-      <CardHeader title="Thông báo hệ thống" description="Gửi thông báo trong ứng dụng tới toàn bộ sinh viên." icon={<Megaphone />} />
+      <CardHeader title={l.announcement} description={l.announcementHint} icon={<Megaphone />} />
       <CardContent>
         <form noValidate onSubmit={submit} className="space-y-4">
-          <Field label="Tiêu đề" error={errors.title} required>
+          <Field label={l.titleLabel} error={errors.title} required>
             {(p) => <Input {...p} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />}
           </Field>
-          <Field label="Nội dung" error={errors.message} required>
+          <Field label={l.messageLabel} error={errors.message} required>
             {(p) => <Textarea {...p} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} rows={4} />}
           </Field>
           <Button type="submit" loading={sending}>
-            Gửi thông báo
+            {l.send}
           </Button>
         </form>
       </CardContent>
@@ -139,9 +152,10 @@ function Announcement() {
 }
 
 export default function AdminSystemPage() {
+  const { t } = useI18n();
   return (
     <div>
-      <PageHeader title="Hệ thống" description="Danh mục mặc định và thông báo toàn hệ thống." />
+      <PageHeader title={t.nav.adminSystem} description={t.admin.system.description} />
       <div className="grid gap-4 xl:grid-cols-2">
         <DefaultCategories />
         <Announcement />

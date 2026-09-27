@@ -6,10 +6,10 @@ import { assertResourceOwner } from "@/lib/auth/ownership";
 import type { GoalStatus } from "@/constants/finance";
 import { computeGoalProgress } from "@/lib/finance/goals";
 import { ymdToStorageDate } from "@/lib/utils/date";
-import { formatVND } from "@/lib/utils/money";
 import type { createGoalSchema, goalContributionSchema, updateGoalSchema } from "@/lib/validations/goal.schema";
 import type { GoalDTO } from "@/types/finance";
 import { notify } from "./notification.service";
+import { onGoalCompleted, onGoalDeposit } from "./points.service";
 import { toNumber } from "./mappers";
 
 const notFound = () => Errors.notFound("GOAL_NOT_FOUND", "Không tìm thấy mục tiêu.");
@@ -80,6 +80,7 @@ export async function updateGoal(userId: string, id: string, input: z.infer<type
       deadline: input.deadline === undefined ? undefined : input.deadline ? ymdToStorageDate(input.deadline) : null,
     },
   });
+  if (input.status === "completed") await onGoalCompleted(userId, id);
   return toGoalDTO(goal);
 }
 
@@ -105,6 +106,8 @@ export async function contributeToGoal(
     return tx.savingGoal.update({ where: { id }, data: { current_amount: { increment: delta } } });
   });
 
+  if (delta > 0) await onGoalDeposit(userId, id);
+
   const target = toNumber(updated.target_amount);
   const before = target > 0 ? (current / target) * 100 : 0;
   const after = target > 0 ? (toNumber(updated.current_amount) / target) * 100 : 0;
@@ -113,11 +116,12 @@ export async function contributeToGoal(
     await notify(userId, {
       kind: "goal",
       type: "success",
-      title: milestone === 100 ? `Hoàn thành mục tiêu "${updated.name}"` : `Đã đạt ${milestone}% mục tiêu "${updated.name}"`,
-      message: `Bạn đã tiết kiệm ${formatVND(toNumber(updated.current_amount))} / ${formatVND(target)}.`,
+      template: "goalMilestone",
+      params: { goal: updated.name, percent: milestone, current: toNumber(updated.current_amount), target },
       link: "/goals",
       dedupeKey: `goal:${id}:${milestone}`,
     });
   }
+  if (milestone === 100) await onGoalCompleted(userId, id);
   return toGoalDTO(updated);
 }

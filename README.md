@@ -41,6 +41,7 @@ npm run dev                 # http://localhost:3000
 | `npm test` | Unit/integration test (Vitest) cho logic tài chính, auth, phân quyền, IDOR |
 | `npm run db:migrate` | `prisma migrate deploy` |
 | `npm run db:seed` | Nạp dữ liệu demo (cần `SEED_RESET=true`) |
+| `npm run db:fix-categories` | Kiểm tra giao dịch có danh mục lệch loại thu/chi (dry-run); thêm `-- --apply` để sửa, có audit |
 
 ---
 
@@ -55,6 +56,9 @@ npm run dev                 # http://localhost:3000
 | **Định kỳ & chi phí cố định** | Tiền nhà, Netflix, trợ cấp… trạng thái Đang chạy / Tạm dừng / Đã hủy; scheduler tự ghi giao dịch khi đến hạn, **idempotent** |
 | **Mục tiêu tiết kiệm** | Nạp / rút tiền, sửa, hoàn thành, số ngày còn lại, số tiền cần để dành mỗi tháng |
 | **Báo cáo** | Tháng / quý / năm: tổng kết, xu hướng, danh mục, top chi tiêu, giao dịch lớn nhất, hiệu quả ngân sách; **xuất PDF** (font tiếng Việt, biểu đồ vector) |
+| **Nhập CSV** | Tải file mẫu; nhận cột tiếng Việt/tiếng Anh, ngày `YYYY-MM-DD`/`DD/MM/YYYY`, số tiền `45.000`/`-45000`; xem trước, gợi ý danh mục hàng loạt, sửa từng dòng, bỏ qua giao dịch trùng; tối đa 500 dòng |
+| **Campus Points** | Điểm thưởng nội bộ (không phải tiền, không quy đổi): +10 giao dịch đầu tiên, +2 mỗi ngày có ghi chép, +5 để dành cho mục tiêu, +10 giữ ngân sách trọn tuần, +25 đạt tiết kiệm tháng, +25 hoàn thành mục tiêu; cấp độ, chuỗi ngày, thành tựu |
+| **Song ngữ** | Tiếng Việt / English – nút VI/EN trên header, trang đăng nhập, landing và trong Cài đặt |
 | **Thông báo** | Ngân sách, định kỳ, mục tiêu, chi tiêu bất thường, hệ thống; chống spam bằng `dedupe_key`; đánh dấu đã đọc |
 | **Cài đặt** | Hồ sơ, giao diện sáng/tối + cỡ chữ, tiền tệ/múi giờ, thiết lập tài chính, danh mục cá nhân, tùy chọn thông báo, đổi mật khẩu |
 | **Quản trị** | Tổng quan hệ thống (người dùng hoạt động, tăng trưởng, khối lượng giao dịch, phân bổ danh mục), quản lý người dùng (vô hiệu hóa, phân quyền), danh mục mặc định, thông báo toàn hệ thống |
@@ -90,14 +94,16 @@ src/
   components/
     ui/                  # Button, Card, Field, Dialog/Sheet, Segmented, Progress, Skeleton…
     common/ layout/ dashboard/ transactions/ budgets/ goals/ recurring/ reports/ settings/ charts/ auth/
-  hooks/                 # use-api (cache + invalidate), use-transactions, use-budget, use-dashboard…
+  hooks/                 # use-api (cache + invalidate), use-transactions, use-budget, use-dashboard, use-points…
+  i18n/                  # config, messages/vi.ts + en.ts, provider (useI18n), server (getLocale), format, templates
   lib/
     auth/                # jwt, session (requireAuth/requireRole/requireAdmin), ownership, cookies, rate-limit
     api/                 # ApiError, response helpers, params
     validations/         # *.schema.ts (Zod) dùng chung
-    finance/             # logic thuần: budget, forecast, safe-to-spend, anomaly, insights, categorize, recurring, goals
+    finance/             # logic thuần: budget, forecast, safe-to-spend, anomaly, insights, categorize, recurring, goals, points
+    csv/                 # parser CSV nhập giao dịch
     utils/               # date (Asia/Ho_Chi_Minh), money (VND), cn
-  services/              # transaction, budget, category, analytics, planning, recurring, goal, notification, user, admin
+  services/              # transaction, budget, category, analytics, planning, recurring, goal, notification, points, import, user, admin
   types/ constants/ context/
 tests/                   # Vitest
 ```
@@ -125,6 +131,13 @@ Mọi response có dạng thống nhất:
 Scheduler chạy "lazy" khi người dùng mở app, và có endpoint cron `GET /api/cron/recurring`
 (header `Authorization: Bearer $CRON_SECRET`). Unique `(recurring_id, date)` + cập nhật có điều kiện đảm bảo không sinh giao dịch trùng
 dù chạy lặp hoặc song song.
+
+### Song ngữ (i18n)
+
+- Không dùng thư viện ngoài: `src/i18n/messages/vi.ts` là từ điển chuẩn, `en.ts` bắt buộc cùng cấu trúc (thiếu key → lỗi TypeScript).
+- Ngôn ngữ lưu trong cookie `campuscoin_locale` (mặc định theo `Accept-Language`, rồi tiếng Việt) nên server component, metadata và `<html lang>` cũng đúng ngôn ngữ.
+- Client dùng `useI18n()` → `{ t, fmt, locale, setLocale }`; server dùng `getServerMessages()`.
+- Nội dung sinh ở server (thông báo, nhận định) trả về `template + params`, client tự dịch; danh mục mặc định được dịch theo tên chuẩn. Tiền tệ (VND) và ngày (`dd/MM/yyyy`) giữ theo khu vực Việt Nam ở cả hai ngôn ngữ.
 
 ### Ngày giờ
 

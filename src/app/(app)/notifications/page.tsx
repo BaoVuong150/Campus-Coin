@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BellOff, CheckCheck } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { PageHeader } from "@/components/layout/page-header";
-import { NOTIFICATION_KIND_LABELS, NotificationIcon } from "@/components/notifications/notification-icon";
+import { NotificationIcon } from "@/components/notifications/notification-icon";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
@@ -13,7 +13,8 @@ import { Segmented } from "@/components/ui/segmented";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useNotificationMutations, useNotifications } from "@/hooks/use-notifications";
-import { errorMessage } from "@/lib/api-client";
+import { renderNotification } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 import { formatDateTime } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
@@ -26,38 +27,40 @@ export default function NotificationsPage() {
   const { data, error, reload } = useNotifications(page, PAGE_SIZE, filter === "unread");
   const { markRead, markAllRead } = useNotificationMutations();
   const { toast } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.notifications;
 
   const handleMarkAll = async () => {
     try {
       await markAllRead();
-      toast.success("Đã đánh dấu tất cả là đã đọc");
+      toast.success(l.markedAll);
     } catch (e) {
-      toast.error("Không thể cập nhật", errorMessage(e));
+      toast.error(l.failed, fmt.error(e));
     }
   };
 
   return (
     <div>
       <PageHeader
-        title="Thông báo"
-        description={data ? `${data.unread} thông báo chưa đọc` : "Cảnh báo ngân sách, khoản định kỳ và mục tiêu."}
+        title={l.title}
+        description={data ? l.unreadCount(data.unread) : l.description}
         actions={
           <>
             <Segmented
-              label="Lọc thông báo"
+              label={l.filter}
               value={filter}
               onChange={(v) => {
                 setFilter(v);
                 setPage(1);
               }}
               options={[
-                { value: "all", label: "Tất cả" },
-                { value: "unread", label: "Chưa đọc" },
+                { value: "all", label: t.common.all },
+                { value: "unread", label: l.unread },
               ]}
               size="md"
             />
             <Button variant="outline" onClick={handleMarkAll} disabled={!data?.unread}>
-              <CheckCheck /> Đánh dấu đã đọc tất cả
+              <CheckCheck /> {l.markAll}
             </Button>
           </>
         }
@@ -70,10 +73,12 @@ export default function NotificationsPage() {
             <SkeletonRows rows={6} />
           </div>
         ) : data.items.length === 0 ? (
-          <EmptyState icon={<BellOff />} title={filter === "unread" ? "Không có thông báo chưa đọc" : "Chưa có thông báo"} description="Bạn sẽ nhận thông báo khi chi tiêu gần chạm ngân sách, có khoản định kỳ được ghi hoặc đạt mốc mục tiêu." />
+          <EmptyState icon={<BellOff />} title={filter === "unread" ? l.emptyUnread : l.empty} description={l.emptyBody} />
         ) : (
           <ul className="divide-y divide-border">
-            {data.items.map((n) => (
+            {data.items.map((n) => {
+              const view = renderNotification(t, n);
+              return (
               <li key={n.id}>
                 <button
                   type="button"
@@ -86,16 +91,17 @@ export default function NotificationsPage() {
                   <NotificationIcon kind={n.kind} type={n.type} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-x-2">
-                      <span className="text-sm font-medium text-foreground">{n.title}</span>
-                      <span className="text-[11px] text-subtle">{NOTIFICATION_KIND_LABELS[n.kind]}</span>
+                      <span className="text-sm font-medium text-foreground">{view.title}</span>
+                      <span className="text-[11px] text-subtle">{l.kinds[n.kind]}</span>
                     </span>
-                    <span className="mt-0.5 block text-[13px] text-muted">{n.message}</span>
+                    <span className="mt-0.5 block text-[13px] text-muted">{view.message}</span>
                     <span className="mt-1 block text-[12px] text-subtle">{formatDateTime(n.createdAt)}</span>
                   </span>
-                  {!n.isRead && <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label="Chưa đọc" />}
+                  {!n.isRead && <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label={t.header.unreadDot} />}
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
         {data && data.total > PAGE_SIZE && (

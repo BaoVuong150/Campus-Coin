@@ -15,12 +15,15 @@ import { useSessionUser } from "@/components/layout/session-context";
 import { useTransactionUI } from "@/components/transactions/transaction-provider";
 import { Button } from "@/components/ui/button";
 import { useSummary } from "@/hooks/use-dashboard";
-import { currentMonthKey, greeting } from "@/lib/utils/date";
+import { currentMonthKey } from "@/lib/utils/date";
+import { greeting } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 
 /** Dashboard: sắp xếp theo mức độ quan trọng – con số chính → kế hoạch → xu hướng → chi tiết. */
 export default function DashboardPage() {
   const user = useSessionUser();
   const { openCreate } = useTransactionUI();
+  const { t } = useI18n();
   const month = useMemo(() => currentMonthKey(), []);
   const { data: summary } = useSummary(month);
   const firstName = user.name.trim().split(/\s+/).pop() ?? user.name;
@@ -29,11 +32,11 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         className="mb-0"
-        title={`${greeting()}, ${firstName}`}
-        description="Tổng quan tài chính của bạn trong tháng này."
+        title={`${greeting(t)}, ${firstName}`}
+        description={t.dashboard.subtitle}
         actions={
           <Button onClick={() => openCreate()}>
-            <Plus /> Thêm giao dịch
+            <Plus /> {t.header.addTransaction}
           </Button>
         }
       />

@@ -1,3 +1,5 @@
+"use client";
+
 import { formatVND } from "@/lib/utils/money";
 
 interface TooltipEntry {

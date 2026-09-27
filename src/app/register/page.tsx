@@ -2,19 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/auth/register-form";
+import { getServerMessages } from "@/i18n/server";
 
-export const metadata: Metadata = { title: "Đăng ký" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getServerMessages()).meta.register };
+}
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const t = await getServerMessages();
   return (
     <AuthShell
-      title="Tạo tài khoản"
-      description="Bắt đầu quản lý chi tiêu chỉ trong một phút."
+      title={t.auth.registerTitle}
+      description={t.auth.registerSubtitle}
       footer={
         <>
-          Đã có tài khoản?{" "}
+          {t.auth.haveAccount}{" "}
           <Link href="/login" className="font-medium text-primary hover:underline">
-            Đăng nhập
+            {t.auth.submitLogin}
           </Link>
         </>
       }

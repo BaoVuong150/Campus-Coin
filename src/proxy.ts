@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifyToken, type VerifyResult } from "@/lib/auth/jwt";
 
-const APP_PREFIXES = ["/dashboard", "/transactions", "/budgets", "/reports", "/goals", "/recurring", "/notifications", "/settings"];
+const APP_PREFIXES = ["/dashboard", "/transactions", "/budgets", "/reports", "/goals", "/recurring", "/points", "/notifications", "/settings"];
 const AUTH_PAGES = ["/login", "/register"];
 
 function readSession(request: NextRequest): VerifyResult {
@@ -59,6 +59,7 @@ export const config = {
     "/reports/:path*",
     "/goals/:path*",
     "/recurring/:path*",
+    "/points/:path*",
     "/notifications/:path*",
     "/settings/:path*",
   ],

@@ -11,6 +11,7 @@ import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
 import type { CategoryDTO } from "@/types/finance";
 import type { TransactionFilters as Filters } from "@/hooks/use-transactions";
+import { useI18n } from "@/i18n/provider";
 
 interface Props {
   filters: Filters;
@@ -20,13 +21,14 @@ interface Props {
   autoFocusSearch?: boolean;
 }
 
-const TYPE_OPTIONS = [
-  { value: "all" as const, label: "Tất cả" },
-  { value: "expense" as const, label: "Chi" },
-  { value: "income" as const, label: "Thu" },
-];
-
 export function TransactionFiltersBar({ filters, categories, onChange, onReset, autoFocusSearch }: Props) {
+  const { t, fmt } = useI18n();
+  const l = t.transactions.filters;
+  const typeOptions = [
+    { value: "all" as const, label: t.common.all },
+    { value: "expense" as const, label: t.common.expenseShort },
+    { value: "income" as const, label: t.common.incomeShort },
+  ];
   const [q, setQ] = useState(filters.q ?? "");
   const [min, setMin] = useState(filters.min ? formatCurrencyInput(filters.min) : "");
   const [max, setMax] = useState(filters.max ? formatCurrencyInput(filters.max) : "");
@@ -72,21 +74,21 @@ export function TransactionFiltersBar({ filters, categories, onChange, onReset, 
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Tìm theo mô tả hoặc danh mục"
-            aria-label="Tìm giao dịch"
+            placeholder={l.search}
+            aria-label={t.header.searchLabel}
             className="pl-9"
           />
         </div>
         <div className="flex items-center gap-2">
           <Segmented
-            label="Loại giao dịch"
+            label={l.type}
             value={filters.type ?? "all"}
             onChange={(type) => onChange({ type, category_id: null })}
-            options={TYPE_OPTIONS}
+            options={typeOptions}
             size="md"
           />
           <Button variant={expanded ? "secondary" : "outline"} onClick={() => setExpanded((v) => !v)} aria-expanded={expanded} aria-controls="tx-advanced-filters">
-            <SlidersHorizontal /> Bộ lọc
+            <SlidersHorizontal /> {l.button}
             {activeCount > 0 && <span className="tabular rounded-full bg-primary px-1.5 text-[11px] text-primary-foreground">{activeCount}</span>}
           </Button>
         </div>
@@ -94,31 +96,31 @@ export function TransactionFiltersBar({ filters, categories, onChange, onReset, 
 
       <div id="tx-advanced-filters" className={cn("grid gap-3 rounded-lg border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-5", !expanded && "hidden")}>
         <label className="space-y-1">
-          <span className="text-[12px] font-medium text-muted">Danh mục</span>
+          <span className="text-[12px] font-medium text-muted">{l.category}</span>
           <Select value={filters.category_id ?? ""} onChange={(e) => onChange({ category_id: e.target.value ? Number(e.target.value) : null })}>
-            <option value="">Tất cả danh mục</option>
+            <option value="">{l.allCategories}</option>
             {visibleCategories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {fmt.category(c.name)}
               </option>
             ))}
           </Select>
         </label>
         <label className="space-y-1">
-          <span className="text-[12px] font-medium text-muted">Từ ngày</span>
+          <span className="text-[12px] font-medium text-muted">{l.from}</span>
           <Input type="date" value={filters.from ?? ""} onChange={(e) => onChange({ from: e.target.value || undefined })} />
         </label>
         <label className="space-y-1">
-          <span className="text-[12px] font-medium text-muted">Đến ngày</span>
+          <span className="text-[12px] font-medium text-muted">{l.to}</span>
           <Input type="date" value={filters.to ?? ""} min={filters.from} onChange={(e) => onChange({ to: e.target.value || undefined })} />
         </label>
         <label className="space-y-1">
-          <span className="text-[12px] font-medium text-muted">Số tiền từ</span>
+          <span className="text-[12px] font-medium text-muted">{l.min}</span>
           <MoneyInput value={min} onValueChange={setMin} placeholder="0" />
         </label>
         <label className="space-y-1">
-          <span className="text-[12px] font-medium text-muted">Đến</span>
-          <MoneyInput value={max} onValueChange={setMax} placeholder="Không giới hạn" />
+          <span className="text-[12px] font-medium text-muted">{l.max}</span>
+          <MoneyInput value={max} onValueChange={setMax} placeholder={l.noLimit} />
         </label>
         {activeCount > 0 && (
           <div className="sm:col-span-2 lg:col-span-5">
@@ -132,7 +134,7 @@ export function TransactionFiltersBar({ filters, categories, onChange, onReset, 
                 onReset();
               }}
             >
-              <X /> Xóa bộ lọc
+              <X /> {t.transactions.clearFilters}
             </Button>
           </div>
         )}

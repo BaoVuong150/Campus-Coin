@@ -137,18 +137,20 @@ function findCanonical(categories: Category[], canonical: CanonicalCategory): Ca
   return categories.find((c) => c.user_id === null && normalizeText(c.name) === target);
 }
 
-/**
- * Gợi ý danh mục cho mô tả giao dịch. Mọi truy vấn đều giới hạn trong dữ liệu của chính user,
- * không bao giờ đọc lịch sử của người khác.
- */
-export async function suggestCategory(
-  userId: string,
-  text: string,
-  type?: TransactionType
-): Promise<CategorySuggestion | null> {
-  const categories = await prisma.category.findMany({
-    where: { AND: [usableCategoryWhere(userId), type ? { type } : {}] },
-  });
+const BATCH_HISTORY_SIZE = 500;
+
+/** Dữ liệu của chính user dùng để gợi ý danh mục – không bao giờ chứa dữ liệu của người khác. */
+interface SuggestionContext {
+  categories: Category[];
+  preferences: Map<string, number>;
+  history: { description: string; category_id: number; type: string }[];
+}
+
+const historyQuery = (text: string) => text.trim().split(/s+/).slice(0, 2).join(" ");
+
+/** Lõi gợi ý: lựa chọn đã ghi nhớ → lịch sử của user → từ khóa merchant → danh mục mặc định. */
+function pickSuggestion(ctx: SuggestionContext, text: string, type?: TransactionType): CategorySuggestion | null {
+  const categories = type ? ctx.categories.filter((c) => c.type === type) : ctx.categories;
   const byId = new Map(categories.map((c) => [c.id, c]));
   const build = (c: Category, source: CategorySuggestion["source"]): CategorySuggestion => ({
     categoryId: c.id,
@@ -157,46 +159,76 @@ export async function suggestCategory(
     source,
   });
 
-  const key = preferenceKey(text);
-  if (key) {
-    const pref = await prisma.categoryPreference.findUnique({
-      where: { user_id_keyword: { user_id: userId, keyword: key } },
-    });
-    const prefCategory = pref ? byId.get(pref.category_id) : undefined;
-    if (prefCategory) return build(prefCategory, "preference");
-  }
+  const preferred = byId.get(ctx.preferences.get(preferenceKey(text)) ?? -1);
+  if (preferred) return build(preferred, "preference");
 
-  const query = text.trim().split(/\s+/).slice(0, 2).join(" ");
+  const query = historyQuery(text);
   if (query.length >= MIN_HISTORY_QUERY_LENGTH) {
-    const history = await prisma.transaction.findMany({
-      where: {
-        user_id: userId,
-        description: { contains: query, mode: "insensitive" },
-        ...(type ? { type } : {}),
-      },
-      select: { category_id: true, description: true },
-      orderBy: { date: "desc" },
-      take: HISTORY_SAMPLE,
-    });
-    // DB lọc "contains" (thô), sau đó chỉ giữ khớp trọn từ: "Shopee" không khớp "ShopeeFood".
+    // Chỉ khớp trọn từ: "Shopee" không khớp "ShopeeFood".
     const needle = ` ${normalizeText(query)} `;
-    const matches = history.filter((h) => ` ${normalizeText(h.description)} `.includes(needle));
-    const historyId = mostFrequent(matches.map((h) => h.category_id));
-    const historyCategory = historyId !== null ? byId.get(historyId) : undefined;
-    if (historyCategory) return build(historyCategory, "history");
+    const matches = ctx.history.filter(
+      (h) => (!type || h.type === type) && ` ${normalizeText(h.description)} `.includes(needle)
+    );
+    const fromHistory = byId.get(mostFrequent(matches.slice(0, HISTORY_SAMPLE).map((h) => h.category_id)) ?? -1);
+    if (fromHistory) return build(fromHistory, "history");
   }
 
   const rule = matchRule(text, type);
-  if (rule) {
-    const matched = findCanonical(categories, rule.category);
-    if (matched) return build(matched, "rule");
-  }
+  const ruled = rule ? findCanonical(categories, rule.category) : undefined;
+  if (ruled) return build(ruled, "rule");
 
-  if (type) {
-    const fallback = findCanonical(categories, fallbackCategory(type));
-    if (fallback) return build(fallback, "default");
-  }
-  return null;
+  const fallback = type ? findCanonical(categories, fallbackCategory(type)) : undefined;
+  return fallback ? build(fallback, "default") : null;
+}
+
+/** Gợi ý cho một mô tả (khi đang gõ): chỉ truy vấn đúng phần dữ liệu cần thiết của user. */
+export async function suggestCategory(
+  userId: string,
+  text: string,
+  type?: TransactionType
+): Promise<CategorySuggestion | null> {
+  const key = preferenceKey(text);
+  const query = historyQuery(text);
+  const [categories, preference, history] = await Promise.all([
+    prisma.category.findMany({ where: { AND: [usableCategoryWhere(userId), type ? { type } : {}] } }),
+    key ? prisma.categoryPreference.findUnique({ where: { user_id_keyword: { user_id: userId, keyword: key } } }) : null,
+    query.length >= MIN_HISTORY_QUERY_LENGTH
+      ? prisma.transaction.findMany({
+          where: { user_id: userId, description: { contains: query, mode: "insensitive" }, ...(type ? { type } : {}) },
+          select: { category_id: true, description: true, type: true },
+          orderBy: { date: "desc" },
+          take: HISTORY_SAMPLE,
+        })
+      : [],
+  ]);
+  return pickSuggestion(
+    { categories, preferences: new Map(preference && key ? [[key, preference.category_id]] : []), history },
+    text,
+    type
+  );
+}
+
+/** Gợi ý hàng loạt (nhập CSV): nạp ngữ cảnh một lần rồi xử lý trong bộ nhớ. */
+export async function suggestCategories(
+  userId: string,
+  items: { text: string; type: TransactionType }[]
+): Promise<(CategorySuggestion | null)[]> {
+  const [categories, preferences, history] = await Promise.all([
+    prisma.category.findMany({ where: usableCategoryWhere(userId) }),
+    prisma.categoryPreference.findMany({ where: { user_id: userId }, select: { keyword: true, category_id: true } }),
+    prisma.transaction.findMany({
+      where: { user_id: userId },
+      select: { category_id: true, description: true, type: true },
+      orderBy: { date: "desc" },
+      take: BATCH_HISTORY_SIZE,
+    }),
+  ]);
+  const ctx: SuggestionContext = {
+    categories,
+    preferences: new Map(preferences.map((p) => [p.keyword, p.category_id])),
+    history,
+  };
+  return items.map((item) => pickSuggestion(ctx, item.text, item.type));
 }
 
 /** Ghi nhớ lựa chọn danh mục của user cho mô tả này (chỉ ảnh hưởng gợi ý của chính user). */

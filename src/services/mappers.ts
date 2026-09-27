@@ -44,6 +44,8 @@ export function toNotificationDTO(n: Notification): NotificationDTO {
     message: n.message,
     type: (NOTIFICATION_TYPES as readonly string[]).includes(n.type) ? (n.type as NotificationDTO["type"]) : "info",
     kind: n.kind as NotificationKind,
+    template: n.template,
+    params: n.params && typeof n.params === "object" && !Array.isArray(n.params) ? (n.params as Record<string, unknown>) : null,
     link: n.link,
     isRead: n.is_read,
     createdAt: n.created_at.toISOString(),

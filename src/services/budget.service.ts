@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/database/prisma";
 import { Errors } from "@/lib/api/errors";
 import { computeBudget, summarizeBudgets } from "@/lib/finance/budget";
-import { monthLabel, monthRange } from "@/lib/utils/date";
-import { formatVND } from "@/lib/utils/money";
+import { monthRange } from "@/lib/utils/date";
 import type { UpsertBudgetInput } from "@/lib/validations/budget.schema";
 import type { BudgetItemDTO, BudgetOverviewDTO } from "@/types/finance";
 import { getUsableCategory } from "./category.service";
@@ -97,16 +96,23 @@ export async function evaluateBudgetAlerts(userId: string, month: string, catego
   const result = computeBudget(toNumber(budget.limit_amount), spent);
   if (result.status === "normal") return;
 
-  const name = budget.category.name;
-  const exceeded = result.status === "exceeded";
-  await notify(userId, {
-    kind: exceeded ? "budget_exceeded" : "budget_warning",
-    type: exceeded ? "alert" : "warning",
-    title: exceeded ? `Vượt ngân sách ${name}` : `Sắp chạm ngân sách ${name}`,
-    message: exceeded
-      ? `Bạn đã chi ${formatVND(spent)} cho ${name} trong ${monthLabel(month).toLowerCase()}, vượt ${formatVND(result.overBy)} so với ngân sách.`
-      : `Bạn đã sử dụng ${result.percentage}% ngân sách ${name} (${formatVND(spent)} / ${formatVND(result.limit)}).`,
-    link: `/budgets?month=${month}`,
-    dedupeKey: `budget:${month}:${categoryId}:${result.status}`,
-  });
+  const category = budget.category.name;
+  const shared = { link: `/budgets?month=${month}`, dedupeKey: `budget:${month}:${categoryId}:${result.status}` };
+  if (result.status === "exceeded") {
+    await notify(userId, {
+      kind: "budget_exceeded",
+      type: "alert",
+      template: "budgetExceeded",
+      params: { category, month, spent, over: result.overBy },
+      ...shared,
+    });
+  } else {
+    await notify(userId, {
+      kind: "budget_warning",
+      type: "warning",
+      template: "budgetWarning",
+      params: { category, percent: result.percentage, spent, limit: result.limit },
+      ...shared,
+    });
+  }
 }

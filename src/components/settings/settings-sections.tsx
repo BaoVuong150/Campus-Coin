@@ -1,26 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { Monitor, Moon, Sun, Trash2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Globe, Moon, Sun, Trash2 } from "lucide-react";
 import { CategoryIcon } from "@/components/common/category-icon";
+import { LanguageSelect } from "@/components/layout/language-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Segmented } from "@/components/ui/segmented";
+import { PASSWORD_MIN_LENGTH } from "@/constants/finance";
 import { useTheme, type FontSize } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
 import { useCategories, useCategoryMutations } from "@/hooks/use-categories";
 import { useProfileMutations } from "@/hooks/use-profile";
-import { ApiClientError, errorMessage } from "@/lib/api-client";
+import { useI18n } from "@/i18n/provider";
+import { ApiClientError } from "@/lib/api-client";
 import { APP_TIMEZONE } from "@/lib/utils/date";
 import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils/money";
 import type { ProfileDTO, TransactionType } from "@/types/finance";
 
+const PAY_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+const NOTIFICATION_KEYS = ["budget", "recurring", "goal", "unusual"] as const;
+
+function SettingRow({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-[12px] text-muted">{hint}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function ProfileSection({ profile }: { profile: ProfileDTO }) {
   const { update } = useProfileMutations();
   const { toast } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.settings.profile;
   const [name, setName] = useState(profile.name);
   const [academicYear, setAcademicYear] = useState(profile.academicYear ?? "");
   const [error, setError] = useState<string>();
@@ -28,14 +48,14 @@ export function ProfileSection({ profile }: { profile: ProfileDTO }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim().length < 2) return setError("Họ tên cần ít nhất 2 ký tự.");
+    if (name.trim().length < 2) return setError(t.validation.nameMin);
     setError(undefined);
     setSaving(true);
     try {
       await update({ name: name.trim(), academic_year: academicYear.trim() || null });
-      toast.success("Đã lưu hồ sơ");
+      toast.success(l.saved);
     } catch (err) {
-      toast.error("Không thể lưu hồ sơ", errorMessage(err));
+      toast.error(l.failed, fmt.error(err));
     } finally {
       setSaving(false);
     }
@@ -43,21 +63,21 @@ export function ProfileSection({ profile }: { profile: ProfileDTO }) {
 
   return (
     <Card>
-      <CardHeader title="Hồ sơ" description="Thông tin hiển thị trong ứng dụng." />
+      <CardHeader title={l.title} description={l.description} />
       <CardContent>
         <form noValidate onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-          <Field label="Họ tên" error={error} required>
+          <Field label={l.name} error={error} required>
             {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />}
           </Field>
-          <Field label="Email" hint="Email đăng nhập không thể thay đổi.">
+          <Field label={l.email} hint={l.emailHint}>
             {(p) => <Input {...p} value={profile.email} disabled readOnly />}
           </Field>
-          <Field label="Năm học / Ngành" className="sm:col-span-2">
-            {(p) => <Input {...p} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="VD: Năm 2 – Kinh tế" maxLength={80} />}
+          <Field label={l.academicYear} className="sm:col-span-2">
+            {(p) => <Input {...p} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder={l.academicYearPlaceholder} maxLength={80} />}
           </Field>
           <div className="sm:col-span-2">
             <Button type="submit" loading={saving}>
-              Lưu hồ sơ
+              {l.save}
             </Button>
           </div>
         </form>
@@ -68,62 +88,57 @@ export function ProfileSection({ profile }: { profile: ProfileDTO }) {
 
 export function AppearanceSection() {
   const { theme, setTheme, fontSize, setFontSize } = useTheme();
+  const { t } = useI18n();
+  const l = t.settings.appearance;
   return (
     <Card>
-      <CardHeader title="Giao diện" description="Chế độ màu và cỡ chữ được lưu trên trình duyệt này." />
+      <CardHeader title={l.title} description={l.description} />
       <CardContent className="space-y-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">Chế độ màu</p>
-            <p className="text-[12px] text-muted">Mặc định theo cài đặt hệ điều hành.</p>
-          </div>
+        <SettingRow title={l.language} hint={l.languageHint}>
+          <LanguageSelect />
+        </SettingRow>
+        <SettingRow title={l.theme} hint={l.themeHint}>
           <div className="flex gap-2">
             <Button variant={theme === "light" ? "secondary" : "outline"} onClick={() => setTheme("light")} aria-pressed={theme === "light"}>
-              <Sun /> Sáng
+              <Sun /> {l.light}
             </Button>
             <Button variant={theme === "dark" ? "secondary" : "outline"} onClick={() => setTheme("dark")} aria-pressed={theme === "dark"}>
-              <Moon /> Tối
+              <Moon /> {l.dark}
             </Button>
           </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">Cỡ chữ</p>
-            <p className="text-[12px] text-muted">Tăng cỡ chữ toàn ứng dụng để dễ đọc hơn.</p>
-          </div>
+        </SettingRow>
+        <SettingRow title={l.fontSize} hint={l.fontSizeHint}>
           <Segmented<FontSize>
-            label="Cỡ chữ"
+            label={l.fontSize}
             value={fontSize}
             onChange={setFontSize}
-            options={[
-              { value: "normal", label: "Chuẩn" },
-              { value: "large", label: "Lớn" },
-              { value: "larger", label: "Rất lớn" },
-            ]}
+            options={(["normal", "large", "larger"] as const).map((value) => ({ value, label: l.fontSizes[value] }))}
             size="md"
           />
-        </div>
+        </SettingRow>
       </CardContent>
     </Card>
   );
 }
 
 export function RegionSection() {
+  const { t } = useI18n();
+  const l = t.settings.region;
   return (
     <Card>
-      <CardHeader title="Tiền tệ & khu vực" icon={<Monitor />} />
+      <CardHeader title={l.title} icon={<Globe />} />
       <CardContent className="grid gap-4 text-sm sm:grid-cols-3">
         <div>
-          <p className="text-[12px] text-muted">Tiền tệ</p>
-          <p className="mt-0.5 font-medium text-foreground">Việt Nam Đồng (VND)</p>
+          <p className="text-[12px] text-muted">{l.currency}</p>
+          <p className="mt-0.5 font-medium text-foreground">{l.currencyValue}</p>
           <p className="tabular text-[12px] text-subtle">1.250.000 ₫</p>
         </div>
         <div>
-          <p className="text-[12px] text-muted">Định dạng ngày</p>
+          <p className="text-[12px] text-muted">{l.dateFormat}</p>
           <p className="mt-0.5 font-medium text-foreground">dd/MM/yyyy</p>
         </div>
         <div>
-          <p className="text-[12px] text-muted">Múi giờ</p>
+          <p className="text-[12px] text-muted">{l.timezone}</p>
           <p className="mt-0.5 font-medium text-foreground">{APP_TIMEZONE} (GMT+7)</p>
         </div>
       </CardContent>
@@ -134,6 +149,8 @@ export function RegionSection() {
 export function FinanceSection({ profile }: { profile: ProfileDTO }) {
   const { update } = useProfileMutations();
   const { toast } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.settings.finance;
   const [allowance, setAllowance] = useState(formatCurrencyInput(profile.monthlyAllowance));
   const [savings, setSavings] = useState(formatCurrencyInput(profile.monthlySavingsGoal));
   const [payDay, setPayDay] = useState(profile.salaryPayDay);
@@ -148,9 +165,9 @@ export function FinanceSection({ profile }: { profile: ProfileDTO }) {
         monthly_savings_goal: parseCurrencyInput(savings),
         salary_pay_day: payDay,
       });
-      toast.success("Đã lưu thiết lập tài chính");
+      toast.success(l.saved);
     } catch (err) {
-      toast.error("Không thể lưu", errorMessage(err));
+      toast.error(l.failed, fmt.error(err));
     } finally {
       setSaving(false);
     }
@@ -158,21 +175,21 @@ export function FinanceSection({ profile }: { profile: ProfileDTO }) {
 
   return (
     <Card>
-      <CardHeader title="Thiết lập tài chính" description="Dùng để tính Số tiền có thể chi và dự báo cuối tháng." />
+      <CardHeader title={l.title} description={l.description} />
       <CardContent>
         <form noValidate onSubmit={submit} className="grid gap-4 sm:grid-cols-3">
-          <Field label="Thu nhập cơ bản / tháng" hint="Trợ cấp, lương làm thêm dự kiến.">
+          <Field label={l.income} hint={l.incomeHint}>
             {(p) => <MoneyInput {...p} value={allowance} onValueChange={setAllowance} placeholder="0" />}
           </Field>
-          <Field label="Tiết kiệm mỗi tháng" hint="Số tiền muốn giữ lại cuối tháng.">
+          <Field label={l.savings} hint={l.savingsHint}>
             {(p) => <MoneyInput {...p} value={savings} onValueChange={setSavings} placeholder="0" />}
           </Field>
-          <Field label="Ngày nhận tiền">
+          <Field label={l.payDay}>
             {(p) => (
               <Select {...p} value={payDay} onChange={(e) => setPayDay(Number(e.target.value))}>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                {PAY_DAYS.map((d) => (
                   <option key={d} value={d}>
-                    Ngày {d}
+                    {l.day(d)}
                   </option>
                 ))}
               </Select>
@@ -180,7 +197,7 @@ export function FinanceSection({ profile }: { profile: ProfileDTO }) {
           </Field>
           <div className="sm:col-span-3">
             <Button type="submit" loading={saving}>
-              Lưu thiết lập
+              {l.save}
             </Button>
           </div>
         </form>
@@ -193,6 +210,8 @@ export function CategoriesSection() {
   const { data } = useCategories();
   const { create, remove } = useCategoryMutations();
   const { toast, confirm } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.settings.categories;
   const [name, setName] = useState("");
   const [type, setType] = useState<TransactionType>("expense");
   const [saving, setSaving] = useState(false);
@@ -205,46 +224,55 @@ export function CategoriesSection() {
     try {
       await create({ name: name.trim(), type });
       setName("");
-      toast.success("Đã thêm danh mục");
+      toast.success(l.added);
     } catch (err) {
-      toast.error("Không thể thêm danh mục", errorMessage(err));
+      toast.error(l.addFailed, fmt.error(err));
     } finally {
       setSaving(false);
     }
   };
 
   const del = async (id: number, label: string) => {
-    const ok = await confirm({ title: "Xóa danh mục?", message: `Xóa danh mục "${label}".`, confirmText: "Xóa", isDestructive: true });
+    const ok = await confirm({ title: l.deleteTitle, message: l.deleteMessage(label), confirmText: t.common.delete, isDestructive: true });
     if (!ok) return;
     try {
       await remove(id);
-      toast.success("Đã xóa danh mục");
+      toast.success(l.deleted);
     } catch (err) {
-      toast.error("Không thể xóa danh mục", errorMessage(err));
+      toast.error(l.deleteFailed, fmt.error(err));
     }
   };
 
   return (
     <Card>
-      <CardHeader title="Danh mục cá nhân" description="Thêm danh mục riêng ngoài danh mục mặc định của hệ thống." />
+      <CardHeader title={l.title} description={l.description} />
       <CardContent className="space-y-4">
         <form noValidate onSubmit={add} className="flex flex-col gap-2 sm:flex-row">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên danh mục mới" aria-label="Tên danh mục mới" maxLength={80} className="sm:flex-1" />
-          <Segmented label="Loại danh mục" value={type} onChange={setType} options={[{ value: "expense", label: "Chi" }, { value: "income", label: "Thu" }]} size="md" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={l.newName} aria-label={l.newName} maxLength={80} className="sm:flex-1" />
+          <Segmented
+            label={l.type}
+            value={type}
+            onChange={setType}
+            options={[
+              { value: "expense", label: t.common.expenseShort },
+              { value: "income", label: t.common.incomeShort },
+            ]}
+            size="md"
+          />
           <Button type="submit" loading={saving} disabled={!name.trim()}>
-            Thêm
+            {t.common.add}
           </Button>
         </form>
         {own.length === 0 ? (
-          <p className="text-[13px] text-muted">Bạn chưa có danh mục riêng.</p>
+          <p className="text-[13px] text-muted">{l.empty}</p>
         ) : (
           <ul className="divide-y divide-border">
             {own.map((c) => (
               <li key={c.id} className="flex items-center gap-3 py-2.5">
                 <CategoryIcon icon={c.icon} color={c.color} size="sm" />
                 <span className="flex-1 text-sm text-foreground">{c.name}</span>
-                <Badge tone={c.type === "income" ? "success" : "neutral"}>{c.type === "income" ? "Thu" : "Chi"}</Badge>
-                <Button variant="ghost" size="icon-sm" onClick={() => del(c.id, c.name)} aria-label={`Xóa danh mục ${c.name}`}>
+                <Badge tone={c.type === "income" ? "success" : "neutral"}>{c.type === "income" ? t.common.incomeShort : t.common.expenseShort}</Badge>
+                <Button variant="ghost" size="icon-sm" onClick={() => del(c.id, c.name)} aria-label={l.deleteLabel(c.name)}>
                   <Trash2 />
                 </Button>
               </li>
@@ -259,6 +287,8 @@ export function CategoriesSection() {
 export function SecuritySection() {
   const { changePassword } = useProfileMutations();
   const { toast } = useToast();
+  const { t, fmt, locale } = useI18n();
+  const l = t.settings.security;
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirmValue, setConfirmValue] = useState("");
@@ -268,9 +298,10 @@ export function SecuritySection() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const found = {
-      current: current ? undefined : "Nhập mật khẩu hiện tại.",
-      next: next.length >= 8 && /[A-Za-z]/.test(next) && /\d/.test(next) ? undefined : "Tối thiểu 8 ký tự, gồm cả chữ và số.",
-      confirm: next === confirmValue ? undefined : "Mật khẩu nhập lại không khớp.",
+      current: current ? undefined : t.validation.currentPasswordRequired,
+      next:
+        next.length >= PASSWORD_MIN_LENGTH && /[A-Za-z]/.test(next) && /\d/.test(next) ? undefined : t.validation.passwordRule(PASSWORD_MIN_LENGTH),
+      confirm: next === confirmValue ? undefined : t.validation.passwordMismatch,
     };
     setErrors(found);
     if (Object.values(found).some(Boolean)) return;
@@ -280,10 +311,13 @@ export function SecuritySection() {
       setCurrent("");
       setNext("");
       setConfirmValue("");
-      toast.success("Đã đổi mật khẩu");
+      toast.success(l.changed);
     } catch (err) {
-      if (err instanceof ApiClientError && err.fields) setErrors({ current: err.fields.currentPassword, next: err.fields.newPassword });
-      toast.error("Không thể đổi mật khẩu", errorMessage(err));
+      if (err instanceof ApiClientError && err.fields) {
+        const field = (message?: string) => message && (locale === "vi" ? message : t.errors.VALIDATION_ERROR);
+        setErrors({ current: field(err.fields.currentPassword), next: field(err.fields.newPassword) });
+      }
+      toast.error(l.failed, fmt.error(err));
     } finally {
       setSaving(false);
     }
@@ -291,21 +325,21 @@ export function SecuritySection() {
 
   return (
     <Card>
-      <CardHeader title="Bảo mật" description="Đổi mật khẩu đăng nhập." />
+      <CardHeader title={l.title} description={l.description} />
       <CardContent>
         <form noValidate onSubmit={submit} className="grid gap-4 sm:grid-cols-3">
-          <Field label="Mật khẩu hiện tại" error={errors.current}>
+          <Field label={l.current} error={errors.current}>
             {(p) => <Input {...p} type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />}
           </Field>
-          <Field label="Mật khẩu mới" error={errors.next}>
+          <Field label={l.new} error={errors.next}>
             {(p) => <Input {...p} type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />}
           </Field>
-          <Field label="Nhập lại mật khẩu mới" error={errors.confirm}>
+          <Field label={l.confirm} error={errors.confirm}>
             {(p) => <Input {...p} type="password" autoComplete="new-password" value={confirmValue} onChange={(e) => setConfirmValue(e.target.value)} />}
           </Field>
           <div className="sm:col-span-3">
             <Button type="submit" loading={saving}>
-              Đổi mật khẩu
+              {l.submit}
             </Button>
           </div>
         </form>
@@ -314,42 +348,40 @@ export function SecuritySection() {
   );
 }
 
-const NOTIFICATION_OPTIONS: { key: keyof ProfileDTO["notifications"]; label: string; description: string }[] = [
-  { key: "budget", label: "Ngân sách", description: "Khi chi tiêu chạm 80% hoặc vượt ngân sách." },
-  { key: "recurring", label: "Khoản định kỳ", description: "Khi một khoản định kỳ được tự động ghi nhận." },
-  { key: "goal", label: "Mục tiêu", description: "Khi đạt 50% và 100% mục tiêu tiết kiệm." },
-  { key: "unusual", label: "Chi tiêu bất thường", description: "Khi một khoản chi cao hơn mức thường thấy." },
-];
-
 export function NotificationSection({ profile }: { profile: ProfileDTO }) {
   const { update } = useProfileMutations();
   const { toast } = useToast();
+  const { t, fmt } = useI18n();
+  const l = t.settings.notifications;
   const [prefs, setPrefs] = useState(profile.notifications);
 
-  const toggle = async (key: keyof ProfileDTO["notifications"]) => {
+  const toggle = async (key: (typeof NOTIFICATION_KEYS)[number]) => {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     try {
       await update({ notifications: next });
     } catch (err) {
       setPrefs(prefs);
-      toast.error("Không thể lưu tùy chọn", errorMessage(err));
+      toast.error(l.failed, fmt.error(err));
     }
   };
 
   return (
     <Card>
-      <CardHeader title="Thông báo" description="Chọn loại thông báo bạn muốn nhận trong ứng dụng." />
+      <CardHeader title={l.title} description={l.description} />
       <CardContent className="divide-y divide-border pt-2">
-        {NOTIFICATION_OPTIONS.map((o) => (
-          <label key={o.key} className="flex cursor-pointer items-center justify-between gap-4 py-3">
-            <span>
-              <span className="block text-sm font-medium text-foreground">{o.label}</span>
-              <span className="block text-[12px] text-muted">{o.description}</span>
-            </span>
-            <input type="checkbox" role="switch" checked={prefs[o.key]} onChange={() => toggle(o.key)} className="size-4 accent-primary" aria-checked={prefs[o.key]} />
-          </label>
-        ))}
+        {NOTIFICATION_KEYS.map((key) => {
+          const [label, description] = l.options[key];
+          return (
+            <label key={key} className="flex cursor-pointer items-center justify-between gap-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-foreground">{label}</span>
+                <span className="block text-[12px] text-muted">{description}</span>
+              </span>
+              <input type="checkbox" role="switch" checked={prefs[key]} onChange={() => toggle(key)} className="size-4 accent-primary" aria-checked={prefs[key]} />
+            </label>
+          );
+        })}
       </CardContent>
     </Card>
   );

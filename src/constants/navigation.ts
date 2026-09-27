@@ -1,4 +1,5 @@
 import {
+  Award,
   Bell,
   FolderCog,
   LayoutDashboard,
@@ -12,32 +13,34 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import type { Messages } from "@/i18n";
 
 export interface NavItem {
   href: string;
-  label: string;
+  labelKey: keyof Messages["nav"];
   icon: LucideIcon;
   /** Hiển thị trên thanh điều hướng dưới cùng (mobile). */
   mobile?: boolean;
 }
 
 export const MAIN_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard, mobile: true },
-  { href: "/transactions", label: "Giao dịch", icon: Receipt, mobile: true },
-  { href: "/budgets", label: "Ngân sách", icon: Wallet, mobile: true },
-  { href: "/reports", label: "Báo cáo", icon: PieChart },
-  { href: "/goals", label: "Mục tiêu", icon: Target, mobile: true },
-  { href: "/recurring", label: "Định kỳ", icon: Repeat },
-  { href: "/notifications", label: "Thông báo", icon: Bell },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, mobile: true },
+  { href: "/transactions", labelKey: "transactions", icon: Receipt, mobile: true },
+  { href: "/budgets", labelKey: "budgets", icon: Wallet, mobile: true },
+  { href: "/reports", labelKey: "reports", icon: PieChart },
+  { href: "/goals", labelKey: "goals", icon: Target, mobile: true },
+  { href: "/recurring", labelKey: "recurring", icon: Repeat },
+  { href: "/points", labelKey: "points", icon: Award },
+  { href: "/notifications", labelKey: "notifications", icon: Bell },
 ];
 
 export const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "Admin Dashboard", icon: ShieldCheck },
-  { href: "/admin/users", label: "Người dùng", icon: Users },
-  { href: "/admin/system", label: "Hệ thống", icon: FolderCog },
+  { href: "/admin", labelKey: "adminDashboard", icon: ShieldCheck },
+  { href: "/admin/users", labelKey: "adminUsers", icon: Users },
+  { href: "/admin/system", labelKey: "adminSystem", icon: FolderCog },
 ];
 
-export const FOOTER_NAV: NavItem[] = [{ href: "/settings", label: "Cài đặt", icon: Settings }];
+export const FOOTER_NAV: NavItem[] = [{ href: "/settings", labelKey: "settings", icon: Settings }];
 
 export function isActivePath(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname === "/admin";

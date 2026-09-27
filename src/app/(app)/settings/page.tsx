@@ -14,13 +14,15 @@ import {
 import { Card } from "@/components/ui/card";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { useProfile } from "@/hooks/use-profile";
+import { useI18n } from "@/i18n/provider";
 
 export default function SettingsPage() {
   const { data: profile, error, reload } = useProfile();
+  const { t } = useI18n();
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title="Cài đặt" description="Hồ sơ, giao diện, thiết lập tài chính và bảo mật." />
+      <PageHeader title={t.settings.title} description={t.settings.description} />
       {error ? (
         <Card>
           <ErrorState onRetry={reload} />

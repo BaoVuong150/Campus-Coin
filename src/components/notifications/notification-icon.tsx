@@ -19,15 +19,6 @@ const TONES: Record<NotificationDTO["type"], string> = {
   success: "bg-success-soft text-success",
 };
 
-export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
-  budget_warning: "Ngân sách",
-  budget_exceeded: "Vượt ngân sách",
-  recurring: "Định kỳ",
-  goal: "Mục tiêu",
-  unusual: "Chi tiêu bất thường",
-  system: "Hệ thống",
-};
-
 export function NotificationIcon({ kind, type }: { kind: NotificationKind; type: NotificationDTO["type"] }) {
   const Icon = ICONS[kind] ?? Bell;
   return (

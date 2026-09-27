@@ -9,7 +9,7 @@ import { useTransactionUI } from "@/components/transactions/transaction-provider
 import { useDebounce } from "@/hooks/use-debounce";
 import { useDismiss } from "@/hooks/use-dismiss";
 import { useTransactions } from "@/hooks/use-transactions";
-import { relativeDay } from "@/lib/utils/date";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 
 const MIN_QUERY = 2;
@@ -19,6 +19,7 @@ const RESULT_LIMIT = 6;
 export function GlobalSearch({ className }: { className?: string }) {
   const router = useRouter();
   const { openDetail } = useTransactionUI();
+  const { t, fmt } = useI18n();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -68,8 +69,8 @@ export function GlobalSearch({ className }: { className?: string }) {
         aria-controls={listId}
         aria-autocomplete="list"
         aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-        aria-label="Tìm giao dịch"
-        placeholder="Tìm giao dịch, danh mục…"
+        aria-label={t.header.searchLabel}
+        placeholder={t.header.searchPlaceholder}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -82,10 +83,10 @@ export function GlobalSearch({ className }: { className?: string }) {
       />
       {enabled && (
         <div className="absolute top-full right-0 left-0 z-40 mt-2 animate-scale-in overflow-hidden rounded-lg border border-border bg-surface shadow-pop">
-          <ul id={listId} role="listbox" aria-label="Kết quả tìm kiếm" className="max-h-80 overflow-y-auto py-1">
-            {isLoading && <li className="px-3 py-3 text-[13px] text-muted">Đang tìm…</li>}
+          <ul id={listId} role="listbox" aria-label={t.header.searchResults} className="max-h-80 overflow-y-auto py-1">
+            {isLoading && <li className="px-3 py-3 text-[13px] text-muted">{t.header.searching}</li>}
             {!isLoading && items.length === 0 && (
-              <li className="px-3 py-3 text-[13px] text-muted">Không tìm thấy giao dịch phù hợp.</li>
+              <li className="px-3 py-3 text-[13px] text-muted">{t.header.noResults}</li>
             )}
             {items.map((tx, i) => (
               <li
@@ -105,7 +106,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-foreground">{tx.description}</p>
                   <p className="text-[12px] text-subtle">
-                    {tx.category.name} · {relativeDay(tx.date)}
+                    {fmt.category(tx.category.name)} · {fmt.relativeDay(tx.date)}
                   </p>
                 </div>
                 <Amount value={tx.amount} type={tx.type} className="text-[13px]" />
@@ -121,7 +122,7 @@ export function GlobalSearch({ className }: { className?: string }) {
               }}
               className="w-full border-t border-border px-3 py-2 text-left text-[13px] font-medium text-primary hover:bg-surface-hover"
             >
-              Xem tất cả kết quả cho “{query.trim()}”
+              {t.header.viewAllResults(query.trim())}
             </button>
           )}
         </div>

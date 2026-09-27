@@ -3,18 +3,22 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
+import { getServerMessages } from "@/i18n/server";
 
-export const metadata: Metadata = { title: "Đăng nhập quản trị" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getServerMessages()).meta.adminLogin };
+}
 
 /** Cổng đăng nhập riêng cho quản trị viên (SRS 3.1). Tài khoản sinh viên sẽ bị từ chối. */
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const t = await getServerMessages();
   return (
     <AuthShell
-      title="Cổng quản trị"
-      description="Chỉ dành cho quản trị viên Campus Coin."
+      title={t.auth.adminTitle}
+      description={t.auth.adminSubtitle}
       footer={
         <Link href="/login" className="font-medium text-primary hover:underline">
-          ← Đăng nhập sinh viên
+          {t.auth.backToStudent}
         </Link>
       }
     >

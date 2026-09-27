@@ -61,6 +61,3 @@ export async function apiFetch<T>(url: string, { body, skipAuthRedirect, headers
   throw new ApiClientError(response.status, code, error?.message ?? "Đã có lỗi xảy ra. Vui lòng thử lại.", error?.fields);
 }
 
-export function errorMessage(error: unknown, fallback = "Đã có lỗi xảy ra."): string {
-  return error instanceof ApiClientError ? error.message : fallback;
-}

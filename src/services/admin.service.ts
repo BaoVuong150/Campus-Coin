@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib/database/prisma";
 import { Errors } from "@/lib/api/errors";
-import { currentMonthKey, DAY_MS, monthRange, shiftMonthKey, shortMonthLabel } from "@/lib/utils/date";
+import { currentMonthKey, DAY_MS, monthRange, shiftMonthKey } from "@/lib/utils/date";
 import type { adminUpdateUserSchema, adminUserQuerySchema } from "@/lib/validations/admin.schema";
 import type { Paginated } from "@/types/finance";
 import type { AdminOverviewDTO, AdminUserDTO } from "@/types/admin";
@@ -89,13 +89,12 @@ export async function getAdminOverview(now = new Date()): Promise<AdminOverviewD
   const userGrowth = months.map((key) => {
     const newUsers = signupMap.get(key) ?? 0;
     running += newUsers;
-    return { key, label: shortMonthLabel(key), newUsers, totalUsers: running };
+    return { key, newUsers, totalUsers: running };
   });
 
   const volumeMap = new Map(volumeRows.map((v) => [v.key, v]));
   const transactionVolume = months.map((key) => ({
     key,
-    label: shortMonthLabel(key),
     count: Number(volumeMap.get(key)?.count ?? 0),
     volume: Number(volumeMap.get(key)?.volume ?? 0),
   }));

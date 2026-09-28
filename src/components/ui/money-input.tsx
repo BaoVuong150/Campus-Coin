@@ -28,7 +28,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function
         className={cn(
           controlClasses,
           "tabular pr-9",
-          xl ? "h-14 text-[28px] font-semibold tracking-tight" : "h-9",
+          xl ? "h-14 text-[28px] font-semibold tracking-tight sm:text-[28px]" : "h-11 sm:h-9",
           className
         )}
         {...props}

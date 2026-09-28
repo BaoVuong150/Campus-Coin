@@ -47,7 +47,8 @@ export function Segmented<T extends string>({ value, onChange, options, label, s
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
               "rounded-[5px] font-medium whitespace-nowrap transition-colors duration-150",
-              size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-8 px-3 text-[13px]",
+              // md: cao 40px trên điện thoại (dễ chạm), 32px từ 640px.
+              size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-10 px-3 text-[13px] sm:h-8",
               fullWidth && "flex-1",
               active ? "bg-surface text-foreground shadow-card" : "text-muted hover:text-foreground"
             )}

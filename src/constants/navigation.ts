@@ -19,16 +19,14 @@ export interface NavItem {
   href: string;
   labelKey: keyof Messages["nav"];
   icon: LucideIcon;
-  /** Hiển thị trên thanh điều hướng dưới cùng (mobile). */
-  mobile?: boolean;
 }
 
 export const MAIN_NAV: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, mobile: true },
-  { href: "/transactions", labelKey: "transactions", icon: Receipt, mobile: true },
-  { href: "/budgets", labelKey: "budgets", icon: Wallet, mobile: true },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/transactions", labelKey: "transactions", icon: Receipt },
+  { href: "/budgets", labelKey: "budgets", icon: Wallet },
   { href: "/reports", labelKey: "reports", icon: PieChart },
-  { href: "/goals", labelKey: "goals", icon: Target, mobile: true },
+  { href: "/goals", labelKey: "goals", icon: Target },
   { href: "/recurring", labelKey: "recurring", icon: Repeat },
   { href: "/points", labelKey: "points", icon: Award },
   { href: "/notifications", labelKey: "notifications", icon: Bell },

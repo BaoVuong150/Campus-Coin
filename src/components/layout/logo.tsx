@@ -17,11 +17,18 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ collapsed = false, className }: { collapsed?: boolean; className?: string }) {
+interface LogoProps {
+  collapsed?: boolean;
+  className?: string;
+  /** Lớp cho chữ "Campus Coin" – ví dụ ẩn chữ ở rail và chỉ hiện từ một breakpoint. */
+  labelClassName?: string;
+}
+
+export function Logo({ collapsed = false, className, labelClassName }: LogoProps) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark />
-      {!collapsed && <span className="text-[15px] font-semibold tracking-tight text-foreground">Campus Coin</span>}
+      {!collapsed && <span className={cn("text-[15px] font-semibold tracking-tight text-foreground", labelClassName)}>Campus Coin</span>}
     </span>
   );
 }

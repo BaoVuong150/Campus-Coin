@@ -44,8 +44,9 @@ export function NotificationBell() {
         )}
       </Button>
 
+      {/* Mobile: neo theo viewport (chuông không nằm sát mép phải nên neo theo nút sẽ tràn ra mép trái). */}
       {open && (
-        <div className="absolute top-full right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] animate-scale-in overflow-hidden rounded-lg border border-border bg-surface shadow-pop">
+        <div className="fixed inset-x-(--app-gutter) top-[calc(var(--app-header-height)_+_env(safe-area-inset-top)_+_8px)] z-40 animate-scale-in overflow-hidden rounded-lg border border-border bg-surface shadow-pop sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:w-[22rem]">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-sm font-semibold text-foreground">{t.header.notifications}</p>
             {unread > 0 && (

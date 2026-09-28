@@ -233,6 +233,7 @@ export const vi = {
     adminSection: "Quản trị",
     mainNav: "Điều hướng chính",
     quickNav: "Điều hướng nhanh",
+    more: "Thêm",
     collapse: "Thu gọn",
     collapseSidebar: "Thu gọn thanh bên",
     expandSidebar: "Mở rộng thanh bên",
@@ -479,6 +480,7 @@ export const vi = {
   },
   dashboard: {
     subtitle: "Tổng quan tài chính của bạn trong tháng này.",
+    quickAdd: { title: "Ghi nhanh", expense: "Khoản chi", income: "Khoản thu" },
     summary: {
       balance: "Số dư hiện tại",
       income: "Thu nhập tháng",
@@ -588,6 +590,15 @@ export const vi = {
       min: "Số tiền từ",
       max: "Đến",
       noLimit: "Không giới hạn",
+      dateRange: "Khoảng ngày",
+      amountRange: "Khoảng số tiền",
+      showResults: "Xem kết quả",
+      activeLabel: "Bộ lọc đang áp dụng",
+      chipFrom: (d: string) => `Từ ${d}`,
+      chipTo: (d: string) => `Đến ${d}`,
+      chipMin: (a: string) => `Từ ${a}`,
+      chipMax: (a: string) => `Đến ${a}`,
+      removeChip: (label: string) => `Bỏ bộ lọc: ${label}`,
     },
     table: {
       transaction: "Giao dịch",

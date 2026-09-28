@@ -158,7 +158,14 @@ export function BarChart({ data, height, incomeLabel, expenseLabel, showLabels =
           <div key={d.key} className="group relative flex h-full flex-1 items-end justify-center gap-0.75">
             <span className="w-full max-w-4 origin-bottom animate-grow-y rounded-t-[4px]" style={barStyle(d.income, "var(--chart-income)", i)} />
             <span className="w-full max-w-4 origin-bottom animate-grow-y rounded-t-[4px]" style={barStyle(d.expense, "var(--chart-expense)", i)} />
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] whitespace-nowrap opacity-0 shadow-pop transition-opacity duration-150 group-hover:opacity-100">
+            {/* display:none khi ẩn (không chỉ opacity 0) – tooltip vô hình vẫn chiếm chỗ và gây cuộn ngang trên mobile.
+                Cột đầu/cuối neo tooltip vào trong để không vượt mép khung. */}
+            <span
+              className={cn(
+                "pointer-events-none absolute bottom-full z-10 mb-2 hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] whitespace-nowrap shadow-pop group-hover:block",
+                i === 0 ? "left-0" : i === data.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2"
+              )}
+            >
               <span className="block font-medium text-foreground">{d.label}</span>
               <span className="tabular block text-muted">
                 {incomeLabel} {formatValue(d.income)}
@@ -172,8 +179,9 @@ export function BarChart({ data, height, incomeLabel, expenseLabel, showLabels =
       </div>
       {showLabels && (
         <div className="mt-2 flex gap-1.5 sm:gap-2.5">
-          {data.map((d) => (
-            <span key={d.key} className="flex-1 text-center text-[11px] text-subtle">
+          {data.map((d, i) => (
+            // Nhiều cột trên màn hẹp: chỉ hiện nhãn xen kẽ để chữ không dính nhau.
+            <span key={d.key} className={cn("min-w-0 flex-1 text-center text-[11px] text-subtle", data.length > 6 && i % 2 === 1 && "max-sm:invisible")}>
               {d.label}
             </span>
           ))}

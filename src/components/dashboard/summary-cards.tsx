@@ -39,20 +39,36 @@ function Change({ current, previous, higherIsBetter }: ChangeProps) {
   );
 }
 
-function StatCard({ label, icon: Icon, value, children }: { label: string; icon: LucideIcon; value: string; children: React.ReactNode }) {
+interface StatCardProps {
+  label: string;
+  icon: LucideIcon;
+  value: string;
+  className?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Thẻ số liệu. Cỡ số tính theo chiều rộng chính thẻ (cqi) nên thẻ nửa màn hình trên điện thoại
+ * vẫn hiển thị trọn "12.500.000 ₫" mà không tràn hay xuống dòng.
+ */
+function StatCard({ label, icon: Icon, value, className, children }: StatCardProps) {
   return (
-    <Card className="flex flex-col gap-2 p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-[13px] font-medium text-muted">{label}</p>
+    <Card className={cn("@container flex min-w-0 flex-col gap-2 p-4 sm:p-5", className)}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-[13px] font-medium text-muted">{label}</p>
         <span className="flex size-7 items-center justify-center rounded-md bg-surface-secondary text-subtle" aria-hidden>
           <Icon className="size-4" />
         </span>
       </div>
-      <p className="tabular text-[26px] leading-tight font-semibold tracking-tight text-foreground">{value}</p>
+      <p className="tabular text-[clamp(17px,12cqi,26px)] leading-tight font-semibold tracking-tight whitespace-nowrap text-foreground">{value}</p>
       {children}
     </Card>
   );
 }
+
+/** Điện thoại: số dư và ngân sách cả hàng, thu / chi cạnh nhau; tablet 2 × 2; từ 1280px một hàng 4 thẻ. */
+const GRID = "grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4";
+const WIDE_ON_PHONE = "col-span-2 sm:col-span-1";
 
 export function SummaryCards({ summary }: { summary: SummaryDTO | undefined }) {
   const { t } = useI18n();
@@ -60,9 +76,9 @@ export function SummaryCards({ summary }: { summary: SummaryDTO | undefined }) {
 
   if (!summary) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={GRID}>
         {Array.from({ length: 4 }, (_, i) => (
-          <SkeletonCard key={i} />
+          <SkeletonCard key={i} className={i === 0 || i === 3 ? WIDE_ON_PHONE : undefined} />
         ))}
       </div>
     );
@@ -70,8 +86,8 @@ export function SummaryCards({ summary }: { summary: SummaryDTO | undefined }) {
 
   const used = summary.budget?.percentage ?? 0;
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label={s.balance} icon={Landmark} value={formatVND(summary.balance)}>
+    <div className={GRID}>
+      <StatCard label={s.balance} icon={Landmark} value={formatVND(summary.balance)} className={WIDE_ON_PHONE}>
         <Change current={summary.balance} previous={summary.previousBalance} higherIsBetter />
       </StatCard>
       <StatCard label={s.income} icon={TrendingUp} value={formatVND(summary.income)}>
@@ -80,7 +96,7 @@ export function SummaryCards({ summary }: { summary: SummaryDTO | undefined }) {
       <StatCard label={s.expense} icon={TrendingDown} value={formatVND(summary.expense)}>
         <Change current={summary.expense} previous={summary.previousExpense} higherIsBetter={false} />
       </StatCard>
-      <StatCard label={s.budgetLeft} icon={Wallet} value={summary.budget ? formatVND(summary.budget.remaining) : "—"}>
+      <StatCard label={s.budgetLeft} icon={Wallet} value={summary.budget ? formatVND(summary.budget.remaining) : "—"} className={WIDE_ON_PHONE}>
         {summary.budget ? (
           <div className="space-y-1.5">
             <Progress value={used} tone={used > 100 ? "danger" : used >= 80 ? "warning" : "primary"} label={s.budgetUsedLabel} size="sm" />

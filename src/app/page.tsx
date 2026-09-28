@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import SitemapSection from "@/components/SitemapSection";
+import { Container } from "@/components/layout/container";
 import { BudgetSection } from "@/components/landing/budget-section";
 import { CashFlowSection } from "@/components/landing/cash-flow-section";
 import { FinalCta } from "@/components/landing/final-cta";
@@ -45,9 +46,9 @@ export default async function HomePage() {
         <PrivacySection t={t} />
         <FinalCta t={t} signedIn={signedIn} />
         <div className="border-t border-border bg-background">
-          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <Container className="section-space">
             <SitemapSection t={t} />
-          </div>
+          </Container>
         </div>
       </main>
       <LandingFooter t={t} />

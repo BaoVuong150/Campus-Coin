@@ -45,74 +45,77 @@ export function CategoryDonut({ slices, total, onSelect }: Props) {
   const { t, fmt } = useI18n();
   const label = (s: DonutSlice) => (s.categoryId === OTHER_ID ? t.common.other : fmt.category(s.name));
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
-      <div className="relative size-44 shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={slices}
-              dataKey="amount"
-              nameKey="name"
-              innerRadius="68%"
-              outerRadius="100%"
-              paddingAngle={slices.length > 1 ? 1.5 : 0}
-              stroke={colors.surface}
-              strokeWidth={2}
-              isAnimationActive={false}
-              onClick={(_, index) => onSelect?.(slices[index])}
-            >
-              {slices.map((s) => (
-                <Cell key={s.categoryId} fill={s.color} className={onSelect && s.categoryId > 0 ? "cursor-pointer" : undefined} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={({ active, payload }) =>
-                active && payload?.[0] ? (
-                  <div className="rounded-md border border-border bg-surface px-3 py-2 text-[12px] shadow-pop">
-                    <p className="font-medium text-foreground">{label(payload[0].payload as DonutSlice)}</p>
-                    <p className="tabular text-muted">
-                      {formatVND(Number(payload[0].value))} · {formatPercent((payload[0].payload as DonutSlice).percentage)}
-                    </p>
-                  </div>
-                ) : null
-              }
-            />
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] text-subtle">{t.dashboard.categories.total}</span>
-          <span className="tabular text-sm font-semibold text-foreground">{formatVND(total)}</span>
+    // Bố cục theo chiều rộng thẻ (container query), không theo viewport: thẻ hẹp trong lưới 12 cột vẫn xếp dọc.
+    <div className="@container">
+      <div className="flex flex-col items-center gap-5 @md:flex-row @md:items-center">
+        <div className="relative size-44 shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={slices}
+                dataKey="amount"
+                nameKey="name"
+                innerRadius="68%"
+                outerRadius="100%"
+                paddingAngle={slices.length > 1 ? 1.5 : 0}
+                stroke={colors.surface}
+                strokeWidth={2}
+                isAnimationActive={false}
+                onClick={(_, index) => onSelect?.(slices[index])}
+              >
+                {slices.map((s) => (
+                  <Cell key={s.categoryId} fill={s.color} className={onSelect && s.categoryId > 0 ? "cursor-pointer" : undefined} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) =>
+                  active && payload?.[0] ? (
+                    <div className="rounded-md border border-border bg-surface px-3 py-2 text-[12px] shadow-pop">
+                      <p className="font-medium text-foreground">{label(payload[0].payload as DonutSlice)}</p>
+                      <p className="tabular text-muted">
+                        {formatVND(Number(payload[0].value))} · {formatPercent((payload[0].payload as DonutSlice).percentage)}
+                      </p>
+                    </div>
+                  ) : null
+                }
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-[11px] text-subtle">{t.dashboard.categories.total}</span>
+            <span className="tabular text-sm font-semibold text-foreground">{formatVND(total)}</span>
+          </div>
         </div>
-      </div>
 
-      <ul className="w-full min-w-0 space-y-1">
-        {slices.map((s) => {
-          const clickable = !!onSelect && s.categoryId > 0;
-          const content = (
-            <>
-              <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: s.color }} aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-left text-foreground">{label(s)}</span>
-              <span className="tabular text-muted">{formatPercent(s.percentage, 0)}</span>
-            </>
-          );
-          return (
-            <li key={s.categoryId}>
-              {clickable ? (
-                <button
-                  type="button"
-                  onClick={() => onSelect?.(s)}
-                  className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors hover:bg-surface-hover")}
-                  aria-label={t.dashboard.categories.sliceLabel(label(s), formatVND(s.amount), formatPercent(s.percentage, 0))}
-                >
-                  {content}
-                </button>
-              ) : (
-                <div className="flex items-center gap-2.5 px-2 py-1.5 text-[13px]">{content}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+        <ul className="w-full min-w-0 space-y-1">
+          {slices.map((s) => {
+            const clickable = !!onSelect && s.categoryId > 0;
+            const content = (
+              <>
+                <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: s.color }} aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-left text-foreground">{label(s)}</span>
+                <span className="tabular text-muted">{formatPercent(s.percentage, 0)}</span>
+              </>
+            );
+            return (
+              <li key={s.categoryId}>
+                {clickable ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelect?.(s)}
+                    className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors hover:bg-surface-hover")}
+                    aria-label={t.dashboard.categories.sliceLabel(label(s), formatVND(s.amount), formatPercent(s.percentage, 0))}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2.5 px-2 py-1.5 text-[13px]">{content}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }

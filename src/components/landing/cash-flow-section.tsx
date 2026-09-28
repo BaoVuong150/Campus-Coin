@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Section } from "@/components/layout/container";
 import { Segmented } from "@/components/ui/segmented";
 import { useI18n } from "@/i18n/provider";
 import { formatVND } from "@/lib/utils/money";
@@ -26,58 +27,56 @@ export function CashFlowSection() {
   ];
 
   return (
-    <section aria-labelledby="cashflow-title" className="bg-surface-secondary">
-      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 lg:py-28">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeading id="cashflow-title" eyebrow={c.eyebrow} title={c.title} body={c.body} />
-          <Segmented
-            label={c.range}
-            value={range}
-            onChange={setRange}
-            options={RANGES.map((value) => ({ value, label: c.ranges[value] }))}
-            size="md"
-          />
-        </div>
-
-        <SurfaceCard className="mt-12 p-5 sm:p-8">
-          <div className="mb-6 flex gap-4">
-            <LegendItem color="var(--chart-income)">{c.income}</LegendItem>
-            <LegendItem color="var(--chart-expense)">{c.expense}</LegendItem>
-          </div>
-          <BarChart data={data} height={260} incomeLabel={c.income} expenseLabel={c.expense} formatValue={fmt.compact} />
-          <table className="sr-only">
-            <caption>{c.tableCaption}</caption>
-            <thead>
-              <tr>
-                <th scope="col">—</th>
-                <th scope="col">{c.income}</th>
-                <th scope="col">{c.expense}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((m) => (
-                <tr key={m.key}>
-                  <th scope="row">{m.label}</th>
-                  <td>{formatVND(m.income)}</td>
-                  <td>{formatVND(m.expense)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <dl className="mt-8 grid gap-6 border-t border-border pt-6 sm:grid-cols-3">
-            {stats.map((stat) => (
-              <div key={stat.label}>
-                <dt className="flex items-center gap-2 text-[13px] text-muted">
-                  <span className="size-2 rounded-full" style={{ backgroundColor: stat.color }} aria-hidden />
-                  {stat.label}
-                </dt>
-                <dd className="tabular mt-1 text-2xl font-semibold tracking-[-0.03em] text-foreground">{formatVND(stat.value)}</dd>
-              </div>
-            ))}
-          </dl>
-        </SurfaceCard>
+    <Section labelledBy="cashflow-title" className="bg-surface-secondary">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <SectionHeading id="cashflow-title" eyebrow={c.eyebrow} title={c.title} body={c.body} />
+        <Segmented
+          label={c.range}
+          value={range}
+          onChange={setRange}
+          options={RANGES.map((value) => ({ value, label: c.ranges[value] }))}
+          size="md"
+        />
       </div>
-    </section>
+
+      <SurfaceCard className="mt-10 p-4 sm:p-8 lg:mt-12">
+        <div className="mb-6 flex gap-4">
+          <LegendItem color="var(--chart-income)">{c.income}</LegendItem>
+          <LegendItem color="var(--chart-expense)">{c.expense}</LegendItem>
+        </div>
+        <BarChart data={data} height={260} incomeLabel={c.income} expenseLabel={c.expense} formatValue={fmt.compact} />
+        <table className="sr-only">
+          <caption>{c.tableCaption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">—</th>
+              <th scope="col">{c.income}</th>
+              <th scope="col">{c.expense}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((m) => (
+              <tr key={m.key}>
+                <th scope="row">{m.label}</th>
+                <td>{formatVND(m.income)}</td>
+                <td>{formatVND(m.expense)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <dl className="mt-8 grid gap-6 border-t border-border pt-6 sm:grid-cols-3">
+          {stats.map((stat) => (
+            <div key={stat.label}>
+              <dt className="flex items-center gap-2 text-[13px] text-muted">
+                <span className="size-2 rounded-full" style={{ backgroundColor: stat.color }} aria-hidden />
+                {stat.label}
+              </dt>
+              <dd className="tabular mt-1 text-2xl font-semibold tracking-[-0.03em] text-foreground">{formatVND(stat.value)}</dd>
+            </div>
+          ))}
+        </dl>
+      </SurfaceCard>
+    </Section>
   );
 }

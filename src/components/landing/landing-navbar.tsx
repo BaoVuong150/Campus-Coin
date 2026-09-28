@@ -39,20 +39,21 @@ export function LandingNavbar({ signedIn }: { signedIn: boolean }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 border-b transition-[background-color,border-color] duration-200",
+        "sticky top-0 z-30 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color] duration-200",
         scrolled ? "border-border bg-background/80 backdrop-blur-md" : "border-transparent bg-transparent"
       )}
     >
-      <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-8 px-4 sm:px-6 lg:px-8">
+      {/* Cùng khung container-page với hero: logo thẳng mép trái nội dung, CTA thẳng mép phải mockup. */}
+      <div className="container-page flex h-(--nav-height) items-center gap-4 lg:gap-6 xl:gap-8">
         <Link href="/" aria-label={t.brand.home} className="shrink-0">
           <Logo />
         </Link>
 
         <nav aria-label={n.label} className="hidden flex-1 justify-center lg:flex">
-          <ul className="flex items-center gap-8 text-sm text-muted">
+          <ul className="flex items-center gap-6 text-sm text-muted xl:gap-8">
             {links.map((link) => (
               <li key={link.href}>
-                <a href={link.href} className="transition-colors duration-150 hover:text-foreground">
+                <a href={link.href} className="whitespace-nowrap transition-colors duration-150 hover:text-foreground">
                   {link.label}
                 </a>
               </li>
@@ -71,7 +72,7 @@ export function LandingNavbar({ signedIn }: { signedIn: boolean }) {
           <Link href={cta.href} className={buttonClasses("primary", "md", "ml-1 hidden h-10 rounded-[10px] px-4 sm:inline-flex")}>
             {cta.label}
           </Link>
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMenuOpen(true)} aria-label={n.menu} aria-expanded={menuOpen}>
+          <Button variant="ghost" size="icon" className="size-11 lg:hidden" onClick={() => setMenuOpen(true)} aria-label={n.menu} aria-expanded={menuOpen}>
             <Menu />
           </Button>
         </div>

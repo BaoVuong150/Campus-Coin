@@ -2,8 +2,12 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type Selec
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * Điện thoại: chữ 16px (iOS Safari tự phóng to trang khi focus ô chữ < 16px) và cao 44px cho dễ chạm;
+ * từ 640px trở lại mật độ desktop (14px, cao 36px).
+ */
 export const controlClasses =
-  "w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground placeholder:text-subtle transition-colors hover:border-border-strong focus:border-primary-ink focus:outline-none focus:ring-2 focus:ring-ring/25 disabled:opacity-60 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/20";
+  "w-full rounded-md border border-border bg-surface px-3 text-base sm:text-sm text-foreground placeholder:text-subtle transition-colors hover:border-border-strong focus:border-primary-ink focus:outline-none focus:ring-2 focus:ring-ring/25 disabled:opacity-60 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/20";
 
 interface FieldProps {
   label: ReactNode;
@@ -42,7 +46,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   { className, ...props },
   ref
 ) {
-  return <input ref={ref} className={cn(controlClasses, "h-9", className)} {...props} />;
+  return <input ref={ref} className={cn(controlClasses, "h-11 sm:h-9", className)} {...props} />;
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
@@ -58,7 +62,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 ) {
   return (
     <div className="relative">
-      <select ref={ref} className={cn(controlClasses, "h-9 appearance-none pr-8", className)} {...props}>
+      <select ref={ref} className={cn(controlClasses, "h-11 appearance-none pr-8 sm:h-9", className)} {...props}>
         {children}
       </select>
       <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-subtle" aria-hidden />

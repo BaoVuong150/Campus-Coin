@@ -36,9 +36,9 @@ export function LandingFooter({ t }: { t: Messages }) {
 
   return (
     <footer className="border-t border-border bg-background">
-      <div className="mx-auto max-w-7xl px-4 pt-14 pb-8 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-          <div>
+      <div className="container-page pt-14 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+          <div className="col-span-2 md:col-span-1">
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-muted">{f.tagline}</p>
           </div>

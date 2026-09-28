@@ -134,7 +134,10 @@ export function Dialog({ open, onClose, title, description, children, footer, va
               <X className="size-4" />
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin px-5 py-4">{children}</div>
+          {/* Không có footer thì phần thân tự chừa safe-area đáy (thanh home của iPhone) khi là bottom sheet. */}
+          <div className={cn("min-h-0 flex-1 overflow-y-auto scrollbar-thin px-5 py-4", !footer && "pb-[max(1rem,env(safe-area-inset-bottom))]")}>
+            {children}
+          </div>
           {footer && (
             <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
               {footer}

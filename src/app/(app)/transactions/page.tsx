@@ -170,10 +170,11 @@ function TransactionsView() {
           )
         ) : (
           <div className={isValidating ? "opacity-70 transition-opacity" : "transition-opacity"}>
-            <div className="hidden md:block">
+            {/* Bảng chỉ từ 1024px (vùng nội dung ~900px); tablet dọc và điện thoại dùng danh sách thẻ, không cuộn ngang bảng. */}
+            <div className="hidden lg:block">
               <TransactionTable items={data.items} unusual={unusual} sort={filters.sort ?? "date_desc"} onSort={(sort) => update({ sort })} onOpen={open} />
             </div>
-            <div className="space-y-0.5 p-2 md:hidden">
+            <div className="space-y-0.5 p-2 lg:hidden">
               {data.items.map((tx) => (
                 <TransactionListItem key={tx.id} tx={tx} unusual={unusual.has(tx.id)} onOpen={open} />
               ))}

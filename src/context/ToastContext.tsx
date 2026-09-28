@@ -104,9 +104,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
 
+      {/* Mobile: nằm ngay trên thanh điều hướng dưới (64px + safe-area iPhone), không bị che. */}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-20 z-60 flex justify-center px-4 md:inset-x-auto md:right-6 md:bottom-6 md:justify-end"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)_+_env(safe-area-inset-bottom)_+_12px)] z-60 flex justify-center px-4 md:inset-x-auto md:right-6 md:bottom-6 md:justify-end"
       >
         {active && Icon && (
           <div

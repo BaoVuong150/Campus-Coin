@@ -170,6 +170,21 @@ Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm 
 
 ## 5. Nhật ký thay đổi
 
+### Responsive toàn diện (desktop lớn → điện thoại)
+
+- **Hệ layout chung** (`src/app/globals.css`): token `--page-gutter`/`--page-max` (1480px) tăng dần theo màn hình, utility
+  `container-page`, `container-text`, `section-space`, `app-page`; component `Container`/`Section` (`src/components/layout/container.tsx`).
+  Bỏ các `max-w-7xl` rải rác – navbar, hero và mọi section thẳng hàng trên cùng một lưới. Breakpoint thêm `xs` 390 và `3xl` 1600.
+- **Hero**: 2 cột từ 1024px (40/60 → ~42/58 từ 1280), tiêu đề `clamp()` tối đa 76px, mockup lớn tới 820px ở màn hình rộng,
+  chiều cao khung đầu được kẹp để 1366×768 vừa một màn. Mockup dùng container query (không `transform: scale`);
+  điện thoại có **mockup riêng dạng app** (`hero-mobile-dashboard.tsx`).
+- **App shell**: < 768px header mobile (tên trang) + thanh điều hướng dưới *Tổng quan · Giao dịch · + · Ngân sách · Thêm*;
+  768–1279 rail chỉ icon; ≥ 1280 sidebar 248px. Hỗ trợ safe-area iPhone (`viewport-fit=cover`).
+- **Dashboard**: một lưới – điện thoại xếp theo mức ưu tiên (số dư → có thể chi → ghi nhanh → ngân sách → gần đây…),
+  laptop 2 cột, ≥ 1440px lưới 12 cột. Thẻ số liệu, biểu đồ tròn, dòng ngân sách tự co theo chiều rộng thẻ (container query).
+- **Form mobile**: ô nhập 16px (không bị iOS tự phóng to) và cao 44px; bảng giao dịch chỉ từ 1024px, nhỏ hơn dùng danh sách thẻ.
+- Bỏ `overflow-x: hidden` trên `body`; sửa các nguồn tràn ngang thật (tooltip biểu đồ landing, bảng thông báo trên điện thoại).
+
 ### Rà soát bảo mật & tính đúng đắn
 
 - **Quên mật khẩu / đặt lại mật khẩu** (`/forgot-password`, `/reset-password`) và **admin đặt lại mật khẩu** (nút chìa khóa ở Quản lý người dùng) – SRS 3.1 / 3.11.

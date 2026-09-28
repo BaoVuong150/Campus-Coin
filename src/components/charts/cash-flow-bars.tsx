@@ -53,8 +53,9 @@ export function CashFlowBars({ data, height = 260 }: Props) {
               tickLine={false}
               axisLine={false}
               tick={{ fill: colors.axis, fontSize: 11 }}
-              interval={dense ? "preserveStartEnd" : 0}
-              minTickGap={8}
+              // Để Recharts tự bỏ nhãn chồng nhau: 12 tháng trên điện thoại vẫn đọc được, màn rộng vẫn hiện đủ.
+              interval="preserveStartEnd"
+              minTickGap={10}
             />
             <YAxis
               tickLine={false}

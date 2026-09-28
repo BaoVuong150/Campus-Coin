@@ -54,7 +54,7 @@
   --shadow-card: 0 1px 2px 0 rgb(8 32 30 / 0.04), 0 1px 3px 0 rgb(8 32 30 / 0.03);
   --shadow-pop: 0 10px 30px -10px rgb(8 32 30 / 0.22), 0 4px 10px -6px rgb(8 32 30 / 0.1);
   /* Chỉ dùng cho mockup sản phẩm ở hero. */
-  --shadow-mockup: 0 32px 80px -12px rgb(8 32 30 / 0.14), 0 8px 24px -8px rgb(8 32 30 / 0.08);
+  --shadow-mockup: 0 30px 80px rgb(15 40 32 / 0.12), 0 4px 18px rgb(15 40 32 / 0.06);
 
   --animate-fade-in: fade-in 180ms ease-out;
   --animate-scale-in: scale-in 180ms ease-out;
@@ -65,6 +65,16 @@
   --animate-float: float 6s ease-in-out infinite;
   --animate-grow-x: grow-x 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-grow-y: grow-y 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/*
+ * Breakpoint dùng chung (thay vì mỗi component tự đặt số riêng):
+ *   xs 390 · sm 640 · md 768 (tablet – có rail, không còn bottom nav) · lg 1024 (laptop)
+ *   xl 1280 (desktop – sidebar đầy đủ) · 2xl 1536 · 3xl 1600 (màn hình lớn)
+ */
+@theme {
+  --breakpoint-xs: 24.375rem;
+  --breakpoint-3xl: 100rem;
 }
 
 @keyframes fade-in {
@@ -267,6 +277,43 @@
     }
   }
 
+  /*
+   * Layout tokens. Gutter tăng dần theo màn hình; nội dung landing tối đa 1480px,
+   * nội dung trong app tối đa 1440px (phần còn lại là khoảng thở có chủ đích).
+   */
+  :root {
+    --page-max: 1480px;
+    --page-text-max: 960px;
+    --page-gutter: 16px;
+    --section-space: clamp(64px, 11vw, 88px);
+    --nav-height: 60px;
+
+    --app-max: 1440px;
+    --app-gutter: 16px;
+    --sidebar-wide: 248px;
+    --sidebar-rail: 64px;
+    --app-header-height: 56px;
+    --mobile-nav-height: 64px;
+  }
+  @media (max-width: 389.98px) {
+    :root { --page-gutter: 12px; --app-gutter: 12px; }
+  }
+  @media (min-width: 768px) {
+    :root { --page-gutter: 20px; --app-gutter: 24px; --section-space: clamp(80px, 10vw, 112px); }
+  }
+  @media (min-width: 1024px) {
+    :root { --page-gutter: 24px; --nav-height: 68px; --sidebar-rail: 76px; --app-header-height: 60px; --section-space: clamp(96px, 9vw, 144px); }
+  }
+  @media (min-width: 1280px) {
+    :root { --page-gutter: 32px; --app-gutter: 32px; }
+  }
+  @media (min-width: 1440px) {
+    :root { --page-gutter: 40px; }
+  }
+  @media (min-width: 1600px) {
+    :root { --page-gutter: 48px; --nav-height: 72px; --app-gutter: 40px; }
+  }
+
   html[data-font-size="normal"] { font-size: 16px; }
   html[data-font-size="large"] { font-size: 17px; }
   html[data-font-size="larger"] { font-size: 18px; }
@@ -282,7 +329,8 @@
 
   body {
     font-family: var(--font-sans);
-    overflow-x: hidden;
+    /* Không dùng overflow-x: hidden ở đây: nó che lỗi tràn ngang và làm hỏng position: sticky.
+       Phần trang trí vượt khung (quầng sáng, thẻ nổi) tự overflow-x: clip ở section chứa nó. */
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -342,9 +390,40 @@
   scrollbar-color: var(--border-strong) transparent;
 }
 
-/* Quầng sáng teal rất nhẹ phía sau hero – gần như không thấy rõ gradient. */
+/* Khung nội dung chung của landing: navbar, hero và mọi section thẳng hàng trên cùng một lưới ngang. */
+@utility container-page {
+  width: min(100% - 2 * var(--page-gutter), var(--page-max));
+  margin-inline: auto;
+}
+
+/* Khung hẹp cho khối nhiều chữ (đoạn giới thiệu, CTA) – tránh dòng quá dài. */
+@utility container-text {
+  width: min(100% - 2 * var(--page-gutter), var(--page-text-max));
+  margin-inline: auto;
+}
+
+/* Khoảng cách dọc chuẩn giữa các section landing (fluid, không dùng py-32 cứng). */
+@utility section-space {
+  padding-block: var(--section-space);
+}
+
+/* Vùng nội dung trang trong app: dùng gần hết chiều rộng còn lại cạnh sidebar, tối đa --app-max. */
+@utility app-page {
+  width: 100%;
+  max-width: calc(var(--app-max) + 2 * var(--app-gutter));
+  margin-inline: auto;
+  padding-inline: var(--app-gutter);
+}
+
+/* Quầng sáng teal rất nhẹ phía sau hero; mobile gần như tắt để không loang lổ trên màn nhỏ. */
 @utility hero-glow {
-  background-image: radial-gradient(circle at 75% 40%, color-mix(in srgb, var(--brand-bright) 9%, transparent), transparent 38%);
+  background-image: radial-gradient(circle at 72% 78%, color-mix(in srgb, var(--brand-bright) 6%, transparent), transparent 55%);
+  @media (min-width: 1024px) {
+    background-image: radial-gradient(circle at 72% 42%, color-mix(in srgb, var(--brand-bright) 10%, transparent), transparent 42%);
+  }
+  @media (min-width: 1600px) {
+    background-image: radial-gradient(circle at 70% 44%, color-mix(in srgb, var(--brand-bright) 10%, transparent), transparent 48%);
+  }
 }
 
 /* Quầng sáng cho khối CTA cuối trang: đậm ở giữa trên, tắt dần ra mép. */

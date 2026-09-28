@@ -37,9 +37,10 @@ function periodIndex(period: ReportPeriod, monthKey: string): number {
 
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: "success" | "danger" }) {
   return (
-    <Card className="p-4">
-      <p className="text-[12px] text-muted">{label}</p>
-      <p className={`tabular mt-1 text-lg font-semibold tracking-tight ${tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-foreground"}`}>{value}</p>
+    // Cỡ số theo chiều rộng thẻ: thẻ nửa màn hình trên điện thoại vẫn giữ số tiền trên một dòng.
+    <Card className="@container min-w-0 p-4">
+      <p className="truncate text-[13px] text-muted">{label}</p>
+      <p className={`tabular mt-1 text-[clamp(15px,11cqi,20px)] font-semibold tracking-tight whitespace-nowrap ${tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-foreground"}`}>{value}</p>
     </Card>
   );
 }

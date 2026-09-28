@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils/cn";
 
 const ITEMS = [LayoutDashboard, Receipt, Wallet, Target];
 
-/** Thanh bên thu gọn của mockup: chỉ icon, mục đầu đang chọn. */
+/** Thanh bên thu gọn của mockup: chỉ icon, mục đầu đang chọn. Chỉ hiện khi mockup đủ rộng (container ≥ 672px). */
 export function DemoSidebar({ t }: { t: Messages }) {
   return (
-    <div className="hidden w-[70px] shrink-0 flex-col items-center border-r border-border py-5 sm:flex">
+    <div className="hidden w-[70px] shrink-0 flex-col items-center border-r border-border py-5 @2xl:flex">
       <LogoMark className="size-8" />
       <ul className="mt-8 flex flex-1 flex-col gap-2">
         {ITEMS.map((Icon, i) => (

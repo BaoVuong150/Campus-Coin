@@ -15,7 +15,7 @@ const GROUPS: { key: keyof Messages["sitemap"]["groups"]; icon: typeof Globe; hr
 /** Sơ đồ trang trực quan trên trang chủ (yêu cầu bắt buộc của đề bài). */
 export default function SitemapSection({ t }: { t: Messages }) {
   return (
-    <section id="sitemap" aria-labelledby="sitemap-title" className="scroll-mt-20">
+    <section id="sitemap" aria-labelledby="sitemap-title" className="scroll-mt-(--nav-height)">
       <h2 id="sitemap-title" className="text-2xl font-semibold tracking-tight text-foreground">
         {t.sitemap.title}
       </h2>

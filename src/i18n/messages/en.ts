@@ -235,6 +235,7 @@ export const en: Messages = {
     adminSection: "Admin",
     mainNav: "Main navigation",
     quickNav: "Quick navigation",
+    more: "More",
     collapse: "Collapse",
     collapseSidebar: "Collapse sidebar",
     expandSidebar: "Expand sidebar",
@@ -477,6 +478,7 @@ export const en: Messages = {
   },
   dashboard: {
     subtitle: "Your finances at a glance this month.",
+    quickAdd: { title: "Quick add", expense: "Expense", income: "Income" },
     summary: {
       balance: "Current balance",
       income: "Income this month",
@@ -586,6 +588,15 @@ export const en: Messages = {
       min: "Amount from",
       max: "To",
       noLimit: "No limit",
+      dateRange: "Date range",
+      amountRange: "Amount range",
+      showResults: "Show results",
+      activeLabel: "Active filters",
+      chipFrom: (d: string) => `From ${d}`,
+      chipTo: (d: string) => `Until ${d}`,
+      chipMin: (a: string) => `From ${a}`,
+      chipMax: (a: string) => `Up to ${a}`,
+      removeChip: (label: string) => `Remove filter: ${label}`,
     },
     table: {
       transaction: "Transaction",

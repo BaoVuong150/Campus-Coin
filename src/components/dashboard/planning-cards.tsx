@@ -148,38 +148,41 @@ export function PlanningCards() {
   const upcoming = data?.upcomingFixed.filter((u) => u.type === "expense").slice(0, UPCOMING_PREVIEW) ?? [];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <PlanningCard
-        title={l.safeTitle}
-        icon={<Gauge />}
-        action={
-          data && (
-            <InfoTip label={l.howCalculated}>
-              <SafeToSpendExplain p={data} />
-            </InfoTip>
-          )
-        }
-      >
-        {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <SafeToSpendBody p={data} />}
-        {data && upcoming.length > 0 && (
-          <div className="mt-4 border-t border-border pt-3">
-            <p className="mb-1.5 text-[12px] font-medium text-subtle">{l.upcoming}</p>
-            <ul className="space-y-1">
-              {upcoming.map((u) => (
-                <li key={`${u.id}-${u.date}`} className="flex items-center justify-between text-[13px]">
-                  <span className="truncate text-muted">
-                    {u.name} · {formatDate(u.date)}
-                  </span>
-                  <span className="tabular text-foreground">{formatVND(u.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </PlanningCard>
-      <PlanningCard title={l.forecastTitle} icon={<CalendarClock />}>
-        {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <ForecastBody p={data} />}
-      </PlanningCard>
+    // Hai thẻ cạnh nhau khi khối đủ rộng (≥ 768px), xếp dọc khi hẹp – kể cả ở cột 4/12 trên desktop lớn.
+    <div className="@container">
+      <div className="grid gap-4 @3xl:grid-cols-2">
+        <PlanningCard
+          title={l.safeTitle}
+          icon={<Gauge />}
+          action={
+            data && (
+              <InfoTip label={l.howCalculated}>
+                <SafeToSpendExplain p={data} />
+              </InfoTip>
+            )
+          }
+        >
+          {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <SafeToSpendBody p={data} />}
+          {data && upcoming.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="mb-1.5 text-[12px] font-medium text-subtle">{l.upcoming}</p>
+              <ul className="space-y-1">
+                {upcoming.map((u) => (
+                  <li key={`${u.id}-${u.date}`} className="flex items-center justify-between text-[13px]">
+                    <span className="truncate text-muted">
+                      {u.name} · {formatDate(u.date)}
+                    </span>
+                    <span className="tabular text-foreground">{formatVND(u.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </PlanningCard>
+        <PlanningCard title={l.forecastTitle} icon={<CalendarClock />}>
+          {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <ForecastBody p={data} />}
+        </PlanningCard>
+      </div>
     </div>
   );
 }

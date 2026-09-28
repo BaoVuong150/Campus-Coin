@@ -12,35 +12,39 @@ import { RecentTransactions } from "./dashboard/recent-transactions";
 import { SafeToSpendCard } from "./dashboard/safe-to-spend-card";
 import { currentMonthNumber } from "./demo-helpers";
 
-/** Mockup sản phẩm ở hero: dựng bằng component thật với dữ liệu mẫu, gắn nhãn rõ ràng. */
+/**
+ * Mockup sản phẩm ở hero (tablet trở lên): dựng bằng component thật với dữ liệu mẫu, gắn nhãn rõ ràng.
+ * Bố cục bên trong dùng container query (@container) nên tự co theo chiều rộng cột, không theo viewport:
+ * ≥ 512px hai cột + biểu đồ; ≥ 672px hiện thêm thanh bên. Không dùng transform: scale().
+ */
 export function HeroDashboard({ t, locale }: { t: Messages; locale: Locale }) {
   const d = t.landing.demo;
   return (
-    <figure className="relative animate-rise" style={{ "--rise": "20px", animationDelay: "240ms" } as CSSProperties}>
-      <div className="absolute -inset-10 -z-10 rounded-full bg-brand-bright/10 blur-3xl" aria-hidden />
+    <figure className="@container relative animate-rise" style={{ "--rise": "20px", animationDelay: "240ms" } as CSSProperties}>
+      <div className="pointer-events-none absolute inset-x-6 -inset-y-6 -z-10 hidden rounded-full bg-brand-bright/8 blur-3xl lg:block" aria-hidden />
 
-      <div className="flex overflow-hidden rounded-2xl border border-border bg-surface shadow-mockup lg:-rotate-[0.6deg]">
+      <div className="flex overflow-hidden rounded-[22px] border border-border bg-surface shadow-mockup">
         <DemoSidebar t={t} />
-        <div className="min-w-0 flex-1 space-y-3 p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[15px] font-semibold tracking-tight text-foreground">{d.greeting(DEMO_FINANCE.userName)}</p>
+        <div className="min-w-0 flex-1 space-y-3 p-4 @xl:p-5 @3xl:space-y-4 @3xl:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold tracking-tight text-foreground">{d.greeting(DEMO_FINANCE.userName)}</p>
               <p className="text-[12px] text-subtle">{d.monthCaption(currentMonthNumber())}</p>
             </div>
-            <span className="rounded-full bg-surface-secondary px-2.5 py-1 text-[11px] text-muted">{d.label}</span>
+            <span className="shrink-0 rounded-full bg-surface-secondary px-2.5 py-1 text-[11px] text-muted">{d.label}</span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-5">
-            <div className="sm:col-span-3">
+          <div className="grid gap-3 @lg:grid-cols-5 @3xl:gap-4">
+            <div className="@lg:col-span-3">
               <BalanceCard t={t} />
             </div>
-            <div className="sm:col-span-2">
+            <div className="@lg:col-span-2">
               <SafeToSpendCard t={t} />
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="hidden sm:block">
+          <div className="grid gap-3 @lg:grid-cols-2 @3xl:gap-4">
+            <div className="hidden @lg:block">
               <CashFlowMiniChart t={t} locale={locale} />
             </div>
             <BudgetOverview t={t} />
@@ -50,8 +54,9 @@ export function HeroDashboard({ t, locale }: { t: Messages; locale: Locale }) {
         </div>
       </div>
 
+      {/* Thẻ nổi: chỉ hiện khi cột trái có khoảng trống để "gác" vào (≥ 1280); tablet/mobile ẩn để không tràn ngang. */}
       <div
-        className="absolute top-44 -left-10 hidden animate-float items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-pop xl:flex"
+        className="pointer-events-none absolute top-[38%] -left-[18px] hidden animate-float items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-pop xl:flex 3xl:-left-11"
         aria-hidden
       >
         <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary-ink">

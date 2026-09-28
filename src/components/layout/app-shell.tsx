@@ -3,10 +3,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Plus, Search } from "lucide-react";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TransactionProvider, useTransactionUI } from "@/components/transactions/transaction-provider";
-import { MAIN_NAV, isActivePath, type NavItem } from "@/constants/navigation";
+import { ADMIN_NAV, FOOTER_NAV, isActivePath, MAIN_NAV, type NavItem } from "@/constants/navigation";
 import { useLocalStorage } from "@/hooks/use-client-store";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useI18n } from "@/i18n/provider";
@@ -21,7 +21,17 @@ import { Sidebar, SidebarContent } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 
+/*
+ * Khung app theo kích thước (một nguồn điều hướng MAIN_NAV cho mọi tầng):
+ *   < 768      header mobile (logo + tên trang) + thanh điều hướng dưới, menu "Thêm" mở drawer
+ *   768–1279   rail chỉ icon (64px → 76px từ 1024) + header đầy đủ
+ *   ≥ 1280     sidebar 248px (người dùng có thể thu gọn thành rail)
+ */
+
 const COLLAPSE_KEY = "campuscoin_sidebar_collapsed";
+
+/** Các mục cố định trên thanh điều hướng dưới (mobile); mọi mục còn lại nằm trong "Thêm". */
+const BOTTOM_NAV_HREFS = ["/dashboard", "/transactions", "/budgets"];
 
 function MobileDrawer({ open, onClose, unread }: { open: boolean; onClose: () => void; unread: number }) {
   const { t } = useI18n();
@@ -35,33 +45,43 @@ function MobileDrawer({ open, onClose, unread }: { open: boolean; onClose: () =>
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t.nav.menu}>
+    <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label={t.nav.menu}>
       <div className="absolute inset-0 animate-fade-in bg-overlay" onClick={onClose} aria-hidden />
-      <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] animate-slide-in-left border-r border-border bg-surface">
-        <SidebarContent onNavigate={onClose} unread={unread} />
+      <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-slide-in-left flex-col border-r border-border bg-surface pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        <div className="min-h-0 flex-1">
+          <SidebarContent mode="full" onNavigate={onClose} unread={unread} />
+        </div>
+        {/* Header mobile không có chỗ cho ngôn ngữ/giao diện nên đặt ở cuối menu. */}
+        <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
+          <LanguageToggle />
+          <ThemeToggle className="size-11" />
+        </div>
       </div>
     </div>
   );
 }
 
-function MobileBottomNav() {
+/** Thanh điều hướng dưới (< 768px): Tổng quan · Giao dịch · [+] · Ngân sách · Thêm. Cao 64px + safe-area iPhone. */
+function MobileBottomNav({ onOpenMore, moreOpen }: { onOpenMore: () => void; moreOpen: boolean }) {
   const pathname = usePathname();
   const { openCreate } = useTransactionUI();
   const { t } = useI18n();
-  const items = MAIN_NAV.filter((i) => i.mobile);
+  const items = BOTTOM_NAV_HREFS.map((href) => MAIN_NAV.find((i) => i.href === href)).filter((i): i is NavItem => !!i);
+  const moreActive = !items.some((i) => isActivePath(pathname, i.href));
+
+  const tabClass = (active: boolean) =>
+    cn(
+      "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[12px] leading-none transition-colors",
+      active ? "font-medium text-primary-ink" : "text-subtle"
+    );
 
   const renderItem = (item: NavItem) => {
     const active = isActivePath(pathname, item.href);
     const Icon = item.icon;
     return (
-      <Link
-        key={item.href}
-        href={item.href}
-        aria-current={active ? "page" : undefined}
-        className={cn("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", active ? "text-primary-ink" : "text-subtle")}
-      >
+      <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
         <Icon className="size-5" aria-hidden />
-        {t.nav[item.labelKey]}
+        <span className="max-w-full truncate px-0.5">{t.nav[item.labelKey]}</span>
       </Link>
     );
   };
@@ -69,47 +89,63 @@ function MobileBottomNav() {
   return (
     <nav
       aria-label={t.nav.quickNav}
-      className="fixed inset-x-0 bottom-0 z-30 flex items-center border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
-      {items.slice(0, 2).map(renderItem)}
-      <div className="flex flex-1 justify-center">
-        <button
-          type="button"
-          onClick={() => openCreate()}
-          aria-label={t.header.addTransaction}
-          className="-mt-5 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-pop transition-transform active:scale-95"
-        >
-          <Plus className="size-5" />
+      <div className="flex h-(--mobile-nav-height) items-stretch px-1">
+        {items.slice(0, 2).map(renderItem)}
+        <div className="flex flex-1 items-center justify-center">
+          <button
+            type="button"
+            onClick={() => openCreate()}
+            aria-label={t.header.addTransaction}
+            className="flex size-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-pop transition-transform active:scale-95"
+          >
+            <Plus className="size-6" />
+          </button>
+        </div>
+        {items.slice(2).map(renderItem)}
+        <button type="button" onClick={onOpenMore} aria-expanded={moreOpen} aria-haspopup="dialog" className={tabClass(moreActive)}>
+          <MoreHorizontal className="size-5" aria-hidden />
+          <span className="max-w-full truncate px-0.5">{t.nav.more}</span>
         </button>
       </div>
-      {items.slice(2, 4).map(renderItem)}
     </nav>
   );
 }
 
-function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
+/** Tên trang hiện tại cho header mobile – lấy từ cùng định nghĩa điều hướng, không lặp dữ liệu. */
+function useCurrentPageTitle(): string {
+  const pathname = usePathname();
+  const { t } = useI18n();
+  const item = [...ADMIN_NAV, ...MAIN_NAV, ...FOOTER_NAV].find((i) => isActivePath(pathname, i.href));
+  return item ? t.nav[item.labelKey] : "Campus Coin";
+}
+
+function Header() {
   const { openCreate } = useTransactionUI();
   const { t } = useI18n();
+  const title = useCurrentPageTitle();
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur sm:gap-3 lg:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenMenu} aria-label={t.nav.openMenu}>
-        <Menu />
-      </Button>
-      <Link href="/dashboard" className="lg:hidden" aria-label={t.brand.overviewLink}>
-        <LogoMark className="size-7" />
-      </Link>
-      <GlobalSearch className="hidden md:block" />
-      <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
-        <Link href="/transactions?search=1" className={buttonClasses("ghost", "icon", "md:hidden")} aria-label={t.header.searchLabel}>
-          <Search />
+    <header className="sticky top-0 z-20 border-b border-border bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="flex h-(--app-header-height) items-center gap-2 px-(--app-gutter) sm:gap-3">
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 md:hidden" aria-label={t.brand.overviewLink}>
+          <LogoMark className="size-8 shrink-0" />
+          <span className="truncate text-[17px] font-semibold tracking-tight text-foreground">{title}</span>
         </Link>
-        <Button onClick={() => openCreate()} className="mr-1 hidden sm:inline-flex">
-          <Plus /> {t.header.addTransaction}
-        </Button>
-        <NotificationBell />
-        <LanguageToggle />
-        <ThemeToggle />
-        <UserMenu />
+        <GlobalSearch className="hidden md:block" />
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <Link href="/transactions?search=1" className={buttonClasses("ghost", "icon", "size-11 md:hidden")} aria-label={t.header.searchLabel}>
+            <Search />
+          </Link>
+          {/* Mobile đã có nút + ở thanh điều hướng dưới. */}
+          <Button onClick={() => openCreate()} className="mr-1 hidden md:inline-flex">
+            <Plus /> {t.header.addTransaction}
+          </Button>
+          <NotificationBell />
+          <LanguageToggle className="hidden md:inline-flex" />
+          <ThemeToggle className="hidden md:inline-flex" />
+          <UserMenu />
+        </div>
       </div>
     </header>
   );
@@ -131,12 +167,13 @@ function ShellFrame({ children }: { children: ReactNode }) {
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsedFlag(collapsed ? "0" : "1")} unread={unread} />
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} unread={unread} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header onOpenMenu={() => setDrawerOpen(true)} />
-        <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-8 lg:pb-10">
+        <Header />
+        {/* Mobile: chừa chỗ cho thanh điều hướng dưới + safe-area để nội dung cuối trang không bị che. */}
+        <main id="main" className="app-page flex-1 pt-5 pb-[calc(var(--mobile-nav-height)_+_env(safe-area-inset-bottom)_+_20px)] md:pt-6 md:pb-10 xl:pt-8">
           {children}
         </main>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav onOpenMore={() => setDrawerOpen(true)} moreOpen={drawerOpen} />
     </div>
   );
 }

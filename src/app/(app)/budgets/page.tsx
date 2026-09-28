@@ -22,9 +22,9 @@ import type { BudgetItemDTO } from "@/types/finance";
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "danger" }) {
   return (
-    <div>
-      <p className="text-[12px] text-muted">{label}</p>
-      <p className={`tabular mt-0.5 text-xl font-semibold tracking-tight ${tone === "danger" ? "text-danger" : "text-foreground"}`}>{value}</p>
+    <div className="@container min-w-0">
+      <p className="truncate text-[13px] text-muted">{label}</p>
+      <p className={`tabular mt-0.5 text-[clamp(16px,13cqi,22px)] font-semibold tracking-tight whitespace-nowrap ${tone === "danger" ? "text-danger" : "text-foreground"}`}>{value}</p>
     </div>
   );
 }
@@ -155,10 +155,10 @@ function BudgetsView() {
                   item={item}
                   actions={
                     <div className="flex shrink-0 items-center">
-                      <Button variant="ghost" size="icon-sm" onClick={() => openDialog(item)} aria-label={l.editLabel(fmt.category(item.category.name))}>
+                      <Button variant="ghost" size="icon-sm" className="size-10 sm:size-8" onClick={() => openDialog(item)} aria-label={l.editLabel(fmt.category(item.category.name))}>
                         <Pencil />
                       </Button>
-                      <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(item)} aria-label={l.deleteLabel(fmt.category(item.category.name))}>
+                      <Button variant="ghost" size="icon-sm" className="size-10 sm:size-8" onClick={() => handleDelete(item)} aria-label={l.deleteLabel(fmt.category(item.category.name))}>
                         <Trash2 />
                       </Button>
                     </div>

@@ -11,6 +11,7 @@ import type { AdminOverviewDTO, AdminUserDTO } from "@/types/admin";
 export type { AdminOverviewDTO, AdminUserDTO };
 import { toNumber } from "./mappers";
 import { hashPassword } from "./user.service";
+import { getSystemHealth } from "@/lib/database/resilience";
 
 const ACTIVE_WINDOW_DAYS = 30;
 const GROWTH_MONTHS = 6;
@@ -51,7 +52,7 @@ export async function getAdminOverview(now = new Date()): Promise<AdminOverviewD
   const growthStart = monthRange(firstMonth).start;
   const activeSince = new Date(now.getTime() - ACTIVE_WINDOW_DAYS * DAY_MS);
 
-  const [users, activeUsers, newUsers, transactions, monthAgg, usersBefore, signups, volumeRows, categories, recent] =
+  const [users, activeUsers, newUsers, transactions, monthAgg, usersBefore, signups, volumeRows, categories, recent, systemHealth] =
     await Promise.all([
       prisma.user.count({ where: { role: "student" } }),
       prisma.user.count({
@@ -83,6 +84,7 @@ export async function getAdminOverview(now = new Date()): Promise<AdminOverviewD
         _sum: { amount: true },
       }),
       prisma.user.findMany({ orderBy: { created_at: "desc" }, take: 6, select: userSelect }),
+      getSystemHealth(),
     ]);
 
   const months = Array.from({ length: GROWTH_MONTHS }, (_, i) => shiftMonthKey(firstMonth, i));
@@ -129,6 +131,7 @@ export async function getAdminOverview(now = new Date()): Promise<AdminOverviewD
     transactionVolume,
     categoryDistribution,
     recentUsers: recent.map(toAdminUser),
+    systemHealth,
   };
 }
 

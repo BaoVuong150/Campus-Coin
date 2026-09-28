@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, KeyRound, Search, UserX } from "lucide-react";
+import { Copy, Download, KeyRound, Search, UserX } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { PageHeader } from "@/components/layout/page-header";
 import { useSessionUser } from "@/components/layout/session-context";
@@ -156,14 +156,54 @@ export default function AdminUsersPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   const debounced = useDebounce(q.trim(), 300);
   const { data, error, reload } = useAdminUsers(debounced, status, page);
+  const { toast } = useToast();
   const { t, fmt } = useI18n();
   const l = t.admin.users;
 
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/admin/users/export");
+      if (!res.ok) {
+        throw new Error("Không thể tải xuống danh sách người dùng.");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `campuscoin_users_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Xuất danh sách người dùng thành công!");
+    } catch (err: unknown) {
+      toast.error("Xuất CSV thất bại", err instanceof Error ? err.message : "Đã có lỗi xảy ra");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div>
-      <PageHeader title={t.nav.adminUsers} description={l.description} />
+      <PageHeader
+        title={t.nav.adminUsers}
+        description={l.description}
+        actions={
+          <Button
+            variant="outline"
+            disabled={isExporting}
+            onClick={handleExportCSV}
+            className="gap-2"
+          >
+            <Download className="size-4" aria-hidden />
+            {isExporting ? "Đang xuất..." : "Xuất danh sách (CSV)"}
+          </Button>
+        }
+      />
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle" aria-hidden />

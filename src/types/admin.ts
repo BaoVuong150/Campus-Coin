@@ -11,6 +11,22 @@ export interface AdminUserDTO {
   createdAt: string;
 }
 
+export interface SystemHealthDTO {
+  database: {
+    status: "healthy" | "degraded" | "down";
+    latencyMs: number;
+    circuitBreaker: "CLOSED" | "OPEN" | "HALF_OPEN";
+  };
+  server: {
+    uptimeSeconds: number;
+    heapUsedMB: number;
+    heapTotalMB: number;
+    nodeVersion: string;
+    environment: string;
+    timezone: string;
+  };
+}
+
 export interface AdminOverviewDTO {
   totals: {
     users: number;
@@ -24,4 +40,5 @@ export interface AdminOverviewDTO {
   transactionVolume: { key: string; count: number; volume: number }[];
   categoryDistribution: { name: string; amount: number; percentage: number; color: string | null }[];
   recentUsers: AdminUserDTO[];
+  systemHealth?: SystemHealthDTO;
 }

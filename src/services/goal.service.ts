@@ -1,9 +1,9 @@
-import type { SavingGoal } from "@prisma/client";
+import type { Prisma, SavingGoal } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib/database/prisma";
 import { ApiError, Errors } from "@/lib/api/errors";
 import { assertResourceOwner } from "@/lib/auth/ownership";
-import type { GoalStatus } from "@/constants/finance";
+import { MAX_AMOUNT, type GoalStatus } from "@/constants/finance";
 import { computeGoalProgress } from "@/lib/finance/goals";
 import { ymdToStorageDate } from "@/lib/utils/date";
 import type { createGoalSchema, goalContributionSchema, updateGoalSchema } from "@/lib/validations/goal.schema";
@@ -80,7 +80,10 @@ export async function updateGoal(userId: string, id: string, input: z.infer<type
       deadline: input.deadline === undefined ? undefined : input.deadline ? ymdToStorageDate(input.deadline) : null,
     },
   });
-  if (input.status === "completed") await onGoalCompleted(userId, id);
+  // Chỉ thưởng điểm khi mục tiêu thực sự đạt đủ số tiền: bấm "Hoàn thành" với 0 đồng không được cộng điểm.
+  if (input.status === "completed" && toNumber(goal.current_amount) >= toNumber(goal.target_amount)) {
+    await onGoalCompleted(userId, id);
+  }
   return toGoalDTO(goal);
 }
 
@@ -95,33 +98,60 @@ export async function contributeToGoal(
   input: z.infer<typeof goalContributionSchema>
 ): Promise<GoalDTO> {
   const goal = await ownGoal(userId, id);
-  const current = toNumber(goal.current_amount);
-  const delta = input.direction === "deposit" ? input.amount : -input.amount;
-  if (current + delta < 0) {
-    throw new ApiError(400, "INSUFFICIENT_GOAL_BALANCE", "Số tiền rút vượt quá số đã tiết kiệm cho mục tiêu này.");
+  if (goal.status === "archived") {
+    throw Errors.badRequest("Mục tiêu đã lưu trữ, không thể nạp hoặc rút tiền.");
   }
+  const delta = input.direction === "deposit" ? input.amount : -input.amount;
 
   const updated = await prisma.$transaction(async (tx) => {
+    // Kiểm tra số dư và cộng/trừ trong CÙNG một câu UPDATE có điều kiện: hai lần rút đồng thời
+    // không thể cùng vượt qua bước kiểm tra rồi làm số dư âm (PostgreSQL khóa dòng và đánh giá lại WHERE).
+    const where: Prisma.SavingGoalWhereInput = {
+      id,
+      user_id: userId,
+      status: { not: "archived" },
+      current_amount: delta < 0 ? { gte: -delta } : { lte: MAX_AMOUNT - delta },
+    };
+    const { count } = await tx.savingGoal.updateMany({ where, data: { current_amount: { increment: delta } } });
+    if (count === 0) {
+      // Phân biệt lý do: mục tiêu vừa bị xóa/lưu trữ song song thì báo đúng lỗi, không báo "không đủ số dư".
+      const fresh = await tx.savingGoal.findFirst({ where: { id, user_id: userId }, select: { status: true } });
+      if (!fresh) throw notFound();
+      if (fresh.status === "archived") throw Errors.badRequest("Mục tiêu đã lưu trữ, không thể nạp hoặc rút tiền.");
+      throw delta < 0
+        ? new ApiError(400, "INSUFFICIENT_GOAL_BALANCE", "Số tiền rút vượt quá số đã tiết kiệm cho mục tiêu này.")
+        : Errors.badRequest("Số tiền của mục tiêu vượt quá giới hạn cho phép.");
+    }
     await tx.goalContribution.create({ data: { goal_id: id, amount: delta, note: input.note } });
-    return tx.savingGoal.update({ where: { id }, data: { current_amount: { increment: delta } } });
+    return tx.savingGoal.findUniqueOrThrow({ where: { id } });
   });
 
-  if (delta > 0) await onGoalDeposit(userId, id);
+  if (delta > 0) await onGoalDeposit(userId);
 
+  // Tính mốc từ số dư sau cập nhật (không dùng giá trị đọc trước đó, có thể đã cũ nếu có thao tác song song).
   const target = toNumber(updated.target_amount);
-  const before = target > 0 ? (current / target) * 100 : 0;
-  const after = target > 0 ? (toNumber(updated.current_amount) / target) * 100 : 0;
-  const milestone = MILESTONES.filter((m) => before < m && after >= m).pop();
+  const after = toNumber(updated.current_amount);
+  const before = Math.round((after - delta) * 100) / 100;
+  const milestone = reachedMilestone(before, after, target);
   if (milestone) {
     await notify(userId, {
       kind: "goal",
       type: "success",
       template: "goalMilestone",
-      params: { goal: updated.name, percent: milestone, current: toNumber(updated.current_amount), target },
+      params: { goal: updated.name, percent: milestone, current: after, target },
       link: "/goals",
+      // dedupeKey theo mục tiêu + mốc: rút ra rồi nạp lại không báo lại cùng một mốc.
       dedupeKey: `goal:${id}:${milestone}`,
     });
   }
   if (milestone === 100) await onGoalCompleted(userId, id);
   return toGoalDTO(updated);
+}
+
+/** Mốc cao nhất (50% / 100%) vừa được vượt qua bởi lần nạp này, nếu có. */
+export function reachedMilestone(before: number, after: number, target: number): number | undefined {
+  if (target <= 0) return undefined;
+  const pctBefore = (before / target) * 100;
+  const pctAfter = (after / target) * 100;
+  return MILESTONES.filter((m) => pctBefore < m && pctAfter >= m).pop();
 }

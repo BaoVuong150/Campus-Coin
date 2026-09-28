@@ -46,8 +46,9 @@ export async function onTransactionLogged(userId: string, now = new Date()) {
   await awardPoints(userId, "dailyLog", `log:${todayYmd(now)}`);
 }
 
-export async function onGoalDeposit(userId: string, goalId: string, now = new Date()) {
-  await awardPoints(userId, "goalDeposit", `deposit:${goalId}:${todayYmd(now)}`);
+/** +5 tối đa một lần mỗi ngày (theo user, không theo mục tiêu) để không thể "cày" điểm bằng nhiều mục tiêu nhỏ. */
+export async function onGoalDeposit(userId: string, now = new Date()) {
+  await awardPoints(userId, "goalDeposit", `deposit:${todayYmd(now)}`);
 }
 
 export async function onGoalCompleted(userId: string, goalId: string) {

@@ -33,5 +33,9 @@ export function useAdminMutations() {
       apiFetch<{ sent: number }>("/api/admin/announcements", { method: "POST", body: { title, message } }),
     []
   );
-  return { updateUser, createCategory, deleteCategory, announce };
+  const resetPassword = useCallback(
+    (id: string) => apiFetch<{ temporaryPassword: string }>(`/api/admin/users/${id}/reset-password`, { method: "POST" }),
+    []
+  );
+  return { updateUser, createCategory, deleteCategory, announce, resetPassword };
 }

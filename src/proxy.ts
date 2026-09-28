@@ -30,8 +30,11 @@ export function proxy(request: NextRequest) {
   const user = session.status === "valid" ? session.payload : null;
   const home = user?.role === "admin" ? "/admin" : "/dashboard";
 
-  if (AUTH_PAGES.includes(pathname) && user) return redirectTo(request, home);
-  if (pathname === "/admin/login" && user?.role === "admin") return redirectTo(request, "/admin");
+  // Có `reason` nghĩa là layout server (đối chiếu DB) vừa từ chối phiên này – tài khoản bị khóa, đổi quyền
+  // hoặc mật khẩu đã đổi – dù chữ ký token vẫn hợp lệ. Không chuyển hướng ngược lại, tránh vòng lặp redirect.
+  const rejectedByServer = request.nextUrl.searchParams.has("reason");
+  if (AUTH_PAGES.includes(pathname) && user && !rejectedByServer) return redirectTo(request, home);
+  if (pathname === "/admin/login" && user?.role === "admin" && !rejectedByServer) return redirectTo(request, "/admin");
 
   const isApp = APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isApp && !user) {

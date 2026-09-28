@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib/database/prisma";
@@ -9,6 +10,7 @@ import type { AdminOverviewDTO, AdminUserDTO } from "@/types/admin";
 
 export type { AdminOverviewDTO, AdminUserDTO };
 import { toNumber } from "./mappers";
+import { hashPassword } from "./user.service";
 
 const ACTIVE_WINDOW_DAYS = 30;
 const GROWTH_MONTHS = 6;
@@ -180,3 +182,34 @@ export async function updateUser(
   return toAdminUser(updated);
 }
 
+
+/** Bảng ký tự cho mật khẩu tạm: bỏ các ký tự dễ nhầm (0/O, 1/l/I). */
+const TEMP_LETTERS = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+const TEMP_DIGITS = "23456789";
+const TEMP_PASSWORD_LENGTH = 12;
+
+/** Mật khẩu tạm ngẫu nhiên (crypto) luôn thỏa quy tắc mật khẩu: có cả chữ và số. */
+export function generateTemporaryPassword(): string {
+  const pool = TEMP_LETTERS + TEMP_DIGITS;
+  const chars = [TEMP_LETTERS[randomInt(TEMP_LETTERS.length)], TEMP_DIGITS[randomInt(TEMP_DIGITS.length)]];
+  while (chars.length < TEMP_PASSWORD_LENGTH) chars.push(pool[randomInt(pool.length)]);
+  // Trộn Fisher–Yates để vị trí chữ/số bắt buộc không cố định.
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
+export async function resetUserPassword(actorId: string, targetId: string): Promise<{ temporaryPassword: string }> {
+  if (actorId === targetId) {
+    throw Errors.badRequest("Hãy dùng chức năng Đổi mật khẩu trong Cài đặt cho tài khoản của chính bạn.");
+  }
+  const temporaryPassword = generateTemporaryPassword();
+  const { count } = await prisma.user.updateMany({
+    where: { id: targetId },
+    data: { password_hash: await hashPassword(temporaryPassword) },
+  });
+  if (count === 0) throw Errors.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng.");
+  return { temporaryPassword };
+}

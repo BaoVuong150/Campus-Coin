@@ -146,7 +146,8 @@ interface SuggestionContext {
   history: { description: string; category_id: number; type: string }[];
 }
 
-const historyQuery = (text: string) => text.trim().split(/s+/).slice(0, 2).join(" ");
+/** Hai từ đầu của mô tả, dùng làm từ khóa tìm trong lịch sử của user. */
+export const historyQuery = (text: string) => text.trim().split(/\s+/).slice(0, 2).join(" ");
 
 /** Lõi gợi ý: lựa chọn đã ghi nhớ → lịch sử của user → từ khóa merchant → danh mục mặc định. */
 function pickSuggestion(ctx: SuggestionContext, text: string, type?: TransactionType): CategorySuggestion | null {

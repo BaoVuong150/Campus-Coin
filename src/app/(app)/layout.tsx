@@ -7,6 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSessionState();
   if (session.status === "expired") redirect("/login?reason=expired");
   if (session.status === "disabled") redirect("/login?reason=disabled");
-  if (session.status !== "authenticated") redirect("/login");
+  // Token hợp lệ nhưng user không còn trong DB: kèm reason để proxy không chuyển hướng ngược lại.
+  if (session.status !== "authenticated") redirect("/login?reason=required");
   return <AppShell user={session.user}>{children}</AppShell>;
 }

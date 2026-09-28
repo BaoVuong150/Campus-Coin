@@ -57,6 +57,18 @@ export function collectDueOccurrences(
   return { due, nextRunDate: cursor, finished: isAfterEnd(schedule, cursor) };
 }
 
+/** Kỳ đầu tiên (tính từ `from`) rơi vào ngày `minYmd` hoặc sau đó – dùng khi kích hoạt lại một lịch. */
+export function firstOccurrenceFrom(schedule: Schedule, from: Date, minYmd: string): Date {
+  let cursor = from;
+  let guard = 0;
+  // Giới hạn vòng lặp: lịch hàng tuần bị dừng nhiều năm vẫn chỉ cần vài trăm bước.
+  while (toYmd(cursor) < minYmd && guard < 5000) {
+    cursor = nextOccurrence(schedule, cursor);
+    guard += 1;
+  }
+  return cursor;
+}
+
 /** Các kỳ còn lại trong tháng `monthKey` sau hôm nay (dùng cho dự báo). */
 export function occurrencesRemainingInMonth(
   schedule: Schedule,

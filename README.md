@@ -22,6 +22,8 @@ npm run dev                 # http://localhost:3000
 
 - Xin chuỗi kết nối DB qua kênh riêng của nhóm – **không** commit `.env` hay dán secret vào README/issue.
 - Thiếu `JWT_SECRET` → server báo lỗi cấu hình (không có giá trị dự phòng).
+- Quên mật khẩu: production cần `APP_URL` (link trong email) và `RESEND_API_KEY` + `MAIL_FROM` để gửi email.
+  Ở môi trường dev chưa cấu hình email, link đặt lại mật khẩu được in ra **console của server**.
 - DB mới hoàn toàn: có thể chạy `database.sql` (sinh từ Prisma schema) hoặc `npx prisma migrate deploy`.
 - Dữ liệu demo đầy đủ (**xóa toàn bộ dữ liệu cũ**): `SEED_RESET=true npm run db:seed`.
 
@@ -38,7 +40,8 @@ npm run dev                 # http://localhost:3000
 | --- | --- |
 | `npm run dev` / `build` / `start` | Chạy dev, build production, chạy production |
 | `npm run lint` / `npm run typecheck` | ESLint, TypeScript |
-| `npm test` | Unit/integration test (Vitest) cho logic tài chính, auth, phân quyền, IDOR |
+| `npm test` | Unit/integration test (Vitest) cho logic tài chính, auth, phân quyền, IDOR, race condition |
+| `npm run test:coverage` | Chạy test kèm báo cáo độ phủ (`coverage/index.html`) cho `src/lib` và `src/services` |
 | `npm run db:migrate` | `prisma migrate deploy` |
 | `npm run db:seed` | Nạp dữ liệu demo (cần `SEED_RESET=true`) |
 | `npm run db:fix-categories` | Kiểm tra giao dịch có danh mục lệch loại thu/chi (dry-run); thêm `-- --apply` để sửa, có audit |
@@ -125,12 +128,23 @@ Mọi response có dạng thống nhất:
 - Mọi truy vấn dữ liệu cá nhân đều lọc theo `user_id`; truy cập tài nguyên của người khác trả 404 (chống IDOR).
 - Đăng nhập: thông báo lỗi chung "Email hoặc mật khẩu không chính xác.", bcrypt (cost 12), rate limit đăng nhập/đăng ký.
 - Mật khẩu tối thiểu 8 ký tự gồm chữ và số. Admin API không bao giờ trả `password_hash`.
+- Token phiên chứa dấu vân tay (SHA-256 cắt ngắn) của `password_hash`: đổi mật khẩu, admin đặt lại mật khẩu hoặc
+  đặt lại qua email đều **đăng xuất mọi phiên cũ** ngay lập tức, không cần bảng lưu phiên.
+- Quên mật khẩu: link có hiệu lực 30 phút, dùng một lần; phản hồi luôn giống nhau và email gửi sau khi phản hồi
+  (không dò được email nào có tài khoản). Token đặt lại và token phiên dùng `audience` khác nhau.
+- Admin đặt lại mật khẩu: sinh mật khẩu tạm ngẫu nhiên, chỉ hiển thị một lần cho admin.
+- Rate limit đăng nhập theo IP + email và thêm một giới hạn riêng theo email (không bypass được bằng header IP giả).
 
 ### Giao dịch định kỳ
 
 Scheduler chạy "lazy" khi người dùng mở app, và có endpoint cron `GET /api/cron/recurring`
-(header `Authorization: Bearer $CRON_SECRET`). Unique `(recurring_id, date)` + cập nhật có điều kiện đảm bảo không sinh giao dịch trùng
-dù chạy lặp hoặc song song.
+(header `Authorization: Bearer $CRON_SECRET`). Mỗi lần chạy, tiến trình phải "giành" kỳ bằng một câu UPDATE có điều kiện
+(`status = active` và `next_run_date` cũ) **trước** khi sinh giao dịch, trong cùng một DB transaction; unique `(recurring_id, date)`
+là lớp bảo vệ thứ hai. Nhờ vậy chạy lặp, chạy song song, hay lịch vừa bị tạm dừng giữa chừng đều không sinh giao dịch trùng.
+
+- Ngày bắt đầu trong quá khứ: chỉ ghi bù các kỳ của **tháng hiện tại** (không sinh hàng loạt giao dịch cho nhiều năm trước).
+- Kích hoạt lại lịch đã tạm dừng **hoặc đã hủy**: bỏ qua các kỳ đã lỡ, chạy tiếp từ kỳ kế tiếp.
+- Cron bỏ qua tài khoản đã bị vô hiệu hóa.
 
 ### Song ngữ (i18n)
 
@@ -150,11 +164,26 @@ Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm 
 
 - Không dùng `alert/confirm/prompt` của trình duyệt – dùng Toast (tối đa 1 toast) và ConfirmDialog.
 - Mọi `<form>` có `noValidate`, lỗi hiển thị inline.
-- Trước khi push: `npm run lint && npm run typecheck && npm test && npm run build`.
+- Trước khi push: `npm run lint && npm run typecheck && npm test && npm run test:coverage && npm run build`.
 
 ---
 
 ## 5. Nhật ký thay đổi
+
+### Rà soát bảo mật & tính đúng đắn
+
+- **Quên mật khẩu / đặt lại mật khẩu** (`/forgot-password`, `/reset-password`) và **admin đặt lại mật khẩu** (nút chìa khóa ở Quản lý người dùng) – SRS 3.1 / 3.11.
+- Đổi mật khẩu đăng xuất các thiết bị khác. **Sau khi triển khai bản này, mọi người dùng cần đăng nhập lại một lần** (định dạng token mới).
+- Sửa vòng lặp chuyển hướng khi token còn chữ ký hợp lệ nhưng tài khoản đã bị khóa/xóa/đổi mật khẩu.
+- Mục tiêu: nạp/rút dùng một câu UPDATE có điều kiện (hai lần rút song song không thể làm số dư âm); không nạp/rút mục tiêu đã lưu trữ;
+  bấm "Hoàn thành" khi chưa đủ tiền không được cộng điểm; +5 điểm nạp mục tiêu tối đa một lần mỗi ngày.
+- Gợi ý danh mục theo lịch sử: sửa lỗi tách từ (`/s+/` → `/\s+/`) khiến gợi ý sai với mô tả có chữ "s".
+- Số tiền tối đa 9.999.999.999 và tối đa 2 chữ số thập phân (khớp cột `Decimal(12, 2)`); ngày trong khoảng năm 2000–2100.
+- Bộ lọc giao dịch bị đảo (từ ngày > đến ngày, min > max) được tự hoán đổi.
+- Lỗi Prisma P2025 → 404, P2003 → 409 thay vì 500. Danh mục gợi ý do client gửi chỉ được lưu nếu user có quyền dùng.
+- Thông báo hệ thống: bấm gửi lặp lại cùng nội dung trong 10 phút không gửi trùng.
+- `db:seed` từ chối chạy khi `NODE_ENV=production` nếu không có thêm `SEED_ALLOW_PRODUCTION=true`, và in ra DB đích trước khi xóa.
+- Không đổi schema/migration.
 
 ### Giao diện trang chủ (landing) – thiết kế lại
 

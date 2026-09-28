@@ -47,8 +47,12 @@ export function toErrorResponse(error: unknown): NextResponse<ApiFailure> {
     console.error("[config]", error.message);
     return fail(new ApiError(500, "CONFIGURATION_ERROR", "Máy chủ chưa được cấu hình đúng."));
   }
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return fail(new ApiError(409, "CONFLICT", "Dữ liệu đã tồn tại."));
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    // P2002: trùng unique; P2003: vi phạm khóa ngoại (dữ liệu đang được tham chiếu);
+    // P2025: bản ghi đã bị xóa giữa lúc kiểm tra và lúc ghi (race) → 404 thay vì 500.
+    if (error.code === "P2002") return fail(new ApiError(409, "CONFLICT", "Dữ liệu đã tồn tại."));
+    if (error.code === "P2003") return fail(new ApiError(409, "CONFLICT", "Dữ liệu đang được sử dụng, không thể thực hiện."));
+    if (error.code === "P2025") return fail(new ApiError(404, "NOT_FOUND", "Không tìm thấy dữ liệu."));
   }
   console.error("[api]", error);
   return fail(new ApiError(500, "INTERNAL_ERROR", "Đã có lỗi xảy ra. Vui lòng thử lại."));

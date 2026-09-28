@@ -1,5 +1,5 @@
 import { normalizeText } from "@/lib/finance/categorize";
-import { isValidYmd } from "@/lib/utils/date";
+import { isSupportedYear, isValidYmd } from "@/lib/utils/date";
 import type { TransactionType } from "@/types/finance";
 
 export const MAX_IMPORT_ROWS = 500;
@@ -39,7 +39,7 @@ export function parseDate(raw: string): string | null {
   const parts = iso ? [iso[1], iso[2], iso[3]] : dmy ? [dmy[3], dmy[2], dmy[1]] : null;
   if (!parts) return null;
   const ymd = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
-  return isValidYmd(ymd) ? ymd : null;
+  return isValidYmd(ymd) && isSupportedYear(ymd) ? ymd : null;
 }
 
 /**

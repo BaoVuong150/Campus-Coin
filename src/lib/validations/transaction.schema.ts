@@ -37,7 +37,14 @@ export const transactionQuerySchema = paginationSchema.extend({
   min: z.coerce.number().min(0).optional(),
   max: z.coerce.number().min(0).optional(),
   sort: z.enum(["date_desc", "date_asc", "amount_desc", "amount_asc"]).default("date_desc"),
-});
+})
+  // Khoảng bị đảo (từ ngày > đến ngày, min > max – dễ xảy ra khi đang gõ bộ lọc) được tự hoán đổi
+  // thay vì báo lỗi, để danh sách không chuyển sang màn hình lỗi.
+  .transform((q) => {
+    if (q.from && q.to && q.from > q.to) [q.from, q.to] = [q.to, q.from];
+    if (q.min !== undefined && q.max !== undefined && q.min > q.max) [q.min, q.max] = [q.max, q.min];
+    return q;
+  });
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;

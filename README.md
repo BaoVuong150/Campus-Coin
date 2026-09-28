@@ -1,178 +1,216 @@
-# CAMPUS COIN - SMART SPENDING STUDENT STYLE
-> **Dự án dự thi Cuộc thi World Tech Championship (Aptech) - TECHWIZ 7**  
-> **Chủ đề (Theme):** NextGen BudgetBee  
-> **Hạng mục (Category):** End-to-End Web Solutions  
-> **Phiên bản SRS:** 1.0 (Student-First Smart Financial Web Solution)  
-> **Công nghệ chủ đạo:** Next.js 16 (App Router, Turbopack, React 19, TypeScript), Tailwind CSS 4, Prisma ORM, PostgreSQL (Supabase Cloud), Recharts, Web Crypto API.
+# Campus Coin
+
+> Quản lý tiền thông minh cho đời sống sinh viên – *Spend smarter. Study easier.*
+> Dự án Techwiz 7 (Aptech) · NextGen BudgetBee · End-to-End Web Solutions
+
+Campus Coin giúp sinh viên ghi thu chi trong vài giây, đặt ngân sách theo danh mục, theo dõi mục tiêu tiết kiệm
+và luôn biết **mỗi ngày còn tiêu được bao nhiêu** đến cuối tháng. Mọi con số (Safe-to-Spend, dự báo, nhận định,
+cảnh báo bất thường) đều tính bằng quy tắc thống kê trên dữ liệu thật của người dùng – có giải thích cách tính, không dùng LLM.
+
+**Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL (Supabase) · Recharts · Zod · Vitest.
 
 ---
 
-## 📌 DÀNH CHO BẠN VÀ AI ASSISTANT LÀM CHUNG DỰ ÁN (PROJECT BRIEFING FOR TEAM & AI)
+## 1. Cài đặt
 
-> 💡 **Lưu ý đặc biệt cho AI Assistant (Cursor / Windsurf / Claude Code / Antigravity / Copilot):**  
-> Dự án này đang chạy **Next.js 16 (Turbopack) & React 19**. Vui lòng đọc kỹ toàn bộ tài liệu này trước khi chỉnh sửa mã nguồn để nắm vững toàn bộ kiến trúc, tiến độ đã làm và các **nguyên tắc bắt buộc không được vi phạm**.
-
----
-
-## 1. 🚀 HƯỚNG DẪN BẮT ĐẦU NHANH TRONG 1 PHÚT (1-MINUTE QUICKSTART)
-
-Dự án đã được cấu hình tự động hóa toàn diện, bạn chỉ cần thực hiện 4 bước sau để khởi chạy ngay:
-
-### Bước 1: Clone dự án & di chuyển vào thư mục
-```bash
-git clone <URL_GITHUB_CUA_NHOM>
-cd Techwiz-7
-```
-
-### Bước 2: Cài đặt thư viện (Dependencies)
 ```bash
 npm install
+cp .env.example .env        # điền DATABASE_URL, JWT_SECRET (≥ 32 ký tự)
+npx prisma migrate deploy   # tạo/cập nhật bảng (chỉ bổ sung, không xóa dữ liệu)
+npm run dev                 # http://localhost:3000
 ```
-*(Hệ thống đã cấu hình script `postinstall: "prisma generate"`, Prisma Client sẽ tự động sinh mã kết nối ngay khi lệnh `npm install` kết thúc mà không cần gõ thêm lệnh nào).*
 
-### Bước 3: Cấu hình biến môi trường (`.env`)
-Tạo một file `.env` tại thư mục gốc của dự án và dán chuỗi kết nối Database dùng chung của nhóm:
-```env
-DATABASE_URL="postgresql://postgres:0932764541Asd@db.qgwzbldfjjcufjuadlzq.supabase.co:5432/postgres"
-JWT_SECRET="campuscoin_techwiz7_secret_key_2026"
-```
-> 🌟 **Lợi thế:** Dự án sử dụng cơ sở dữ liệu đám mây **Supabase PostgreSQL**, bạn **KHÔNG CẦN cài đặt PostgreSQL trên máy tính**. Cả nhóm dùng chung một database thực tế đã có sẵn đầy đủ 6 tháng giao dịch, ngân sách và người dùng!
+- Xin chuỗi kết nối DB qua kênh riêng của nhóm – **không** commit `.env` hay dán secret vào README/issue.
+- Thiếu `JWT_SECRET` → server báo lỗi cấu hình (không có giá trị dự phòng).
+- DB mới hoàn toàn: có thể chạy `database.sql` (sinh từ Prisma schema) hoặc `npx prisma migrate deploy`.
+- Dữ liệu demo đầy đủ (**xóa toàn bộ dữ liệu cũ**): `SEED_RESET=true npm run db:seed`.
 
-### Bước 4: Khởi chạy Dev Server
-```bash
-npm run dev
-```
-Mở trình duyệt truy cập: **`http://localhost:3000`** — Ứng dụng sẽ hoạt động ngay lập tức!
+### Tài khoản demo
+
+| Vai trò | Email | Mật khẩu | Cổng đăng nhập |
+| --- | --- | --- | --- |
+| Sinh viên | `student@campuscoin.edu` | `Student@123` | `/login` |
+| Quản trị viên | `admin@campuscoin.edu` | `Admin@123` | `/admin/login` |
+
+### Scripts
+
+| Lệnh | Mô tả |
+| --- | --- |
+| `npm run dev` / `build` / `start` | Chạy dev, build production, chạy production |
+| `npm run lint` / `npm run typecheck` | ESLint, TypeScript |
+| `npm test` | Unit/integration test (Vitest) cho logic tài chính, auth, phân quyền, IDOR |
+| `npm run db:migrate` | `prisma migrate deploy` |
+| `npm run db:seed` | Nạp dữ liệu demo (cần `SEED_RESET=true`) |
+| `npm run db:fix-categories` | Kiểm tra giao dịch có danh mục lệch loại thu/chi (dry-run); thêm `-- --apply` để sửa, có audit |
 
 ---
 
-## 2. 📋 TIẾN TRÌNH & NHỮNG GÌ ĐÃ HOÀN THIỆN (WHAT HAS BEEN DONE)
+## 2. Tính năng
 
-Dự án đã được hoàn thiện toàn bộ các yêu cầu chức năng nghiệp vụ từ SRS 3.1 đến SRS 3.12:
+| Khu vực | Nội dung |
+| --- | --- |
+| **Tổng quan** | Số dư, thu/chi tháng (so với tháng trước), ngân sách còn lại, *Số tiền có thể chi*, *Dự kiến cuối tháng*, dòng tiền 7 ngày → 12 tháng, chi tiêu theo danh mục (click để lọc giao dịch), ngân sách, giao dịch gần đây, nhận định, mục tiêu |
+| **Giao dịch** | Tìm kiếm (debounce), lọc thu/chi, danh mục, khoảng ngày, khoảng tiền; sắp xếp; phân trang phía server; bảng (desktop) / thẻ (mobile); chi tiết, sửa, xóa có xác nhận; lưu vết kiểm toán |
+| **Thêm giao dịch** | Toggle thu/chi, ô số tiền lớn, *Gợi ý danh mục* theo mô tả (user luôn đổi được), chọn danh mục bằng icon, lặp lại định kỳ; cảnh báo trùng lặp và khoản chi bất thường trước khi lưu |
+| **Ngân sách** | Chọn tháng, tổng quan, thêm/sửa/xóa, sao chép từ tháng trước; cảnh báo ≥ 80% và khi vượt |
+| **Định kỳ & chi phí cố định** | Tiền nhà, Netflix, trợ cấp… trạng thái Đang chạy / Tạm dừng / Đã hủy; scheduler tự ghi giao dịch khi đến hạn, **idempotent** |
+| **Mục tiêu tiết kiệm** | Nạp / rút tiền, sửa, hoàn thành, số ngày còn lại, số tiền cần để dành mỗi tháng |
+| **Báo cáo** | Tháng / quý / năm: tổng kết, xu hướng, danh mục, top chi tiêu, giao dịch lớn nhất, hiệu quả ngân sách; **xuất PDF** (font tiếng Việt, biểu đồ vector) |
+| **Nhập CSV** | Tải file mẫu; nhận cột tiếng Việt/tiếng Anh, ngày `YYYY-MM-DD`/`DD/MM/YYYY`, số tiền `45.000`/`-45000`; xem trước, gợi ý danh mục hàng loạt, sửa từng dòng, bỏ qua giao dịch trùng; tối đa 500 dòng |
+| **Campus Points** | Điểm thưởng nội bộ (không phải tiền, không quy đổi): +10 giao dịch đầu tiên, +2 mỗi ngày có ghi chép, +5 để dành cho mục tiêu, +10 giữ ngân sách trọn tuần, +25 đạt tiết kiệm tháng, +25 hoàn thành mục tiêu; cấp độ, chuỗi ngày, thành tựu |
+| **Song ngữ** | Tiếng Việt / English – nút VI/EN trên header, trang đăng nhập, landing và trong Cài đặt |
+| **Thông báo** | Ngân sách, định kỳ, mục tiêu, chi tiêu bất thường, hệ thống; chống spam bằng `dedupe_key`; đánh dấu đã đọc |
+| **Cài đặt** | Hồ sơ, giao diện sáng/tối + cỡ chữ, tiền tệ/múi giờ, thiết lập tài chính, danh mục cá nhân, tùy chọn thông báo, đổi mật khẩu |
+| **Quản trị** | Tổng quan hệ thống (người dùng hoạt động, tăng trưởng, khối lượng giao dịch, phân bổ danh mục), quản lý người dùng (vô hiệu hóa, phân quyền), danh mục mặc định, thông báo toàn hệ thống |
 
-### 2.1. Xác thực & Quản lý người dùng (Authentication & Session Guard)
-- **Đăng ký sinh viên (`/register`):** Tạo hồ sơ sinh viên với mức trợ cấp cơ bản (`monthly_allowance_baseline`) và mục tiêu tiết kiệm hàng tháng (`monthly_savings_goal`).
-- **Đăng nhập sinh viên (`/login`):** Xác thực mật khẩu mã hóa qua `bcryptjs`, sinh mã JWT lưu trong cookie an toàn `campuscoin_token` (httpOnly, sameSite lax, 7 ngày).
-- **Cổng Quản trị viên riêng biệt (`/admin/login`, `/admin`):** Đăng nhập Admin tách biệt độc lập với sinh viên (SRS 3.1 Direct-Access Admin).
-- **Navbar Dynamic Auth State:** Tự động phát hiện phiên đăng nhập qua `/api/user/profile`:
-  - Chưa đăng nhập: Hiển thị nút "Đăng nhập".
-  - Đã đăng nhập: Tự động ẩn nút đăng nhập, hiển thị Avatar, Tên sinh viên (ví dụ: Vương Gia Bảo), nút truy cập "Vào Sổ Chi Tiêu" và nút "Đăng xuất".
-- **Bảo vệ 2 lớp chống quay lại Login/Register khi đã đăng nhập:**
-  - *Lớp 1 (Server-side):* Dùng Next.js 16 Edge Proxy (`src/proxy.ts`), chặn HTTP 307 Redirect thẳng về `/dashboard` (hoặc `/admin`) trước khi HTML kịp gửi về trình duyệt.
-  - *Lớp 2 (Client-side):* Hook `useEffect` kiểm tra auth tại trang `/login`, `/register`, `/admin/login` chuyển hướng ngay lập tức, không để lộ form đăng nhập.
+### Cách tính các chỉ số
 
-### 2.2. Sổ Chi Tiêu Toàn Diện All-in-One (`/dashboard`)
-- **Dữ liệu thật 100% (No Hardcode):** Toàn bộ dữ liệu số dư, thu nhập, chi phí, ngân sách và lịch sử đều được nạp và tính toán trực tiếp từ Supabase Database.
-- **Thanh ghi nhanh 5 giây:** Nhập số tiền + mô tả -> AI tự nhận diện và điền danh mục ngay trong 5 giây mà không cần mở modal phức tạp.
-- **Thuật toán Hạn mức chi tiêu an toàn hôm nay (Daily Safe Spending):**
-  - Đã chuẩn hóa theo ngày thực tế trong tháng (`daysInMonth = 30 hoặc 31 ngày`).
-  - Logic bảo vệ mục tiêu tiết kiệm:
-    $$\text{Hạn mức ngày} = \frac{\text{Tổng trợ cấp/lương} - \text{Mục tiêu tiết kiệm tháng} - \text{Chi phí cố định (Tiền trọ, mạng...)}}{\text{Tổng số ngày trong tháng}}$$
-    Giúp sinh viên biết chính xác mỗi ngày tiêu tối đa bao nhiêu thì cuối tháng sẽ để dành được đúng mục tiêu tiết kiệm đã đề ra.
-- **5 Thẻ tài chính thông minh:** Số dư hiện tại, Tổng thu nhập tháng, Tổng chi tiêu tháng, Quỹ tiết kiệm tích lũy, và Hạn mức an toàn hôm nay (có nhãn cảnh báo trạng thái).
-- **Canh gác ngân sách danh mục (Budget Goals & Real-time Progress Bar):** Đo lường mức độ tiêu thụ thực tế so với ngân sách đã đặt ra, đổi màu cảnh báo khi chạm 80% và báo động khi vượt ngưỡng.
-- **Lịch sử giao dịch đa tầng:** Gom nhóm theo Ngày, Tháng, Năm; lọc theo danh mục, loại thu/chi; chỉnh sửa hoặc xóa giao dịch mượt mà.
-- **Biểu đồ tài chính Recharts:** So sánh Thu vs Chi 6 tháng liên tiếp, phân bổ cơ cấu chi tiêu theo tỷ lệ phần trăm trực quan.
-- **Báo cáo & Xuất PDF:** Tự động tổng hợp báo cáo tháng và cho phép xuất file PDF lưu trữ.
-
-### 2.3. Trí tuệ nhân tạo (AI Engine)
-- **Tự động gán danh mục qua NLP (`/api/ai/categorize`):**
-  - Tự động nhận diện ngữ nghĩa tiếng Việt: từ khóa ẩm thực (cơm, bún, cafe, trà sữa...) $\rightarrow$ Danh mục `Ăn uống`; từ khóa đi lại (xăng, grab, xe bus...) $\rightarrow$ `Đi lại`; nhà trọ/điện nước $\rightarrow$ `Tiền trọ / KTX`, v.v.
-  - Tự động học từ lịch sử người dùng: Nếu sinh viên từng sửa danh mục cho một mô tả nào đó, lần sau AI sẽ ưu tiên thói quen của sinh viên đó trước.
-- **Báo cáo thấu hiểu chi tiêu AI Insights (`/api/ai/insights`):** Tự động phát hiện danh mục có mức tăng đột biến và đưa ra lời khuyên thực tế.
-- **Mẹo tiết kiệm cá nhân hóa (Saving Tips):** Tính toán từ dữ liệu chi tiêu, cho phép sinh viên Ghim (Pin) hoặc Bỏ qua (Dismiss).
-
-### 2.4. Việt Hóa & Thiết kế chuẩn Production (No Demo/Scaffold)
-- **100% Tiếng Việt cho Danh mục:** Toàn bộ 12 danh mục hệ thống đã được đồng bộ chuẩn tiếng Việt ở cả Database, Seed Script, AI Engine và UI:
-  - *Thu nhập:* `Trợ cấp gia đình`, `Việc làm thêm`, `Học bổng`, `Quà tặng / Thưởng`, `Thu nhập khác`.
-  - *Chi tiêu:* `Ăn uống`, `Đi lại`, `Tiền trọ / KTX`, `Học tập`, `Dịch vụ số`, `Giải trí`, `Chi tiêu khác`.
-- **Dọn dẹp hoàn toàn giao diện bài tập/demo:**
-  - Đã xóa khối tài khoản mẫu trên Trang chủ và Navbar.
-  - Đã xóa các banner "Dành cho Ban giám khảo", "1-Click Login" trên trang đăng nhập để giao diện mang đúng dáng dấp của sản phẩm thương mại hoàn chỉnh.
-  - Đã gỡ bỏ tính năng nhập CSV rườm rà.
-- **Trợ năng & Giao diện hiện đại (Modern Fintech Aesthetics):** Hỗ trợ Dark/Light mode, điều chỉnh cỡ chữ (A / A+ / A++), hiệu ứng chuyển động tinh tế, chuẩn Responsive từ Mobile đến Desktop.
+- **Số tiền có thể chi / ngày** = (số dư + thu nhập định kỳ sắp nhận − chi phí cố định còn lại − tiền đang để dành cho mục tiêu − tiết kiệm tháng cần giữ) ÷ số ngày còn lại; nếu có ngân sách thì lấy mức thấp hơn giữa kết quả này và *ngân sách còn lại ÷ số ngày*. (`src/lib/finance/safe-to-spend.ts`)
+- **Dự kiến cuối tháng** = số dư + thu định kỳ sắp nhận − chi cố định còn lại − tốc độ chi linh hoạt/ngày × số ngày còn lại. Dưới 7 ngày đầu tháng dùng trung bình 3 tháng trước. (`forecast.ts`)
+- **Chi tiêu bất thường**: lớn hơn mean + 2σ lịch sử chi, hoặc gấp 3 lần trung bình danh mục (cần ≥ 5 mẫu). (`anomaly.ts`)
+- **Gợi ý danh mục**: lựa chọn trước đây của chính user → lịch sử của chính user → từ khóa merchant (GrabFood, Shopee, CGV…) → danh mục mặc định. Không đọc dữ liệu người khác. (`categorize.ts`, `category.service.ts`)
+- **Nhận định**: so sánh tuần/tháng, ngày chi nhiều nhất, chuỗi giữ ngân sách… chỉ sinh khi đủ dữ liệu. (`insights.ts`)
 
 ---
 
-## 3. ⚠️ NGUYÊN TẮC BẮT BUỘC KHI DÙNG AI CODING (CRITICAL AI RULES)
-
-Các thành viên và AI Assistant **BẮT BUỘC PHẢI TUÂN THỦ NGHIÊM NGẶT** các quy tắc sau (đã ghi nhận trong file `AGENTS.md`):
-
-1. **CẤM CHẠY LỆNH `npm run dev` BẰNG TOOL CHẠY LỆNH CỦA AI:**
-   - AI **tuyệt đối không được tự ý chạy `npm run dev`** hoặc bất kỳ lệnh daemon nào chiếm terminal. Lệnh này để **người dùng tự chạy trên cửa sổ terminal riêng** để tránh xung đột port (`EADDRINUSE`) hoặc treo tiến trình.
-   - AI chỉ được phép chạy các lệnh một lần như: `npm run build`, `npx prisma db push`, `npx prisma db seed`.
-
-2. **CẤM DÙNG `alert()`, `confirm()`, `prompt()` MẶC ĐỊNH CỦA TRÌNH DUYỆT:**
-   - Tất cả thông báo, xác nhận hành động BẮT BUỘC sử dụng hook `const { toast } = useToast()` từ `@/context/ToastContext` và Modal Dialog của dự án.
-
-3. **CẤM DÙNG VALIDATION TOOLTIP MẶC ĐỊNH CỦA TRÌNH DUYỆT:**
-   - Tuyệt đối không để hiện bong bóng lỗi mặc định ("Please fill out this field"). Luôn thêm thuộc tính `noValidate` vào thẻ `<form noValidate ...>` và tự xử lý hiển thị lỗi tùy chỉnh.
-
-4. **SINGLETON TOAST (CHỐNG TRÀN MÀN HÌNH):**
-   - Hệ thống Toast được thiết kế chỉ hiển thị tối đa **DUY NHẤT 1 TOAST** tại bất kỳ thời điểm nào để tránh spam giao diện.
-
-5. **QUY ƯỚC NEXT.JS 16 PROXY:**
-   - Next.js 16 đã deprecate quy ước `middleware.ts` và thay bằng **`src/proxy.ts`**. Giữ nguyên cấu trúc này, không đổi ngược lại `middleware.ts`.
-
----
-
-## 4. 📂 CẤU TRÚC THƯ MỤC TRỌNG YẾU (KEY PROJECT STRUCTURE)
+## 3. Kiến trúc
 
 ```
-Techwiz-7/
-├── prisma/
-│   ├── schema.prisma       # Cấu trúc CSDL (Users, Categories, Transactions, Budgets, Insights, SavingTips)
-│   └── seed.ts             # Script nạp dữ liệu mẫu 6 tháng chuẩn Tiếng Việt
-├── src/
-│   ├── proxy.ts            # Proxy Next.js 16 (Bảo vệ route, chặn truy cập /login, /register khi đã auth)
-│   ├── app/
-│   │   ├── page.tsx        # Landing Page (Hero, AI demo showcase, Sitemap trực quan)
-│   │   ├── layout.tsx      # Root Layout (Theme, Toast Provider, Font Inter)
-│   │   ├── globals.css     # CSS toàn cục, Design tokens, dark mode, cursor pointer
-│   │   ├── login/page.tsx  # Trang đăng nhập Sinh viên (Chuẩn production)
-│   │   ├── register/page.tsx # Trang tạo hồ sơ Sinh viên
-│   │   ├── dashboard/page.tsx # Trung tâm Sổ Chi Tiêu Sinh Viên All-in-One (Trọng tâm dự án)
-│   │   ├── admin/
-│   │   │   ├── page.tsx    # Bảng điều khiển Quản trị viên (Thống kê, danh mục trường)
-│   │   │   └── login/page.tsx # Cổng đăng nhập Admin
-│   │   └── api/            # Hệ thống RESTful API endpoints
-│   │       ├── auth/       # Login, Register, Logout
-│   │       ├── ai/         # /api/ai/categorize (NLP Rule Engine), /api/ai/insights
-│   │       ├── transactions/ # Thao tác CRUD giao dịch
-│   │       ├── categories/ # Quản lý danh mục
-│   │       ├── budgets/    # Quản lý hạn mức ngân sách
-│   │       ├── user/profile/ # Thông tin phiên làm việc người dùng hiện tại
-│   │       └── admin/stats/ # Thống kê toàn hệ thống
-│   ├── components/
-│   │   ├── Navbar.tsx      # Thanh điều hướng thông minh (Tự nhận diện auth state, dark mode, font size)
-│   │   └── SitemapSection.tsx # Sơ đồ hệ thống trực quan bắt buộc theo SRS
-│   ├── context/
-│   │   ├── ToastContext.tsx # Hệ thống Toast thông báo Singleton
-│   │   └── ThemeContext.tsx # Quản lý Dark/Light mode & Font size trợ năng
-│   └── lib/
-│       ├── auth.ts         # JWT sign, verify & cookie helpers
-│       ├── prisma.ts       # Singleton PrismaClient
-│       └── currency.ts     # Format tiền tệ VNĐ và parser
-├── .env.example            # Mẫu cấu hình môi trường
-├── database.sql            # Script SQL thuần nộp bài cuộc thi
-└── package.json            # Scripts & dependencies
+UI (app/(app)/*, components/*) → hooks (use-*.ts, apiFetch) → API routes (app/api/*)
+  → lib/auth (requireAuth/requireAdmin) + lib/validations (Zod) → services/* → lib/finance (pure) → Prisma → PostgreSQL
 ```
 
+```
+prisma/
+  schema.prisma          # source of truth
+  migrations/            # 0_init (baseline) + các migration bổ sung
+  seed.ts                # dữ liệu demo, ngày tương đối theo hôm nay
+src/
+  app/
+    (app)/               # trang cần đăng nhập: dashboard, transactions, budgets, reports, goals,
+                         # recurring, notifications, settings, admin/* (layout kiểm tra phiên ở server)
+    api/                 # route handlers mỏng: auth → validate → service → response chuẩn
+    login, register, admin/login, page.tsx (landing + sitemap)
+  components/
+    ui/                  # Button, Card, Field, Dialog/Sheet, Segmented, Progress, Skeleton…
+    common/ layout/ dashboard/ transactions/ budgets/ goals/ recurring/ reports/ settings/ charts/ auth/
+  hooks/                 # use-api (cache + invalidate), use-transactions, use-budget, use-dashboard, use-points…
+  i18n/                  # config, messages/vi.ts + en.ts, provider (useI18n), server (getLocale), format, templates
+  lib/
+    auth/                # jwt, session (requireAuth/requireRole/requireAdmin), ownership, cookies, rate-limit
+    api/                 # ApiError, response helpers, params
+    validations/         # *.schema.ts (Zod) dùng chung
+    finance/             # logic thuần: budget, forecast, safe-to-spend, anomaly, insights, categorize, recurring, goals, points
+    csv/                 # parser CSV nhập giao dịch
+    utils/               # date (Asia/Ho_Chi_Minh), money (VND), cn
+  services/              # transaction, budget, category, analytics, planning, recurring, goal, notification, points, import, user, admin
+  types/ constants/ context/
+tests/                   # Vitest
+```
+
+### API
+
+Mọi response có dạng thống nhất:
+
+```json
+{ "success": true, "data": { } }
+{ "success": false, "error": { "code": "TRANSACTION_NOT_FOUND", "message": "Không tìm thấy giao dịch." } }
+```
+
+### Bảo mật
+
+- JWT HS256 trong cookie `httpOnly`, `sameSite=lax`, `secure` ở production; không có secret dự phòng.
+- Mỗi request đối chiếu user trong DB (còn tồn tại, còn hoạt động, role hiện tại) → vô hiệu hóa/đổi quyền có hiệu lực ngay.
+- `/api/admin/*` kiểm tra `requireAdmin()` ở server; layout admin cũng kiểm tra riêng. Proxy chỉ là lớp chuyển hướng.
+- Mọi truy vấn dữ liệu cá nhân đều lọc theo `user_id`; truy cập tài nguyên của người khác trả 404 (chống IDOR).
+- Đăng nhập: thông báo lỗi chung "Email hoặc mật khẩu không chính xác.", bcrypt (cost 12), rate limit đăng nhập/đăng ký.
+- Mật khẩu tối thiểu 8 ký tự gồm chữ và số. Admin API không bao giờ trả `password_hash`.
+
+### Giao dịch định kỳ
+
+Scheduler chạy "lazy" khi người dùng mở app, và có endpoint cron `GET /api/cron/recurring`
+(header `Authorization: Bearer $CRON_SECRET`). Unique `(recurring_id, date)` + cập nhật có điều kiện đảm bảo không sinh giao dịch trùng
+dù chạy lặp hoặc song song.
+
+### Song ngữ (i18n)
+
+- Không dùng thư viện ngoài: `src/i18n/messages/vi.ts` là từ điển chuẩn, `en.ts` bắt buộc cùng cấu trúc (thiếu key → lỗi TypeScript).
+- Ngôn ngữ lưu trong cookie `campuscoin_locale` (mặc định theo `Accept-Language`, rồi tiếng Việt) nên server component, metadata và `<html lang>` cũng đúng ngôn ngữ.
+- Client dùng `useI18n()` → `{ t, fmt, locale, setLocale }`; server dùng `getServerMessages()`.
+- Nội dung sinh ở server (thông báo, nhận định) trả về `template + params`, client tự dịch; danh mục mặc định được dịch theo tên chuẩn. Tiền tệ (VND) và ngày (`dd/MM/yyyy`) giữ theo khu vực Việt Nam ở cả hai ngôn ngữ.
+
+### Ngày giờ
+
+DB lưu thời điểm UTC; mọi phép tính ngày/tháng quy về **Asia/Ho_Chi_Minh**. Giao dịch chỉ có ngày được lưu lúc 12:00 giờ VN.
+Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm trong logic.
+
 ---
 
-## 5. 🔑 TÀI KHOẢN DÙNG THỬ SẴN CƠ SỞ DỮ LIỆU (TEST CREDENTIALS)
+## 4. Quy tắc làm việc (xem thêm `AGENTS.md`)
 
-Khi khởi chạy thành công, bạn và giám khảo có thể dùng 2 tài khoản đã nạp sẵn dữ liệu thực tế sau:
-
-| Loại tài khoản | Email đăng nhập | Mật khẩu | Phạm vi dữ liệu |
-| :--- | :--- | :--- | :--- |
-| **Sinh viên (Student)** | `student@campuscoin.edu` | `Student@123` | Nạp sẵn 6 tháng giao dịch, ngân sách tháng 9/2026, AI insights phân tích và mẹo tiết kiệm cá nhân. |
-| **Quản trị viên (Admin)** | `admin@campuscoin.edu` | `Admin@123` | Toàn quyền Quản trị: Thống kê số lượng sinh viên toàn trường, thêm/xóa danh mục mặc định. |
+- Không dùng `alert/confirm/prompt` của trình duyệt – dùng Toast (tối đa 1 toast) và ConfirmDialog.
+- Mọi `<form>` có `noValidate`, lỗi hiển thị inline.
+- Trước khi push: `npm run lint && npm run typecheck && npm test && npm run build`.
 
 ---
 
-## 6. 🛠️ CÁC LỆNH HỮU ÍCH KHI PHÁT TRIỂN
-- `npm run dev`: Chạy dev server tại `http://localhost:3000`.
-- `npm run build`: Kiểm tra biên dịch sản phẩm (Biên dịch 19/19 routes sạch 100%).
-- `npm run db:push`: Đồng bộ schema từ `schema.prisma` lên PostgreSQL Supabase.
-- `npm run db:seed`: Nạp lại toàn bộ dữ liệu mẫu ban đầu nếu cần làm mới.
+## 5. Nhật ký thay đổi
+
+### Giao diện trang chủ (landing) – thiết kế lại
+
+- Trang chủ chia thành các section rõ ràng: Hero có mockup dashboard, Vấn đề, "Có thể chi hôm nay" (kèm bảng
+  giải thích cách tính), Ngân sách, Dòng tiền (chọn 3/6/12 tháng), Mục tiêu, Bảo mật (nền tối), CTA cuối và footer nhiều cột.
+- Thanh điều hướng mới: trong suốt ở đầu trang, mờ nền khi cuộn, có liên kết tới từng section và menu dạng sheet trên mobile.
+- Component nằm trong `src/components/landing` (mockup ở `landing/dashboard`); dữ liệu mẫu gom tại
+  `src/data/demo-finance.ts` và luôn gắn nhãn "Dữ liệu mẫu".
+- Sitemap trực quan vẫn giữ trên trang chủ theo yêu cầu SRS.
+- Nội dung section Bảo mật chỉ nêu những gì hệ thống thực sự làm: không liên kết ngân hàng, dữ liệu tách theo tài khoản,
+  mật khẩu băm một chiều, cookie httpOnly, giới hạn số lần đăng nhập.
+- Thêm favicon SVG, metadata SEO/OpenGraph theo ngôn ngữ, nút cỡ `xl` cho CTA.
+- Hiệu ứng nhẹ (xuất hiện tuần tự, thanh tiến độ, cột biểu đồ); tự tắt khi người dùng bật "giảm chuyển động".
+- Đã kiểm tra hiển thị ở 1440 / 1366 / 1024 / 768 / 430 / 390 / 375px, cả chế độ sáng và tối, không cuộn ngang.
+
+### Màu chủ đạo: đổi từ xanh lá (emerald) sang teal `#2dd4bf`
+
+| Token | Sáng | Tối | Dùng cho |
+| --- | --- | --- | --- |
+| `--primary` | `#2dd4bf` | `#2dd4bf` | Nền nút chính, CTA, logo, thanh tiến độ |
+| `--primary-hover` | `#14b8a6` | `#5eead4` | Trạng thái hover của nút |
+| `--primary-foreground` | `#042f2e` | `#042f2e` | Chữ trên nền teal |
+| `--primary-ink` *(mới)* | `#0f766e` | `#2dd4bf` | Chữ, icon, viền màu nhấn trên nền sáng/tối |
+| `--primary-soft` | `#f0fdfa` | `#0d2b28` | Nền nhạt (thẻ chọn, badge) |
+| `--brand` / `--brand-bright` | `#14b8a6` / `#2dd4bf` | `#2dd4bf` / `#5eead4` | Điểm nhấn, biểu đồ nhỏ, vầng sáng hero |
+| `--success` | `#0f766e` | `#2dd4bf` | Thu nhập, trạng thái tốt |
+| `--ring` | `#0d9488` | `#5eead4` | Viền focus bàn phím |
+
+- **Vì sao nút dùng chữ tối thay vì chữ trắng:** chữ trắng trên `#2dd4bf` chỉ đạt tỉ lệ tương phản ~1.9:1 (không đạt WCAG);
+  chữ `#042f2e` đạt ~10:1.
+- **Vì sao tách `--primary-ink`:** `#2dd4bf` quá nhạt để làm chữ trên nền trắng, nên mọi `text-primary` / `border-primary`
+  được đổi sang `text-primary-ink` / `border-primary-ink` (`#0f766e`, ~5.5:1). Ở chế độ tối, `--primary-ink` chính là `#2dd4bf`.
+- Các chấm "chưa đọc" của thông báo và vạch đánh dấu mục đang chọn ở sidebar dùng `bg-primary-ink` để dễ nhìn.
+- Logo, favicon (`src/app/icon.svg`) và logo trong file PDF xuất báo cáo (`src/lib/report-pdf.ts`) đổi sang nền teal, chữ C màu tối.
+- Màu biểu đồ Thu/Chi, màu cảnh báo (đỏ/vàng) giữ nguyên vì đã được kiểm định cho người mù màu.
+- Nguồn sự thật của mọi màu: `src/app/globals.css` (xem thêm `DESIGN.md`).
+
+### Hài hòa màu sắc & căn chỉnh giao diện
+
+- **Màu trung tính ngả teal:** nền, chữ, viền đổi từ xám ngả xanh lá (còn sót từ bảng emerald) sang xám ngả teal để
+  đồng bộ với màu chủ đạo.
+
+  | Token | Sáng | Tối |
+  | --- | --- | --- |
+  | `--background` | `#f7fafa` | `#081110` |
+  | `--surface` / `--surface-secondary` | `#ffffff` / `#f1f6f6` | `#0c1817` / `#122120` |
+  | `--foreground` / `--muted` / `--subtle` | `#0b1716` / `#56686a` / `#647677` | `#eef6f5` / `#9eb2b1` / `#8a9e9d` |
+  | `--border` | `rgb(12 45 43 / .09)` | `rgb(255 255 255 / .08)` |
+  | `--inverse` (section Bảo mật) | `#08201e` | `#050d0c` |
+
+- **Màu tô thanh tiến độ mới** `--warning-fill` (`#f59e0b`) và `--danger-fill` (`#e5484d`): thanh "sắp chạm ngân sách"
+  trước đây dùng màu chữ cảnh báo `#b45309` nên trông nâu; nay thanh dùng màu tô sáng, còn chữ vẫn giữ màu đậm để đủ tương phản.
+- **Thanh tiến độ bình thường** dùng `--brand` (`#14b8a6`) thống nhất giữa trang chủ và ứng dụng.
+- **Bảng màu danh mục (biểu đồ tròn, PDF):** thay 2 màu xanh lá cũ bằng teal `#0f9f94` và xanh ô liu `#4d7c0f`
+  (tối: `#14a399`, `#5f9a12`); đã chạy kiểm định cho người mù màu ở cả hai chế độ.
+- **Khối CTA cuối trang:** bỏ mảng teal đặc chói mắt, thay bằng nền teal nhạt có quầng sáng nhẹ, chữ tối và nút chính teal.
+- **Dashboard:** bỏ nút "Thêm giao dịch" bị trùng (đã có trên thanh trên cùng; mobile có nút tròn ở thanh dưới),
+  sửa khoảng cách giữa tiêu đề và hàng thẻ số liệu (trước đó `mb-0` ghi đè `space-y-6` của Tailwind 4).
+- Màu chữ/đường kẻ trong file PDF báo cáo cập nhật theo bảng trung tính mới.

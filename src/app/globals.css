@@ -2,223 +2,352 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --color-canvas: var(--canvas);
-  --color-surface-1: var(--surface-1);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
-  --color-surface-4: var(--surface-4);
-  --color-hairline: var(--hairline);
-  --color-hairline-strong: var(--hairline-strong);
-  --color-hairline-tertiary: var(--hairline-tertiary);
-  --color-ink: var(--ink);
-  --color-ink-muted: var(--ink-muted);
-  --color-ink-subtle: var(--ink-subtle);
-  --color-ink-tertiary: var(--ink-tertiary);
+/*
+ * Design tokens Campus Coin. Mọi màu trong UI đều đi qua các biến này;
+ * component dùng utility như bg-surface, text-muted, border-border, bg-primary...
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
-  --color-primary-focus: var(--primary-focus);
-  --color-brand-secure: var(--brand-secure);
-  --color-semantic-success: var(--semantic-success);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-fill: var(--danger-fill);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-fill: var(--warning-fill);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-inverse: var(--inverse);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-inverse-muted: var(--inverse-muted);
+  --color-inverse-border: var(--inverse-border);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 22px;
+
+  --shadow-card: 0 1px 2px 0 rgb(8 32 30 / 0.04), 0 1px 3px 0 rgb(8 32 30 / 0.03);
+  --shadow-pop: 0 10px 30px -10px rgb(8 32 30 / 0.22), 0 4px 10px -6px rgb(8 32 30 / 0.1);
+  /* Chỉ dùng cho mockup sản phẩm ở hero. */
+  --shadow-mockup: 0 32px 80px -12px rgb(8 32 30 / 0.14), 0 8px 24px -8px rgb(8 32 30 / 0.08);
+
+  --animate-fade-in: fade-in 180ms ease-out;
+  --animate-scale-in: scale-in 180ms ease-out;
+  --animate-slide-up: slide-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-slide-in-left: slide-in-left 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-slide-in-right: slide-in-right 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-rise: rise 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-grow-x: grow-x 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-grow-y: grow-y 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+/* Landing: xuất hiện nhẹ khi tải trang; độ lệch và độ trễ chỉnh qua --rise / --delay. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(var(--rise, 12px)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+}
+@keyframes grow-y {
+  from { transform: scaleY(0); }
 }
 
 @layer base {
   :root {
-    /* Linear Light Mode Defaults */
-    --canvas: #ffffff;
-    --surface-1: #ffffff;
-    --surface-2: #f8f9fa;
-    --surface-3: #f1f3f5;
-    --surface-4: #e9ecef;
-    --hairline: #e2e8f0;
-    --hairline-strong: #cbd5e1;
-    --hairline-tertiary: #94a3b8;
-    --ink: #0f1011;
-    --ink-muted: #334155;
-    --ink-subtle: #64748b;
-    --ink-tertiary: #94a3b8;
-    --primary: #5e6ad2;
-    --primary-hover: #4d58ba;
-    --primary-focus: #5e69d1;
-    --brand-secure: #7a7fad;
-    --semantic-success: #27a644;
+    color-scheme: light;
+    --background: #f7fafa;
+    --surface: #ffffff;
+    --surface-secondary: #f1f6f6;
+    --surface-hover: #e9f1f0;
+    --border: rgb(12 45 43 / 0.09);
+    --border-strong: rgb(12 45 43 / 0.17);
+    --foreground: #0b1716;
+    --muted: #56686a;
+    --subtle: #647677;
+    /* Màu chủ đạo teal #2dd4bf: nền nút dùng chữ tối để đạt tương phản AA;
+       chữ/icon màu nhấn trên nền sáng dùng --primary-ink (đậm hơn). */
+    --primary: #2dd4bf;
+    --primary-hover: #14b8a6;
+    --primary-foreground: #042f2e;
+    --primary-soft: #f0fdfa;
+    --primary-ink: #0f766e;
+    --brand: #14b8a6;
+    --brand-bright: #2dd4bf;
+    --success: #0f766e;
+    --success-soft: #f0fdfa;
+    --danger: #c9343a;
+    --danger-fill: #e5484d;
+    --danger-soft: #fdeeee;
+    --danger-foreground: #ffffff;
+    --warning: #b45309;
+    --warning-fill: #f59e0b;
+    --warning-soft: #fef6e7;
+    --info: #2563eb;
+    --info-soft: #eaf1fe;
+    --ring: #0d9488;
+    --overlay: rgb(6 20 19 / 0.45);
+    /* Section nền tối (bảo mật) – luôn tối ở cả hai chế độ. */
+    --inverse: #08201e;
+    --inverse-surface: #0d2a28;
+    --inverse-foreground: #effaf8;
+    --inverse-muted: #9dbcb8;
+    --inverse-border: rgb(255 255 255 / 0.09);
+
+    /* Chart roles – đã kiểm định CVD (dataviz validator) trên nền sáng */
+    --chart-income: #0d9488;
+    --chart-expense: #e5484d;
+    --chart-grid: #e6eeed;
+    --chart-axis: #647677;
+    --chart-1: #2a78d6;
+    --chart-2: #eb6834;
+    --chart-3: #0f9f94;
+    --chart-4: #eda100;
+    --chart-5: #e87ba4;
+    --chart-6: #4d7c0f;
+    --chart-7: #4a3aa7;
+    --chart-8: #e34948;
+    --chart-other: #a2b0b0;
   }
 
-  .dark, [data-theme="dark"] {
-    /* Canonical Linear Dark Canvas from DESIGN.md */
-    --canvas: #010102;
-    --surface-1: #0f1011;
-    --surface-2: #141516;
-    --surface-3: #18191a;
-    --surface-4: #191a1b;
-    --hairline: #23252a;
-    --hairline-strong: #34343a;
-    --hairline-tertiary: #3e3e44;
-    --ink: #f7f8f8;
-    --ink-muted: #d0d6e0;
-    --ink-subtle: #8a8f98;
-    --ink-tertiary: #62666d;
-    --primary: #5e6ad2;
-    --primary-hover: #828fff;
-    --primary-focus: #5e69d1;
-    --brand-secure: #7a7fad;
-    --semantic-success: #27a644;
+  :root.dark {
+    color-scheme: dark;
+    --background: #081110;
+    --surface: #0c1817;
+    --surface-secondary: #122120;
+    --surface-hover: #172a28;
+    --border: rgb(255 255 255 / 0.08);
+    --border-strong: rgb(255 255 255 / 0.15);
+    --foreground: #eef6f5;
+    --muted: #9eb2b1;
+    --subtle: #8a9e9d;
+    --primary: #2dd4bf;
+    --primary-hover: #5eead4;
+    --primary-foreground: #042f2e;
+    --primary-soft: #0d2b28;
+    --primary-ink: #2dd4bf;
+    --brand: #2dd4bf;
+    --brand-bright: #5eead4;
+    --success: #2dd4bf;
+    --success-soft: #0d2b28;
+    --danger: #f08080;
+    --danger-fill: #f08080;
+    --danger-soft: #2c1517;
+    --danger-foreground: #1a0a0b;
+    --warning: #fbbf24;
+    --warning-fill: #fbbf24;
+    --warning-soft: #2b2110;
+    --info: #60a5fa;
+    --info-soft: #14203a;
+    --ring: #5eead4;
+    --overlay: rgb(0 0 0 / 0.6);
+    --inverse: #050d0c;
+    --inverse-surface: #0c1817;
+    --inverse-foreground: #eef6f5;
+    --inverse-muted: #9eb2b1;
+    --inverse-border: rgb(255 255 255 / 0.08);
+
+    --chart-income: #14a391;
+    --chart-expense: #e5484d;
+    --chart-grid: rgb(255 255 255 / 0.06);
+    --chart-axis: #8a9e9d;
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #14a399;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
+    --chart-6: #5f9a12;
+    --chart-7: #9085e9;
+    --chart-8: #e66767;
+    --chart-other: #5a6c6b;
   }
 
-  /* Accessibility font sizing */
-  html[data-font-size="normal"] {
-    font-size: 16px;
+  /* Trước khi script theme chạy (chưa có data-theme): theo cài đặt hệ điều hành để không nháy màu.
+     Giữ giá trị đồng bộ với khối :root.dark phía trên. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+      --background: #081110;
+      --surface: #0c1817;
+      --surface-secondary: #122120;
+      --surface-hover: #172a28;
+      --border: rgb(255 255 255 / 0.08);
+      --border-strong: rgb(255 255 255 / 0.15);
+      --foreground: #eef6f5;
+      --muted: #9eb2b1;
+      --subtle: #8a9e9d;
+      --primary: #2dd4bf;
+      --primary-hover: #5eead4;
+      --primary-foreground: #042f2e;
+      --primary-soft: #0d2b28;
+      --primary-ink: #2dd4bf;
+      --brand: #2dd4bf;
+      --brand-bright: #5eead4;
+      --success: #2dd4bf;
+      --success-soft: #0d2b28;
+      --danger: #f08080;
+      --danger-fill: #f08080;
+      --danger-soft: #2c1517;
+      --danger-foreground: #1a0a0b;
+      --warning: #fbbf24;
+      --warning-fill: #fbbf24;
+      --warning-soft: #2b2110;
+      --info: #60a5fa;
+      --info-soft: #14203a;
+      --ring: #5eead4;
+      --overlay: rgb(0 0 0 / 0.6);
+      --inverse: #050d0c;
+      --inverse-surface: #0c1817;
+      --inverse-foreground: #eef6f5;
+      --inverse-muted: #9eb2b1;
+      --inverse-border: rgb(255 255 255 / 0.08);
+      --chart-income: #14a391;
+      --chart-expense: #e5484d;
+      --chart-grid: rgb(255 255 255 / 0.06);
+      --chart-axis: #8a9e9d;
+      --chart-1: #3987e5;
+      --chart-2: #d95926;
+      --chart-3: #14a399;
+      --chart-4: #c98500;
+      --chart-5: #d55181;
+      --chart-6: #5f9a12;
+      --chart-7: #9085e9;
+      --chart-8: #e66767;
+      --chart-other: #5a6c6b;
+    }
   }
 
-  html[data-font-size="large"] {
-    font-size: 18px;
+  html[data-font-size="normal"] { font-size: 16px; }
+  html[data-font-size="large"] { font-size: 17px; }
+  html[data-font-size="larger"] { font-size: 18px; }
+
+  html, body {
+    background-color: var(--background);
+    color: var(--foreground);
   }
 
-  html[data-font-size="larger"] {
-    font-size: 20px;
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+
+  button,
+  [role="button"],
+  a,
+  summary,
+  label[for],
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  input:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0ms !important;
+      transition-duration: 1ms !important;
+    }
   }
 }
 
-/* =========================================================================
-   LINEAR SEAMLESS DUAL-THEME ENGINE
-   Maps hardcoded Linear dark hex utilities to their Light counterparts
-   whenever the page is NOT in .dark mode.
-   This guarantees that ALL existing pages (dashboard, modals, admin, etc.)
-   seamlessly switch between crisp Light and deep Linear Dark.
-   ========================================================================= */
-html:not(.dark) .bg-\[\#010102\] {
-  background-color: #ffffff !important;
-}
-html:not(.dark) .bg-\[\#0f1011\] {
-  background-color: #ffffff !important;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-}
-html:not(.dark) .bg-\[\#141516\] {
-  background-color: #f8f9fa !important;
-}
-html:not(.dark) .bg-\[\#18191a\] {
-  background-color: #f1f3f5 !important;
-}
-html:not(.dark) .bg-\[\#191a1b\] {
-  background-color: #e9ecef !important;
-}
-html:not(.dark) .border-\[\#23252a\] {
-  border-color: #e2e8f0 !important;
-}
-html:not(.dark) .border-\[\#34343a\] {
-  border-color: #cbd5e1 !important;
-}
-html:not(.dark) .border-\[\#3e3e44\] {
-  border-color: #cbd5e1 !important;
-}
-html:not(.dark) .text-\[\#f7f8f8\] {
-  color: #0f1011 !important;
-}
-html:not(.dark) .text-\[\#d0d6e0\] {
-  color: #334155 !important;
-}
-html:not(.dark) .text-\[\#8a8f98\] {
-  color: #64748b !important;
-}
-html:not(.dark) .text-\[\#62666d\] {
-  color: #94a3b8 !important;
-}
-html:not(.dark) .hover\:bg-\[\#141516\]:hover {
-  background-color: #f1f3f5 !important;
-}
-html:not(.dark) .hover\:bg-\[\#141516\]\/50:hover {
-  background-color: #f1f3f5 !important;
-}
-html:not(.dark) .bg-\[\#141516\]\/50 {
-  background-color: #f8f9fa !important;
-}
-html:not(.dark) .hover\:bg-\[\#18191a\]:hover {
-  background-color: #e9ecef !important;
-}
-html:not(.dark) .hover\:bg-\[\#191a1b\]:hover {
-  background-color: #dee2e6 !important;
-}
-html:not(.dark) .hover\:text-\[\#f7f8f8\]:hover {
-  color: #0f1011 !important;
-}
-html:not(.dark) .edge-highlight {
-  box-shadow: inset 0 1px 0 0 rgba(0, 0, 0, 0.04) !important;
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
-body {
-  background-color: var(--canvas);
-  color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Inter", "Geist Sans", sans-serif;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  transition: background-color 0.2s ease, color 0.2s ease;
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
-/* =========================================================================
-   GLOBAL INTERACTION & CURSOR POINTER
-   Ensures ALL buttons and interactive elements globally have cursor: pointer
-   ========================================================================= */
-button,
-[role="button"],
-input[type="button"],
-input[type="submit"],
-input[type="reset"] {
-  cursor: pointer;
+/* Quầng sáng teal rất nhẹ phía sau hero – gần như không thấy rõ gradient. */
+@utility hero-glow {
+  background-image: radial-gradient(circle at 75% 40%, color-mix(in srgb, var(--brand-bright) 9%, transparent), transparent 38%);
 }
 
-button:disabled,
-[role="button"][aria-disabled="true"],
-input[type="button"]:disabled,
-input[type="submit"]:disabled {
-  cursor: not-allowed;
-}
-
-/* Linear-inspired typography tracking utilities from DESIGN.md */
-.tracking-display-xl {
-  letter-spacing: -3.0px;
-}
-.tracking-display-lg {
-  letter-spacing: -1.8px;
-}
-.tracking-display-md {
-  letter-spacing: -1.0px;
-}
-.tracking-headline {
-  letter-spacing: -0.6px;
-}
-.tracking-card-title {
-  letter-spacing: -0.4px;
-}
-.tracking-subhead {
-  letter-spacing: -0.2px;
-}
-.tracking-body-lg {
-  letter-spacing: -0.1px;
-}
-.tracking-body {
-  letter-spacing: -0.05px;
-}
-.tracking-eyebrow {
-  letter-spacing: 0.4px;
-}
-
-/* Linear Hairline Top Edge Highlight */
-.edge-highlight {
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-}
-
-/* Linear Minimalist Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #23252a;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #34343a;
+/* Quầng sáng cho khối CTA cuối trang: đậm ở giữa trên, tắt dần ra mép. */
+@utility cta-glow {
+  background-image: radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--brand-bright) 18%, transparent), transparent 70%);
 }

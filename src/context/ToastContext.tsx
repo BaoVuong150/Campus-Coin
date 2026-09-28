@@ -1,15 +1,24 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { cn } from "@/lib/utils/cn";
+import { useI18n } from "@/i18n/provider";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
-export interface ToastItem {
-  id: string;
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+interface ToastItem {
+  id: number;
   type: ToastType;
   title: string;
   description?: string;
+  action?: ToastAction;
 }
 
 export interface ConfirmOptions {
@@ -20,184 +29,135 @@ export interface ConfirmOptions {
   isDestructive?: boolean;
 }
 
-interface ToastContextType {
-  toast: {
-    success: (title: string, description?: string) => void;
-    error: (title: string, description?: string) => void;
-    warning: (title: string, description?: string) => void;
-    info: (title: string, description?: string) => void;
-  };
+type ToastFn = (title: string, description?: string, action?: ToastAction) => void;
+
+interface ToastContextValue {
+  toast: Record<ToastType, ToastFn>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
+const TOAST_DURATION_MS = 4000;
+const TOAST_WITH_ACTION_DURATION_MS = 7000;
+
+const ICONS: Record<ToastType, typeof Info> = {
+  success: CheckCircle2,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+};
+
+const ICON_COLOR: Record<ToastType, string> = {
+  success: "text-success",
+  error: "text-danger",
+  warning: "text-warning",
+  info: "text-info",
+};
+
+/**
+ * Toast dạng singleton: luôn chỉ một toast trên màn hình, toast mới thay thế toast cũ (quy tắc chống spam trong AGENTS.md).
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [activeToast, setActiveToast] = useState<ToastItem | null>(null);
-  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    options: ConfirmOptions;
-    resolve: (val: boolean) => void;
-  } | null>(null);
+  const { t } = useI18n();
+  const [active, setActive] = useState<ToastItem | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seq = useRef(0);
+  const [dialog, setDialog] = useState<{ options: ConfirmOptions; resolve: (v: boolean) => void } | null>(null);
 
-  const removeToast = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setActiveToast(null);
+  const dismiss = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    setActive(null);
   }, []);
 
-  // Strict Singleton Toast: Only 1 toast visible at any time, even on spam clicks
-  const addToast = useCallback((type: ToastType, title: string, description?: string) => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    const id = Date.now().toString();
-    setActiveToast({ id, type, title, description });
-
-    // Auto-dismiss after 4 seconds
-    timerRef.current = setTimeout(() => {
-      setActiveToast(null);
-    }, 4000);
+  const show = useCallback((type: ToastType, title: string, description?: string, action?: ToastAction) => {
+    if (timer.current) clearTimeout(timer.current);
+    seq.current += 1;
+    setActive({ id: seq.current, type, title, description, action });
+    timer.current = setTimeout(() => setActive(null), action ? TOAST_WITH_ACTION_DURATION_MS : TOAST_DURATION_MS);
   }, []);
 
-  const toast = {
-    success: (title: string, description?: string) => addToast("success", title, description),
-    error: (title: string, description?: string) => addToast("error", title, description),
-    warning: (title: string, description?: string) => addToast("warning", title, description),
-    info: (title: string, description?: string) => addToast("info", title, description),
+  const toast = useMemo<Record<ToastType, ToastFn>>(
+    () => ({
+      success: (t, d, a) => show("success", t, d, a),
+      error: (t, d, a) => show("error", t, d, a),
+      warning: (t, d, a) => show("warning", t, d, a),
+      info: (t, d, a) => show("info", t, d, a),
+    }),
+    [show]
+  );
+
+  const confirm = useCallback(
+    (options: ConfirmOptions) => new Promise<boolean>((resolve) => setDialog({ options, resolve })),
+    []
+  );
+
+  const close = (result: boolean) => {
+    dialog?.resolve(result);
+    setDialog(null);
   };
 
-  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setConfirmDialog({
-        isOpen: true,
-        options,
-        resolve,
-      });
-    });
-  }, []);
-
-  const handleConfirmAction = (result: boolean) => {
-    if (confirmDialog) {
-      confirmDialog.resolve(result);
-      setConfirmDialog(null);
-    }
-  };
+  const value = useMemo(() => ({ toast, confirm }), [toast, confirm]);
+  const Icon = active ? ICONS[active.type] : null;
 
   return (
-    <ToastContext.Provider value={{ toast, confirm }}>
+    <ToastContext.Provider value={value}>
       {children}
 
-      {/* ================= GLOBAL TOAST CONTAINER (MAX 1 TOAST AT A TIME) ================= */}
       <div
         aria-live="polite"
-        className="fixed bottom-5 right-5 z-[9999] max-w-sm w-full pointer-events-none p-2 sm:p-0"
+        className="pointer-events-none fixed inset-x-0 bottom-20 z-60 flex justify-center px-4 md:inset-x-auto md:right-6 md:bottom-6 md:justify-end"
       >
-        {activeToast && (
+        {active && Icon && (
           <div
-            key={activeToast.id}
-            role="alert"
-            className="pointer-events-auto flex items-start gap-3 p-3.5 rounded-[12px] bg-white/95 dark:bg-[#0f1011]/95 backdrop-blur-md border border-[#e2e8f0] dark:border-[#23252a] shadow-xl text-[#0f1011] dark:text-[#f7f8f8] transition-all transform animate-in fade-in slide-in-from-bottom-2 duration-200"
+            key={active.id}
+            role={active.type === "error" ? "alert" : "status"}
+            className="pointer-events-auto flex w-full max-w-sm animate-slide-up items-start gap-3 rounded-lg border border-border bg-surface p-3.5 shadow-pop"
           >
-            <div className="flex-shrink-0 mt-0.5">
-              {activeToast.type === "success" && (
-                <CheckCircle2 className="w-4 h-4 text-[#16a34a] dark:text-[#27a644]" />
-              )}
-              {activeToast.type === "error" && (
-                <AlertCircle className="w-4 h-4 text-[#e11d48] dark:text-[#f43f5e]" />
-              )}
-              {activeToast.type === "warning" && (
-                <AlertTriangle className="w-4 h-4 text-[#f59e0b]" />
-              )}
-              {activeToast.type === "info" && (
-                <Info className="w-4 h-4 text-[#5e6ad2] dark:text-[#828fff]" />
-              )}
-            </div>
-
-            <div className="flex-1 text-xs">
-              <p className="font-semibold text-[13px] leading-snug">{activeToast.title}</p>
-              {activeToast.description && (
-                <p className="text-[#64748b] dark:text-[#8a8f98] mt-1 leading-relaxed">
-                  {activeToast.description}
-                </p>
+            <Icon className={cn("mt-0.5 size-4 shrink-0", ICON_COLOR[active.type])} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">{active.title}</p>
+              {active.description && <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{active.description}</p>}
+              {active.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    active.action?.onClick();
+                    dismiss();
+                  }}
+                  className="mt-2 text-[13px] font-medium text-primary-ink hover:underline"
+                >
+                  {active.action.label}
+                </button>
               )}
             </div>
-
             <button
               type="button"
-              onClick={removeToast}
-              className="text-[#94a3b8] dark:text-[#62666d] hover:text-[#0f1011] dark:hover:text-[#f7f8f8] p-1 rounded transition-colors cursor-pointer"
-              title="Đóng thông báo"
+              onClick={dismiss}
+              aria-label={t.common.closeToast}
+              className="rounded-md p-1 text-subtle transition-colors hover:bg-surface-hover hover:text-foreground"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="size-3.5" />
             </button>
           </div>
         )}
       </div>
 
-      {/* ================= GLOBAL CONFIRMATION DIALOG ================= */}
-      {confirmDialog && confirmDialog.isOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="w-full max-w-[420px] rounded-[14px] bg-white dark:bg-[#0f1011] border border-[#e2e8f0] dark:border-[#23252a] shadow-2xl p-6 text-[#0f1011] dark:text-[#f7f8f8] animate-in zoom-in-95 duration-150 space-y-4"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  confirmDialog.options.isDestructive
-                    ? "bg-[#fff1f2] dark:bg-[#1f1315] text-[#e11d48]"
-                    : "bg-[#f1f3f5] dark:bg-[#141516] text-[#5e6ad2]"
-                }`}
-              >
-                {confirmDialog.options.isDestructive ? (
-                  <AlertTriangle className="w-5 h-5 text-[#e11d48]" />
-                ) : (
-                  <Info className="w-5 h-5 text-[#5e6ad2]" />
-                )}
-              </div>
-              <h3 className="text-[16px] font-semibold tracking-headline">
-                {confirmDialog.options.title}
-              </h3>
-            </div>
-
-            <p className="text-[13px] text-[#64748b] dark:text-[#8a8f98] leading-relaxed pl-12">
-              {confirmDialog.options.message}
-            </p>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e2e8f0] dark:border-[#23252a]">
-              <button
-                type="button"
-                onClick={() => handleConfirmAction(false)}
-                className="px-3.5 py-2 rounded-[8px] border border-[#e2e8f0] dark:border-[#23252a] bg-[#f8f9fa] dark:bg-[#141516] hover:bg-[#f1f3f5] dark:hover:bg-[#18191a] text-[#475569] dark:text-[#d0d6e0] text-[13px] font-medium transition-colors cursor-pointer"
-              >
-                {confirmDialog.options.cancelText || "Hủy bỏ"}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleConfirmAction(true)}
-                className={`px-4 py-2 rounded-[8px] text-[13px] font-medium text-white transition-colors cursor-pointer shadow-xs ${
-                  confirmDialog.options.isDestructive
-                    ? "bg-[#e11d48] hover:bg-[#be123c]"
-                    : "bg-[#5e6ad2] hover:bg-[#828fff]"
-                }`}
-              >
-                {confirmDialog.options.confirmText || "Xác nhận"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!dialog}
+        title={dialog?.options.title ?? ""}
+        message={dialog?.options.message ?? ""}
+        confirmText={dialog?.options.confirmText}
+        cancelText={dialog?.options.cancelText}
+        destructive={dialog?.options.isDestructive}
+        onResult={close}
+      />
     </ToastContext.Provider>
   );
 }
 
 export function useToast() {
   const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error("useToast must be used within a ToastProvider");
-  }
+  if (!context) throw new Error("useToast must be used within a ToastProvider");
   return context;
 }

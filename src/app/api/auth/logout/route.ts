@@ -1,11 +1,8 @@
-import { NextResponse } from "next/server";
+import { ok } from "@/lib/api/response";
+import { clearSessionCookie } from "@/lib/auth/cookies";
 
 export async function POST() {
-  const response = NextResponse.json({ success: true, message: "Đăng xuất thành công." });
-  response.cookies.set("campuscoin_token", "", {
-    httpOnly: true,
-    expires: new Date(0),
-    path: "/",
-  });
+  const response = ok({ loggedOut: true });
+  clearSessionCookie(response);
   return response;
 }

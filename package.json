@@ -9,7 +9,12 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "prisma migrate deploy",
+    "db:fix-categories": "tsx prisma/scripts/fix-category-mismatch.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -43,6 +48,7 @@
     "prisma": "^6.4.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

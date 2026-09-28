@@ -1,99 +1,26 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { handle, ok, parseBody } from "@/lib/api/response";
+import { uuidParam, type IdContext } from "@/lib/api/params";
+import { requireAuth } from "@/lib/auth/session";
+import { updateTransactionSchema } from "@/lib/validations/transaction.schema";
+import { deleteTransaction, getTransaction, updateTransaction } from "@/services/transaction.service";
 
-export async function PUT(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const user = await getCurrentUser();
+export const GET = handle<IdContext>(async (_req, ctx) => {
+  const user = await requireAuth();
+  return ok(await getTransaction(user.id, await uuidParam(ctx)));
+});
 
-    if (!user) {
-      return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
-    }
+export const PATCH = handle<IdContext>(async (req, ctx) => {
+  const user = await requireAuth();
+  const id = await uuidParam(ctx);
+  const input = await parseBody(req, updateTransactionSchema);
+  return ok(await updateTransaction(user.id, id, input));
+});
 
-    // Kiểm tra quyền sở hữu (Chống IDOR - Insecure Direct Object Reference)
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
-    });
+// Giữ PUT để tương thích client cũ.
+export const PUT = PATCH;
 
-    if (!existing) {
-      return NextResponse.json({ error: "Giao dịch không tồn tại." }, { status: 404 });
-    }
-
-    if (existing.user_id !== user.userId && user.role !== "admin") {
-      return NextResponse.json(
-        { error: "Bạn không có quyền chỉnh sửa giao dịch này." },
-        { status: 403 }
-      );
-    }
-
-    const { amount, type, description, category_id, date, is_recurring } = await req.json();
-
-    if (amount !== undefined) {
-      const num = Number(amount);
-      if (isNaN(num) || num <= 0) {
-        return NextResponse.json({ error: "Số tiền không hợp lệ." }, { status: 400 });
-      }
-    }
-
-    const updated = await prisma.transaction.update({
-      where: { id },
-      data: {
-        amount: amount ? Number(amount) : undefined,
-        type: type || undefined,
-        description: description?.trim() || undefined,
-        category_id: category_id ? Number(category_id) : undefined,
-        date: date ? new Date(date) : undefined,
-        is_recurring: typeof is_recurring === "boolean" ? is_recurring : undefined,
-      },
-      include: { category: true },
-    });
-
-    return NextResponse.json({ success: true, transaction: updated });
-  } catch (error) {
-    console.error("Transaction PUT error:", error);
-    return NextResponse.json({ error: "Lỗi cập nhật giao dịch." }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
-    }
-
-    // Kiểm tra quyền sở hữu (Chống IDOR - Insecure Direct Object Reference)
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Giao dịch không tồn tại." }, { status: 404 });
-    }
-
-    if (existing.user_id !== user.userId && user.role !== "admin") {
-      return NextResponse.json(
-        { error: "Bạn không có quyền xóa giao dịch này." },
-        { status: 403 }
-      );
-    }
-
-    await prisma.transaction.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ success: true, message: "Đã xóa giao dịch." });
-  } catch (error) {
-    console.error("Transaction DELETE error:", error);
-    return NextResponse.json({ error: "Lỗi xóa giao dịch." }, { status: 500 });
-  }
-}
+export const DELETE = handle<IdContext>(async (_req, ctx) => {
+  const user = await requireAuth();
+  await deleteTransaction(user.id, await uuidParam(ctx));
+  return ok({ deleted: true });
+});

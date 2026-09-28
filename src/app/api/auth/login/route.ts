@@ -1,70 +1,19 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-import { signToken } from "@/lib/auth";
+import { handle, ok, parseBody } from "@/lib/api/response";
+import { signToken } from "@/lib/auth/jwt";
+import { setSessionCookie } from "@/lib/auth/cookies";
+import { AUTH_RATE_LIMIT, clientIp, rateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
+import { loginSchema } from "@/lib/validations/auth.schema";
+import { authenticate } from "@/services/user.service";
 
-export async function POST(req: Request) {
-  try {
-    const { email, password } = await req.json();
+export const POST = handle(async (req) => {
+  const input = await parseBody(req, loginSchema);
+  const key = `login:${clientIp(req)}:${input.email}`;
+  rateLimit(key, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Vui lòng nhập đầy đủ email và mật khẩu." },
-        { status: 400 }
-      );
-    }
+  const user = await authenticate(input);
+  resetRateLimit(key);
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Tài khoản không tồn tại trên hệ thống." },
-        { status: 401 }
-      );
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return NextResponse.json(
-        { error: "Mật khẩu không chính xác." },
-        { status: 401 }
-      );
-    }
-
-    const token = signToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    });
-
-    const response = NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        academic_year: user.academic_year,
-      },
-    });
-
-    response.cookies.set("campuscoin_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    });
-
-    return response;
-  } catch (error) {
-    console.error("Login API Error:", error);
-    return NextResponse.json(
-      { error: "Lỗi máy chủ khi đăng nhập." },
-      { status: 500 }
-    );
-  }
-}
+  const response = ok({ user });
+  setSessionCookie(response, signToken({ userId: user.id, email: user.email, role: user.role, name: user.name }));
+  return response;
+});

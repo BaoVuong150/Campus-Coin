@@ -109,6 +109,7 @@ export interface PlanningDTO {
   expectedIncome: number;
   goalReserved: number;
   savingsTarget: number;
+  monthlySavingsGoal?: number;
   budgetRemaining: number | null;
   safeToSpend: {
     spendable: number;

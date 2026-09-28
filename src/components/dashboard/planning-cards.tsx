@@ -1,16 +1,22 @@
 "use client";
 
-import { AlertTriangle, CalendarClock, CheckCircle2, Gauge } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { AlertTriangle, CalendarClock, CheckCircle2, Gauge, Pencil, Target } from "lucide-react";
 import { ErrorState } from "@/components/common/states";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
 import { InfoTip } from "@/components/ui/info-tip";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanning } from "@/hooks/use-dashboard";
+import { useProfileMutations } from "@/hooks/use-profile";
+import { useToast } from "@/context/ToastContext";
 import { useI18n } from "@/i18n/provider";
 import { formatDate } from "@/lib/utils/date";
-import { formatVND } from "@/lib/utils/money";
+import { formatCurrencyInput, formatVND, parseCurrencyInput } from "@/lib/utils/money";
 import { cn } from "@/lib/utils/cn";
 import type { PlanningDTO } from "@/types/finance";
 
@@ -38,7 +44,78 @@ function LoadingBody() {
   );
 }
 
-function SafeToSpendBody({ p }: { p: PlanningDTO }) {
+function EditMonthlySavingsGoalDialog({
+  open,
+  onClose,
+  currentGoal,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentGoal: number;
+}) {
+  const { t, fmt } = useI18n();
+  const l = t.dashboard.planning;
+  const { toast } = useToast();
+  const { update } = useProfileMutations();
+  const [value, setValue] = useState(formatCurrencyInput(currentGoal));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setValue(formatCurrencyInput(currentGoal));
+    }
+  }, [open, currentGoal]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const numeric = parseCurrencyInput(value);
+      await update({ monthly_savings_goal: numeric });
+      toast.success(l.savingsGoalSuccess);
+      onClose();
+    } catch (err) {
+      toast.error(l.savingsGoalFailed, fmt.error(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={l.savingsGoalTitle}
+      description={l.savingsGoalDesc}
+      size="sm"
+    >
+      <form noValidate onSubmit={handleSubmit} className="space-y-4 pt-1">
+        <Field label={l.savingsGoalTitle} hint="VND">
+          {(p) => (
+            <MoneyInput
+              {...p}
+              value={value}
+              onValueChange={setValue}
+              placeholder="0"
+              size="xl"
+              data-autofocus
+            />
+          )}
+        </Field>
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            {t.common.cancel}
+          </Button>
+          <Button type="submit" variant="primary" size="sm" loading={saving}>
+            {t.common.save}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function SafeToSpendBody({ p, onEditGoal }: { p: PlanningDTO; onEditGoal: () => void }) {
   const { t } = useI18n();
   const l = t.dashboard.planning;
   const s = p.safeToSpend;
@@ -48,6 +125,8 @@ function SafeToSpendBody({ p }: { p: PlanningDTO }) {
       : s.limitedBy === "budget" && s.daily === 0
         ? l.budgetUsedUp(formatVND(s.dailyByBalance))
         : l.remaining(p.remainingDays);
+
+  const goalAmount = p.monthlySavingsGoal ?? (p.savingsTarget > 0 ? p.savingsTarget : 0);
 
   return (
     <div className="space-y-3">
@@ -59,6 +138,7 @@ function SafeToSpendBody({ p }: { p: PlanningDTO }) {
         </p>
         <p className="mt-1 text-[13px] text-muted">{note}</p>
       </div>
+
       <div className="flex flex-wrap items-center gap-2">
         {s.status === "healthy" && (
           <Badge tone="success">
@@ -76,6 +156,41 @@ function SafeToSpendBody({ p }: { p: PlanningDTO }) {
           </Badge>
         )}
         {s.limitedBy === "budget" && <Badge tone="neutral">{l.limitedByBudget}</Badge>}
+      </div>
+
+      {/* Hiển thị mục tiêu tiết kiệm tháng - Phương án 1 */}
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-surface-secondary/70 p-2.5 text-[13px] transition-colors hover:bg-surface-secondary">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-ink" aria-hidden>
+            <Target className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium text-muted uppercase tracking-wider">
+              {l.savingsGoalTitle}
+            </p>
+            <p className="tabular font-semibold text-foreground truncate">
+              {goalAmount > 0 ? (
+                <>
+                  {formatVND(goalAmount)}
+                  <span className="ml-1.5 text-[11px] font-normal text-subtle">
+                    {p.savingsTarget > 0 ? l.savingsGoalLocked : l.savingsGoalAchieved}
+                  </span>
+                </>
+              ) : (
+                <span className="text-subtle font-normal">{l.savingsGoalUnset}</span>
+              )}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onEditGoal}
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-primary-ink hover:bg-primary-soft cursor-pointer transition-colors shrink-0"
+          title={goalAmount > 0 ? l.savingsGoalChange : l.savingsGoalSet}
+        >
+          <Pencil className="size-3" aria-hidden />
+          <span>{goalAmount > 0 ? l.savingsGoalChange : l.savingsGoalSet}</span>
+        </button>
       </div>
     </div>
   );
@@ -146,40 +261,58 @@ export function PlanningCards() {
   const l = t.dashboard.planning;
   const { data, error, reload } = usePlanning();
   const upcoming = data?.upcomingFixed.filter((u) => u.type === "expense").slice(0, UPCOMING_PREVIEW) ?? [];
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <PlanningCard
-        title={l.safeTitle}
-        icon={<Gauge />}
-        action={
-          data && (
-            <InfoTip label={l.howCalculated}>
-              <SafeToSpendExplain p={data} />
-            </InfoTip>
-          )
-        }
-      >
-        {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <SafeToSpendBody p={data} />}
-        {data && upcoming.length > 0 && (
-          <div className="mt-4 border-t border-border pt-3">
-            <p className="mb-1.5 text-[12px] font-medium text-subtle">{l.upcoming}</p>
-            <ul className="space-y-1">
-              {upcoming.map((u) => (
-                <li key={`${u.id}-${u.date}`} className="flex items-center justify-between text-[13px]">
-                  <span className="truncate text-muted">
-                    {u.name} · {formatDate(u.date)}
-                  </span>
-                  <span className="tabular text-foreground">{formatVND(u.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </PlanningCard>
-      <PlanningCard title={l.forecastTitle} icon={<CalendarClock />}>
-        {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <ForecastBody p={data} />}
-      </PlanningCard>
-    </div>
+    <>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PlanningCard
+          title={l.safeTitle}
+          icon={<Gauge />}
+          action={
+            data && (
+              <InfoTip label={l.howCalculated}>
+                <SafeToSpendExplain p={data} />
+              </InfoTip>
+            )
+          }
+        >
+          {error ? (
+            <ErrorState onRetry={reload} />
+          ) : !data ? (
+            <LoadingBody />
+          ) : (
+            <SafeToSpendBody p={data} onEditGoal={() => setGoalDialogOpen(true)} />
+          )}
+          {data && upcoming.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="mb-1.5 text-[12px] font-medium text-subtle">{l.upcoming}</p>
+              <ul className="space-y-1">
+                {upcoming.map((u) => (
+                  <li key={`${u.id}-${u.date}`} className="flex items-center justify-between text-[13px]">
+                    <span className="truncate text-muted">
+                      {u.name} · {formatDate(u.date)}
+                    </span>
+                    <span className="tabular text-foreground">{formatVND(u.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </PlanningCard>
+        <PlanningCard title={l.forecastTitle} icon={<CalendarClock />}>
+          {error ? <ErrorState onRetry={reload} /> : !data ? <LoadingBody /> : <ForecastBody p={data} />}
+        </PlanningCard>
+      </div>
+
+      {data && (
+        <EditMonthlySavingsGoalDialog
+          open={goalDialogOpen}
+          onClose={() => setGoalDialogOpen(false)}
+          currentGoal={data.monthlySavingsGoal ?? data.savingsTarget}
+        />
+      )}
+    </>
   );
 }
+

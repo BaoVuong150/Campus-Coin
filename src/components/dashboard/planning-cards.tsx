@@ -158,40 +158,42 @@ function SafeToSpendBody({ p, onEditGoal }: { p: PlanningDTO; onEditGoal: () => 
         {s.limitedBy === "budget" && <Badge tone="neutral">{l.limitedByBudget}</Badge>}
       </div>
 
-      {/* Hiển thị mục tiêu tiết kiệm tháng - Phương án 1 */}
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-surface-secondary/70 p-2.5 text-[13px] transition-colors hover:bg-surface-secondary">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-ink" aria-hidden>
-            <Target className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[11px] font-medium text-muted uppercase tracking-wider">
-              {l.savingsGoalTitle}
-            </p>
-            <p className="tabular font-semibold text-foreground truncate">
-              {goalAmount > 0 ? (
-                <>
-                  {formatVND(goalAmount)}
-                  <span className="ml-1.5 text-[11px] font-normal text-subtle">
-                    {p.savingsTarget > 0 ? l.savingsGoalLocked : l.savingsGoalAchieved}
-                  </span>
-                </>
-              ) : (
-                <span className="text-subtle font-normal">{l.savingsGoalUnset}</span>
-              )}
-            </p>
+      {/* Mục tiêu tiết kiệm tháng (tạm thời tháo khỏi giao diện web, giữ nguyên code) */}
+      {false && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-surface-secondary/70 p-2.5 text-[13px] transition-colors hover:bg-surface-secondary">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-ink" aria-hidden>
+              <Target className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-muted uppercase tracking-wider">
+                {l.savingsGoalTitle}
+              </p>
+              <p className="tabular font-semibold text-foreground truncate">
+                {goalAmount > 0 ? (
+                  <>
+                    {formatVND(goalAmount)}
+                    <span className="ml-1.5 text-[11px] font-normal text-subtle">
+                      {p.savingsTarget > 0 ? l.savingsGoalLocked : l.savingsGoalAchieved}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-subtle font-normal">{l.savingsGoalUnset}</span>
+                )}
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onEditGoal}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-primary-ink hover:bg-primary-soft cursor-pointer transition-colors shrink-0"
+            title={goalAmount > 0 ? l.savingsGoalChange : l.savingsGoalSet}
+          >
+            <Pencil className="size-3" aria-hidden />
+            <span>{goalAmount > 0 ? l.savingsGoalChange : l.savingsGoalSet}</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onEditGoal}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-primary-ink hover:bg-primary-soft cursor-pointer transition-colors shrink-0"
-          title={goalAmount > 0 ? l.savingsGoalChange : l.savingsGoalSet}
-        >
-          <Pencil className="size-3" aria-hidden />
-          <span>{goalAmount > 0 ? l.savingsGoalChange : l.savingsGoalSet}</span>
-        </button>
-      </div>
+      )}
     </div>
   );
 }

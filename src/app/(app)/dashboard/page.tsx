@@ -48,9 +48,9 @@ export default function DashboardPage() {
         <RecentTransactionsCard />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div>
         <InsightsCard />
-        <GoalsPreviewCard />
+        {/* <GoalsPreviewCard /> - Tạm thời tháo mục tiêu tiết kiệm khỏi giao diện dashboard */}
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/transactions", labelKey: "transactions", icon: Receipt, mobile: true },
   { href: "/budgets", labelKey: "budgets", icon: Wallet, mobile: true },
   { href: "/reports", labelKey: "reports", icon: PieChart },
-  { href: "/goals", labelKey: "goals", icon: Target, mobile: true },
+  // { href: "/goals", labelKey: "goals", icon: Target, mobile: true }, // Tạm thời tháo mục tiêu khỏi menu điều hướng
   { href: "/recurring", labelKey: "recurring", icon: Repeat },
   { href: "/points", labelKey: "points", icon: Award },
   { href: "/notifications", labelKey: "notifications", icon: Bell },

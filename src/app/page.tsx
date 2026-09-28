@@ -41,7 +41,7 @@ export default async function HomePage() {
         <SafeToSpendSection t={t} />
         <BudgetSection t={t} />
         <CashFlowSection />
-        <GoalsSection t={t} />
+        {/* <GoalsSection t={t} /> - Tạm thời tháo khỏi landing page */}
         <PrivacySection t={t} />
         <FinalCta t={t} signedIn={signedIn} />
         <div className="border-t border-border bg-background">

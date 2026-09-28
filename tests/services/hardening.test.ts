@@ -17,7 +17,7 @@ const db = vi.hoisted(() => ({
   category: { findFirst: vi.fn(), findMany: vi.fn() },
   categoryPreference: { upsert: vi.fn() },
   transaction: { create: vi.fn(), createMany: vi.fn(), findMany: vi.fn() },
-  transactionAudit: { create: vi.fn() },
+  transactionAudit: { create: vi.fn(), createMany: vi.fn() },
   recurringTransaction: {
     findMany: vi.fn(),
     findFirst: vi.fn(),
@@ -34,6 +34,9 @@ const db = vi.hoisted(() => ({
   $transaction: vi.fn(),
 }));
 vi.mock("@/lib/database/prisma", () => ({ prisma: db }));
+// Hộp thư dev ghi file ra .mail/ – giả lập để test không ghi đĩa thật.
+const fsMock = vi.hoisted(() => ({ mkdir: vi.fn(), writeFile: vi.fn() }));
+vi.mock("node:fs/promises", () => fsMock);
 
 import { ApiError } from "@/lib/api/errors";
 import { toErrorResponse } from "@/lib/api/response";
@@ -160,11 +163,13 @@ describe("quên mật khẩu", () => {
     info.mockRestore();
   });
 
-  it("email tồn tại (dev, chưa cấu hình mail): link được in ra console server", async () => {
+  it("email tồn tại (dev, chưa cấu hình mail): email lưu vào .mail/, token KHÔNG bị in ra log", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     db.user.findUnique.mockResolvedValue({ ...sessionUser(OLD_HASH), email: "a@test.dev" });
     await requestPasswordReset("a@test.dev", "http://localhost:3000");
-    expect(info).toHaveBeenCalledWith(expect.stringContaining("http://localhost:3000/reset-password?token="));
+    const html = fsMock.writeFile.mock.calls.find(([file]) => String(file).endsWith(".html"))?.[1] as string;
+    expect(html).toContain("http://localhost:3000/reset-password?token=");
+    for (const call of info.mock.calls) expect(String(call[0])).not.toContain("token=");
     info.mockRestore();
   });
 });
@@ -215,7 +220,7 @@ describe("mục tiêu tiết kiệm", () => {
       "INSUFFICIENT_GOAL_BALANCE"
     );
     expect(db.savingGoal.updateMany).toHaveBeenCalledWith({
-      where: { id: GOAL, user_id: USER_A, status: { not: "archived" }, current_amount: { gte: 300 } },
+      where: { id: GOAL, user_id: USER_A, status: "active", current_amount: { gte: 300 } },
       data: { current_amount: { increment: -300 } },
     });
     expect(db.goalContribution.create).not.toHaveBeenCalled();
@@ -244,7 +249,11 @@ describe("mục tiêu tiết kiệm", () => {
     db.savingGoal.findUnique.mockResolvedValue(goal());
     db.savingGoal.updateMany.mockResolvedValue({ count: 1 });
     db.savingGoal.findUniqueOrThrow.mockResolvedValue(goal({ current_amount: new Prisma.Decimal(1000) }));
-    await contributeToGoal(USER_A, GOAL, { amount: 100, direction: "deposit" });
+    db.savingGoal.update.mockResolvedValue(goal({ current_amount: new Prisma.Decimal(1000), status: "completed" }));
+    const result = await contributeToGoal(USER_A, GOAL, { amount: 100, direction: "deposit" });
+    // Đạt đủ số tiền → tự chuyển sang "hoàn thành" trong cùng transaction.
+    expect(db.savingGoal.update).toHaveBeenCalledWith({ where: { id: GOAL }, data: { status: "completed" } });
+    expect(result.status).toBe("completed");
     const notification = db.notification.createMany.mock.calls
       .map(([arg]) => arg.data[0])
       .find((n: { template: string }) => n.template === "goalMilestone");
@@ -328,10 +337,26 @@ describe("giao dịch định kỳ", () => {
     db.recurringTransaction.findMany.mockResolvedValue([rec({ next_run_date: storageDate(2026, 3, 5) })]);
     db.recurringTransaction.updateMany.mockResolvedValue({ count: 1 });
     db.transaction.createMany.mockResolvedValue({ count: 1 });
+    // Chỉ những dòng thực sự được tạo mới được ghi audit.
+    db.transaction.findMany.mockImplementation(async ({ where }: { where: { id: { in: string[] } } }) =>
+      where.id.in.map((id) => ({
+        id,
+        user_id: USER_A,
+        amount: new Prisma.Decimal(100000),
+        type: "expense",
+        description: "Netflix",
+        category_id: 6,
+        date: storageDate(2026, 3, 5),
+        recurring_id: REC,
+      }))
+    );
     const created = await processDueRecurring(undefined, storageDate(2026, 3, 10));
     expect(created).toBe(1);
     expect(db.recurringTransaction.findMany.mock.calls[0][0].where.user).toEqual({ is_active: true });
     expect(db.transaction.createMany.mock.calls[0][0].skipDuplicates).toBe(true);
+    const audits = db.transactionAudit.createMany.mock.calls[0][0].data;
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({ action: "create", user_id: USER_A, snapshot: { source: "recurring", recurring_id: REC } });
   });
 
   it("kích hoạt lại lịch đã hủy: không bù các kỳ đã lỡ", async () => {

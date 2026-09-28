@@ -33,6 +33,7 @@ export const NOTIFICATION_KINDS = [
   "recurring",
   "goal",
   "unusual",
+  "security",
   "system",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

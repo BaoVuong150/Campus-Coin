@@ -59,7 +59,8 @@ export async function onGoalCompleted(userId: string, goalId: string) {
  * Tuần (thứ Hai → Chủ nhật, giờ VN) đã kết thúc, có ghi chép và mọi ngân sách của tháng
  * đều chưa vượt tính đến cuối tuần → +10 điểm.
  */
-async function evaluateBudgetWeeks(userId: string, now: Date) {
+async function evaluateBudgetWeeks(userId: string, now: Date): Promise<number> {
+  let awarded = 0;
   const today = vnParts(now);
   const daysSinceMonday = (today.weekday + 6) % 7;
   const thisMonday = vnStartOfDay(today.year, today.month, today.day - daysSinceMonday);
@@ -81,15 +82,17 @@ async function evaluateBudgetWeeks(userId: string, now: Date) {
     });
     const spentMap = new Map(spent.map((s) => [s.category_id, toNumber(s._sum.amount)]));
     const kept = budgets.every((b) => computeBudget(toNumber(b.limit_amount), spentMap.get(b.category_id) ?? 0).status !== "exceeded");
-    if (kept) await awardPoints(userId, "budgetWeek", `budget-week:${toYmd(start)}`);
+    if (kept && (await awardPoints(userId, "budgetWeek", `budget-week:${toYmd(start)}`))) awarded += 1;
   }
+  return awarded;
 }
 
 /** Tháng đã kết thúc có (thu − chi) ≥ mục tiêu tiết kiệm tháng → +25 điểm. */
-async function evaluateMonthlySavings(userId: string, now: Date) {
+async function evaluateMonthlySavings(userId: string, now: Date): Promise<number> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { monthly_savings_goal: true } });
   const goal = toNumber(user?.monthly_savings_goal);
-  if (goal <= 0) return;
+  if (goal <= 0) return 0;
+  let awarded = 0;
 
   for (let i = 1; i <= MONTHS_TO_EVALUATE; i++) {
     const month = shiftMonthKey(currentMonthKey(now), -i);
@@ -102,13 +105,18 @@ async function evaluateMonthlySavings(userId: string, now: Date) {
     });
     const income = toNumber(rows.find((r) => r.type === "income")?._sum?.amount);
     const expense = toNumber(rows.find((r) => r.type === "expense")?._sum?.amount);
-    if (income > 0 && income - expense >= goal) await awardPoints(userId, "monthlySavings", `savings:${month}`);
+    if (income > 0 && income - expense >= goal && (await awardPoints(userId, "monthlySavings", `savings:${month}`))) awarded += 1;
   }
+  return awarded;
 }
 
+/** Cộng điểm cho các tuần/tháng đã kết thúc (idempotent). Gọi từ POST /api/sync, không gọi trong GET. */
+export async function evaluatePeriodicRewards(userId: string, now = new Date()): Promise<number> {
+  return (await evaluateBudgetWeeks(userId, now)) + (await evaluateMonthlySavings(userId, now));
+}
+
+/** Chỉ đọc: điểm, cấp độ, chuỗi ngày, thành tựu. */
 export async function getPointsSummary(userId: string, now = new Date()): Promise<PointsSummaryDTO> {
-  await evaluateBudgetWeeks(userId, now);
-  await evaluateMonthlySavings(userId, now);
 
   const windowStart = new Date(now.getTime() - STREAK_WINDOW_DAYS * DAY_MS);
   const [total, history, days, transactionCount, goalDeposits, budgetWeeks, completedGoals, recurringCount] = await Promise.all([

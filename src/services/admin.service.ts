@@ -10,6 +10,7 @@ import type { AdminOverviewDTO, AdminUserDTO } from "@/types/admin";
 
 export type { AdminOverviewDTO, AdminUserDTO };
 import { toNumber } from "./mappers";
+import { withPasswordChangeFlag } from "@/lib/auth/account-flags";
 import { hashPassword } from "./user.service";
 import { getSystemHealth } from "@/lib/database/resilience";
 
@@ -208,10 +209,16 @@ export async function resetUserPassword(actorId: string, targetId: string): Prom
   if (actorId === targetId) {
     throw Errors.badRequest("Hãy dùng chức năng Đổi mật khẩu trong Cài đặt cho tài khoản của chính bạn.");
   }
+  const target = await prisma.user.findUnique({ where: { id: targetId }, select: { preferences: true } });
+  if (!target) throw Errors.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng.");
   const temporaryPassword = generateTemporaryPassword();
+  // Mật khẩu tạm chỉ để đăng nhập một lần: bật cờ buộc user đặt mật khẩu mới ngay sau khi đăng nhập.
   const { count } = await prisma.user.updateMany({
     where: { id: targetId },
-    data: { password_hash: await hashPassword(temporaryPassword) },
+    data: {
+      password_hash: await hashPassword(temporaryPassword),
+      preferences: withPasswordChangeFlag(target.preferences, true),
+    },
   });
   if (count === 0) throw Errors.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng.");
   return { temporaryPassword };

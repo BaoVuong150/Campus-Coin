@@ -1,6 +1,6 @@
-import { formatDate } from "@/lib/utils/date";
+import { formatDate, formatDateTime } from "@/lib/utils/date";
 import { formatPercent, formatVND } from "@/lib/utils/money";
-import type { InsightDictionary, NotificationDictionary, PointReason } from "../templates";
+import type { InsightDictionary, NotificationDictionary, PointReason, TipDictionary } from "../templates";
 import type { Messages } from "./vi";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -50,6 +50,18 @@ const notificationTemplates: NotificationDictionary = {
     title: (p) => `+${p.points} Campus Points`,
     message: (p) => POINT_REASONS[p.reason],
   },
+  passwordChanged: {
+    title: () => "Password changed",
+    message: (p) => `Your password was changed at ${formatDateTime(p.at)}. Other devices were signed out. If this wasn't you, use “Forgot password” now.`,
+  },
+  passwordReset: {
+    title: () => "Password reset",
+    message: (p) => `Your password was reset by email at ${formatDateTime(p.at)}. All previous sessions were ended.`,
+  },
+  sessionsRevoked: {
+    title: () => "Signed out of other devices",
+    message: (p) => `You signed out of all other devices at ${formatDateTime(p.at)}.`,
+  },
 };
 
 const insights: InsightDictionary = {
@@ -95,6 +107,34 @@ const insights: InsightDictionary = {
   },
 };
 
+const tipTemplates: TipDictionary = {
+  aboveAverage: {
+    title: (p) => `${p.category} spending is higher than usual`,
+    description: (p) =>
+      `At this pace you'll spend about ${formatVND(p.projected)} on ${p.category} this month, versus ${formatVND(p.average)} on average before. Try a weekly cap to bring it back down.`,
+  },
+  budgetRisk: {
+    title: (p) => `${p.category} budget will run over`,
+    description: (p) =>
+      `At the current pace, your ${formatVND(p.limit)} budget runs out before month-end. Keep ${p.category} under ${formatVND(p.weekly)} per week to stay within it.`,
+  },
+  smallPurchases: {
+    title: () => "Lots of small repeat purchases",
+    description: (p) =>
+      `${p.count} purchases under 50,000 ₫ this month (${formatVND(p.total)} in total). Coffee, bubble tea and snacks add up – try cutting about a third.`,
+  },
+  subscriptions: {
+    title: () => "Review your subscriptions",
+    description: (p) =>
+      `You pay for ${p.count} digital subscriptions, about ${formatVND(p.monthly)} a month. Cancel the ones you rarely use or switch to student/family plans.`,
+  },
+  savingsGap: {
+    title: () => "Not on track for your monthly savings",
+    description: (p) =>
+      `To keep ${formatVND(p.goal)} at month-end, cut flexible spending by about ${formatVND(p.daily)} per day from now on.`,
+  },
+};
+
 export const en: Messages = {
   meta: {
     description: "Smart money management for student life – income, expenses, budgets, savings goals and month-end forecasts.",
@@ -102,6 +142,8 @@ export const en: Messages = {
     register: "Sign up",
     adminLogin: "Admin sign in",
     forgotPassword: "Forgot password",
+    changePassword: "Set a new password",
+    onboarding: "Getting started",
     resetPassword: "Reset password",
     homeTitle: "Campus Coin – Money management for students",
     homeDescription: "Track income and spending, stay on budget and know how much you can spend each day.",
@@ -160,6 +202,7 @@ export const en: Messages = {
     SESSION_EXPIRED: "Your session has expired. Please sign in again.",
     FORBIDDEN: "You don't have permission to do this.",
     ACCOUNT_DISABLED: "This account has been disabled. Please contact an administrator.",
+    PASSWORD_CHANGE_REQUIRED: "Please change your temporary password to continue.",
     INVALID_CREDENTIALS: "Incorrect email or password.",
     EMAIL_TAKEN: "This email is already in use.",
     VALIDATION_ERROR: "Some information is invalid.",
@@ -173,7 +216,9 @@ export const en: Messages = {
     CONFLICT: "This already exists.",
     CATEGORY_IN_USE: "This category is in use and can't be deleted or change type.",
     INSUFFICIENT_GOAL_BALANCE: "You can't withdraw more than you've saved for this goal.",
+    GOAL_HAS_HISTORY: "This goal has deposit/withdrawal history. Archive it instead of deleting to keep the history.",
     RATE_LIMITED: "Too many attempts. Please try again in a few minutes.",
+    EMAIL_UNAVAILABLE: "Email sending is not enabled. Please contact an administrator to reset your password.",
     INVALID_JSON: "The request data is invalid.",
     CONFIGURATION_ERROR: "The server isn't configured correctly.",
     INTERNAL_ERROR: "Something went wrong. Please try again.",
@@ -240,7 +285,6 @@ export const en: Messages = {
     adminSection: "Admin",
     mainNav: "Main navigation",
     quickNav: "Quick navigation",
-    more: "More",
     collapse: "Collapse",
     collapseSidebar: "Collapse sidebar",
     expandSidebar: "Expand sidebar",
@@ -268,6 +312,33 @@ export const en: Messages = {
     toLight: "Switch to light mode",
     toDark: "Switch to dark mode",
     language: "Language",
+  },
+  categoryEdit: {
+    title: "Edit category",
+    name: "Category name",
+    type: "Type",
+    typeHint: "Income/expense type can only change while the category is unused.",
+    editLabel: (n: string) => `Edit ${n}`,
+    saved: "Category saved",
+    systemHint: "Applies to every user. Renaming a default category turns off keyword-based suggestions for it.",
+  },
+  onboarding: {
+    title: "Quick setup",
+    subtitle: "A few details so Campus Coin can work out how much you can safely spend each day. Takes about a minute.",
+    income: "Monthly allowance / income",
+    incomeHint: "Money from family, part-time pay… You can change it later in Settings.",
+    payDay: "Monthly pay day",
+    payDayOption: (d: number) => `Day ${d}`,
+    savings: "Save each month (optional)",
+    savingsHint: "This amount is set aside when calculating what you can spend.",
+    autoAllowance: "Record this income automatically on pay day each month",
+    autoAllowanceHint: "Starts from your next pay day. You can pause it on the Recurring page.",
+    budgetsTitle: "Starter budgets",
+    budgetsHint: "Suggested from your income – untick or change any amount.",
+    submit: "Start using Campus Coin",
+    skip: "Skip, set up later",
+    done: "All set. Happy smart spending!",
+    failed: "Couldn't save setup",
   },
   auth: {
     loginTitle: "Sign in",
@@ -300,6 +371,8 @@ export const en: Messages = {
     forgotSubtitle: "Enter your account email and we'll send you a reset link.",
     forgotSubmit: "Send reset link",
     forgotSent: "If this email belongs to an active account, a reset link has been sent. The link is valid for 30 minutes.",
+    emailUnavailableTitle: "Password reset emails are unavailable",
+    emailUnavailableBody: "Email sending is not enabled yet. Please contact an administrator – they can issue a temporary password so you can sign in and set a new one.",
     backToLogin: "← Back to sign in",
     resetTitle: "Reset password",
     resetSubtitle: "Choose a new password for your account.",
@@ -308,6 +381,12 @@ export const en: Messages = {
     resetDone: "Your password has been reset. Please sign in with your new password.",
     resetMissingToken: "This reset link is invalid. Please request a new one.",
     requestNewLink: "Request a new link",
+    forceChangeTitle: "Set a new password",
+    forceChangeSubtitle: "You signed in with a temporary password from an administrator. Choose a new password to continue.",
+    temporaryPassword: "Temporary password",
+    forceChangeSubmit: "Save and continue",
+    forceChangeDone: "Password changed. Welcome back!",
+    forceChangeLogout: "Sign out",
     reasons: {
       expired: "Your session has expired. Please sign in again.",
       disabled: "This account has been disabled. Please contact an administrator.",
@@ -482,6 +561,18 @@ export const en: Messages = {
     },
   },
   dashboard: {
+    tips: {
+      title: "Saving tips",
+      description: "Suggestions from your own spending, ranked by how much you could save.",
+      empty: "No tips yet. Keep logging for a few days to get relevant suggestions.",
+      potential: (a: string) => `Could save ~${a}/month`,
+      pin: "Pin tip",
+      unpin: "Unpin",
+      dismiss: "Dismiss tip",
+      pinned: "Pinned",
+      system: "General tip",
+      failed: "Couldn't update tip",
+    },
     subtitle: "Your finances at a glance this month.",
     quickAdd: { title: "Quick add", expense: "Expense", income: "Income" },
     summary: {
@@ -529,6 +620,12 @@ export const en: Messages = {
       emptyBody: "Track your first income or expense to get started.",
     },
     planning: {
+      emptyTitle: "No data yet",
+      emptyBody: "Add your first transaction to see how much you can spend each day.",
+      addFirst: "Add transaction",
+      forecastEmpty: "Not enough data for a forecast yet. Keep logging for a few more days.",
+      confidence: { insufficient: "Not enough data", low: "Low confidence", medium: "Medium confidence", high: "High confidence" },
+      basedOn: (n: number) => `Based on ${n} days of transaction history.`,
       safeTitle: "Safe to spend",
       forecastTitle: "Month-end forecast",
       canSpend: "You can spend about",
@@ -579,6 +676,7 @@ export const en: Messages = {
     },
   },
   insights,
+  tips: tipTemplates,
   transactions: {
     title: "Transactions",
     description: "All your income and expenses.",
@@ -749,6 +847,14 @@ export const en: Messages = {
   },
   goals: {
     title: "Savings goals",
+    archive: "Archive",
+    archiveLabel: (n: string) => `Archive ${n}`,
+    archiveTitle: "Archive goal?",
+    archiveMessage: (n: string) => `"${n}" will move to Archived. Its saved amount no longer counts as reserved. You can restore it any time.`,
+    archived: "Goal archived",
+    archivedSection: "Archived",
+    restore: "Restore",
+    restored: "Goal restored",
     description: "Put money aside for what matters.",
     saving: (amount: string, n: number) => `Saving ${amount} across ${n} goals.`,
     new: "New goal",
@@ -860,6 +966,35 @@ export const en: Messages = {
     },
   },
   reports: {
+    email: {
+      send: "Send by email",
+      sent: (to: string) => `Report sent to ${to}`,
+      savedDev: "Development: the email was saved to the .mail/ folder",
+      failed: "Couldn't send report",
+      subject: (label: string) => `Campus Coin – ${label} report`,
+      greeting: (name: string) => `Hi ${name},`,
+      intro: (label: string, from: string, to: string) => `Here is your financial summary for ${label} (${from} – ${to}).`,
+      income: "Total income",
+      expense: "Total expense",
+      net: "Net (saved)",
+      avgDaily: "Average daily spend",
+      transactions: "Transactions",
+      topCategories: "Top spending",
+      largest: "Largest expense",
+      budgets: (n: number, over: number) => `Budgets: ${n} categories, ${over} over the limit.`,
+      open: "Open the full report",
+      footer: "Sent at your request from the Reports page. Campus Coin never connects to bank accounts.",
+    },
+    history: {
+      title: "Previous months' insights",
+      description: "Saved automatically each month. Bookmark important months to revisit.",
+      empty: "No saved insights yet. They are saved automatically as you use the app during the month.",
+      bookmark: "Bookmark",
+      unbookmark: "Remove bookmark",
+      bookmarked: "Bookmarked",
+      tipsHeading: "Tips that month",
+      failed: "Couldn't update",
+    },
     title: "Reports",
     description: "Income and spending analysis by period.",
     period: "Report period",
@@ -923,6 +1058,7 @@ export const en: Messages = {
       recurring: "Recurring",
       goal: "Goal",
       unusual: "Unusual spending",
+      security: "Security",
       system: "System",
     },
     templates: notificationTemplates,
@@ -1039,16 +1175,55 @@ export const en: Messages = {
     },
     security: {
       title: "Security",
-      description: "Change your sign-in password.",
+      description: "Change your password and manage sessions.",
       current: "Current password",
       new: "New password",
       confirm: "Confirm new password",
       submit: "Change password",
       changed: "Password changed",
       failed: "Couldn't change password",
+      signOutAll: "Sign out of all other devices",
+      signOutAllHint: "Use this if you forgot to sign out on a shared computer or think your account was exposed.",
+      signOutAllTitle: "Sign out of other devices?",
+      signOutAllMessage: "Every session on other devices ends immediately. This device stays signed in.",
+      signOutAllDone: "Signed out of all other devices",
+      signOutAllFailed: "Couldn't sign out other devices",
     },
   },
   admin: {
+    tips: {
+      title: "Saving tip templates",
+      hint: "General tips shown to every student, alongside tips computed from each person's data.",
+      titleLabel: "Title",
+      contentLabel: "Content",
+      potentialLabel: "Estimated saving per month (optional)",
+      add: "Add tip",
+      added: "Tip added",
+      addFailed: "Couldn't add tip",
+      empty: "No tip templates yet.",
+      deleteTitle: "Delete tip template?",
+      deleteMessage: (n: string) => `"${n}" will no longer be shown to students.`,
+      deleted: "Tip deleted",
+      deleteFailed: "Couldn't delete tip",
+    },
+    audit: {
+      title: "Admin audit log",
+      hint: "The 30 most recent administrator actions. Passwords are never recorded.",
+      empty: "No actions recorded yet.",
+      by: (name: string) => `by ${name}`,
+      unknownActor: "deleted account",
+      actions: {
+        "user.update": "Updated account",
+        "user.reset_password": "Reset password",
+        "category.create": "Added system category",
+        "category.update": "Edited system category",
+        "category.delete": "Deleted system category",
+        "announcement.send": "Sent announcement",
+        "users.export": "Exported user list",
+        "tip.create": "Added saving tip template",
+        "tip.delete": "Deleted saving tip template",
+      },
+    },
     dashboardDescription: "System-wide activity. User credentials are never shown.",
     totalStudents: "Total students",
     active30: "Active (30 days)",

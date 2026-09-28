@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Globe, Moon, Sun, Trash2 } from "lucide-react";
+import { Globe, LogOut, Moon, Pencil, Sun, Trash2 } from "lucide-react";
+import { CategoryEditDialog } from "@/components/common/category-edit-dialog";
 import { CategoryIcon } from "@/components/common/category-icon";
 import { LanguageSelect } from "@/components/layout/language-switcher";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ import { useI18n } from "@/i18n/provider";
 import { ApiClientError } from "@/lib/api-client";
 import { APP_TIMEZONE } from "@/lib/utils/date";
 import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils/money";
-import type { ProfileDTO, TransactionType } from "@/types/finance";
+import type { CategoryDTO, ProfileDTO, TransactionType } from "@/types/finance";
 
 const PAY_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const NOTIFICATION_KEYS = ["budget", "recurring", "goal", "unusual"] as const;
@@ -210,7 +211,8 @@ export function FinanceSection({ profile }: { profile: ProfileDTO }) {
 
 export function CategoriesSection() {
   const { data } = useCategories();
-  const { create, remove } = useCategoryMutations();
+  const { create, update, remove } = useCategoryMutations();
+  const [editing, setEditing] = useState<CategoryDTO | null>(null);
   const { toast, confirm } = useToast();
   const { t, fmt } = useI18n();
   const l = t.settings.categories;
@@ -271,6 +273,9 @@ export function CategoriesSection() {
                 <CategoryIcon icon={c.icon} color={c.color} size="sm" />
                 <span className="flex-1 text-sm text-foreground">{c.name}</span>
                 <Badge tone={c.type === "income" ? "success" : "neutral"}>{c.type === "income" ? t.common.incomeShort : t.common.expenseShort}</Badge>
+                <Button variant="ghost" size="icon-sm" onClick={() => setEditing(c)} aria-label={t.categoryEdit.editLabel(c.name)}>
+                  <Pencil />
+                </Button>
                 <Button variant="ghost" size="icon-sm" onClick={() => del(c.id, c.name)} aria-label={l.deleteLabel(c.name)}>
                   <Trash2 />
                 </Button>
@@ -279,13 +284,24 @@ export function CategoriesSection() {
           </ul>
         )}
       </CardContent>
+      {editing && (
+        <CategoryEditDialog
+          category={editing}
+          displayName={editing.name}
+          onSave={async (input) => {
+            await update(editing.id, input);
+            toast.success(t.categoryEdit.saved);
+          }}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </Card>
   );
 }
 
 export function SecuritySection() {
-  const { changePassword } = useProfileMutations();
-  const { toast } = useToast();
+  const { changePassword, signOutOtherDevices } = useProfileMutations();
+  const { toast, confirm } = useToast();
   const { t, fmt } = useI18n();
   const l = t.settings.security;
   const [current, setCurrent] = useState("");
@@ -293,6 +309,21 @@ export function SecuritySection() {
   const [confirmValue, setConfirmValue] = useState("");
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [saving, setSaving] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+
+  const signOutOthers = async () => {
+    const ok = await confirm({ title: l.signOutAllTitle, message: l.signOutAllMessage, confirmText: l.signOutAll, isDestructive: true });
+    if (!ok) return;
+    setRevoking(true);
+    try {
+      await signOutOtherDevices();
+      toast.success(l.signOutAllDone);
+    } catch (err) {
+      toast.error(l.signOutAllFailed, fmt.error(err));
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,6 +371,15 @@ export function SecuritySection() {
             </Button>
           </div>
         </form>
+        <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">{l.signOutAll}</p>
+            <p className="mt-0.5 text-[13px] text-muted">{l.signOutAllHint}</p>
+          </div>
+          <Button variant="outline" onClick={signOutOthers} loading={revoking} className="shrink-0">
+            <LogOut /> {l.signOutAll}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

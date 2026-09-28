@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:migrate": "prisma migrate deploy",
-    "db:fix-categories": "tsx prisma/scripts/fix-category-mismatch.ts"
+    "db:fix-categories": "tsx prisma/scripts/fix-category-mismatch.ts",
+    "cron:recurring": "tsx scripts/run-recurring.ts",
+    "demo:reset": "tsx scripts/demo-reset.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -52,5 +54,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^3.2.7"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

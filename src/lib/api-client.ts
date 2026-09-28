@@ -13,6 +13,9 @@ export class ApiClientError extends Error {
   }
 }
 
+/** Thời gian chờ tối đa cho một request API. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 const SESSION_CODES = new Set(["UNAUTHORIZED", "SESSION_EXPIRED", "ACCOUNT_DISABLED"]);
 let redirecting = false;
 
@@ -40,6 +43,8 @@ export async function apiFetch<T>(url: string, { body, skipAuthRedirect, headers
       headers: body !== undefined ? { "Content-Type": "application/json", ...headers } : headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       credentials: "same-origin",
+      // Mạng chậm/treo: không để nút "đang lưu" quay mãi – báo lỗi để người dùng thử lại.
+      signal: init.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw new ApiClientError(0, "NETWORK_ERROR", "Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.");
@@ -59,6 +64,8 @@ export async function apiFetch<T>(url: string, { body, skipAuthRedirect, headers
   const code = error?.code ?? "INTERNAL_ERROR";
   if (!skipAuthRedirect && response.status === 401 && SESSION_CODES.has(code)) redirectToLogin(code);
   if (!skipAuthRedirect && code === "ACCOUNT_DISABLED") redirectToLogin(code);
+  // Đang dùng mật khẩu tạm do admin cấp: mọi thao tác khác bị chặn cho tới khi đổi mật khẩu.
+  if (!skipAuthRedirect && code === "PASSWORD_CHANGE_REQUIRED") window.location.replace("/change-password");
   throw new ApiClientError(response.status, code, error?.message ?? "Đã có lỗi xảy ra. Vui lòng thử lại.", error?.fields);
 }
 

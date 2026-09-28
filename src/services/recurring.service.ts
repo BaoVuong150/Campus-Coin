@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma, type Category, type RecurringTransaction } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/database/prisma";
@@ -17,7 +18,8 @@ import type { RecurringDTO, TransactionType } from "@/types/finance";
 import { getUsableCategory } from "./category.service";
 import { evaluateBudgetAlerts } from "./budget.service";
 import { notify } from "./notification.service";
-import { asType, toCategoryDTO, toNumber } from "./mappers";
+import { asType, auditSnapshot, toCategoryDTO, toNumber } from "./mappers";
+import { errorSummary, logEvent } from "@/lib/observability/log";
 
 type CreateInput = z.infer<typeof createRecurringSchema>;
 type UpdateInput = z.infer<typeof updateRecurringSchema>;
@@ -147,7 +149,13 @@ export async function deleteRecurring(userId: string, id: string): Promise<void>
  * Tạo giao dịch cho các kỳ định kỳ đã đến hạn. Idempotent nhờ unique (recurring_id, date):
  * chạy lại nhiều lần hoặc chạy song song cũng không sinh giao dịch trùng.
  */
-export async function processDueRecurring(userId?: string, now = new Date()): Promise<number> {
+export interface RecurringRunResult {
+  processed: number;
+  created: number;
+  failed: number;
+}
+
+export async function runDueRecurring(userId?: string, now = new Date()): Promise<RecurringRunResult> {
   const due = await prisma.recurringTransaction.findMany({
     where: {
       status: "active",
@@ -158,56 +166,83 @@ export async function processDueRecurring(userId?: string, now = new Date()): Pr
     },
   });
 
-  let created = 0;
+  const result: RecurringRunResult = { processed: due.length, created: 0, failed: 0 };
   for (const rec of due) {
-    const { due: dates, nextRunDate, finished } = collectDueOccurrences(scheduleOf(rec), rec.next_run_date, now);
-    if (dates.length === 0 && !finished) continue;
-
-    const inserted = await prisma.$transaction(async (tx) => {
-      // "Giành quyền" xử lý kỳ này trước: chỉ tiến trình cập nhật được next_run_date cũ (và lịch vẫn đang
-      // chạy) mới được sinh giao dịch. Tiến trình song song hoặc lịch vừa bị tạm dừng/hủy sẽ bỏ qua.
-      const claim = await tx.recurringTransaction.updateMany({
-        where: { id: rec.id, status: "active", next_run_date: rec.next_run_date },
-        data: { next_run_date: nextRunDate, ...(finished ? { status: "cancelled" } : {}) },
-      });
-      if (claim.count === 0 || dates.length === 0) return 0;
-
-      // Unique (recurring_id, date) + skipDuplicates là lớp bảo vệ thứ hai.
-      const result = await tx.transaction.createMany({
-        data: dates.map((date) => ({
-          user_id: rec.user_id,
-          category_id: rec.category_id,
-          amount: rec.amount,
-          type: rec.type,
-          description: rec.name,
-          date,
-          is_recurring: true,
-          recurrence_period: rec.frequency,
-          recurring_id: rec.id,
-        })),
-        skipDuplicates: true,
-      });
-      return result.count;
-    });
-
-    created += inserted;
-    if (inserted > 0) {
-      const last = dates[dates.length - 1];
-      await notify(rec.user_id, {
-        kind: "recurring",
-        type: "info",
-        template: rec.type === "income" ? "recurringIncome" : "recurringExpense",
-        params: { name: rec.name, amount: toNumber(rec.amount), date: last.toISOString(), next: nextRunDate.toISOString() },
-        link: "/recurring",
-        dedupeKey: `recurring:${rec.id}:${toYmd(last)}`,
-      });
-      if (rec.type === "expense") {
-        const months = new Set(dates.map((d) => toYmd(d).slice(0, 7)));
-        for (const month of months) await evaluateBudgetAlerts(rec.user_id, month, rec.category_id);
-      }
+    // Mỗi lịch xử lý độc lập: một lịch lỗi (dữ liệu hỏng, danh mục bị xóa…) không chặn các lịch còn lại.
+    try {
+      result.created += await processOneSchedule(rec, now);
+    } catch (error) {
+      result.failed += 1;
+      logEvent("error", "recurring.item_failed", { recurringId: rec.id, reason: errorSummary(error) });
     }
   }
-  return created;
+  return result;
+}
+
+/** Tương thích: số giao dịch đã tạo. */
+export async function processDueRecurring(userId?: string, now = new Date()): Promise<number> {
+  return (await runDueRecurring(userId, now)).created;
+}
+
+async function processOneSchedule(rec: RecurringTransaction, now: Date): Promise<number> {
+  const { due: dates, nextRunDate, finished } = collectDueOccurrences(scheduleOf(rec), rec.next_run_date, now);
+  if (dates.length === 0 && !finished) return 0;
+
+  const inserted = await prisma.$transaction(async (tx) => {
+    // "Giành quyền" xử lý kỳ này trước: chỉ tiến trình cập nhật được next_run_date cũ (và lịch vẫn đang
+    // chạy) mới được sinh giao dịch. Tiến trình song song hoặc lịch vừa bị tạm dừng/hủy sẽ bỏ qua.
+    const claim = await tx.recurringTransaction.updateMany({
+      where: { id: rec.id, status: "active", next_run_date: rec.next_run_date },
+      data: { next_run_date: nextRunDate, ...(finished ? { status: "cancelled" } : {}) },
+    });
+    if (claim.count === 0 || dates.length === 0) return 0;
+
+    // Unique (recurring_id, date) + skipDuplicates là lớp bảo vệ thứ hai.
+    const rows = dates.map((date) => ({
+      id: randomUUID(),
+      user_id: rec.user_id,
+      category_id: rec.category_id,
+      amount: rec.amount,
+      type: rec.type,
+      description: rec.name,
+      date,
+      is_recurring: true,
+      recurrence_period: rec.frequency,
+      recurring_id: rec.id,
+    }));
+    await tx.transaction.createMany({ data: rows, skipDuplicates: true });
+
+    // Lưu vết kiểm toán như giao dịch nhập tay – chỉ cho những dòng thực sự được tạo (bỏ qua dòng trùng).
+    const createdRows = await tx.transaction.findMany({ where: { id: { in: rows.map((r) => r.id) } } });
+    if (createdRows.length > 0) {
+      await tx.transactionAudit.createMany({
+        data: createdRows.map((t) => ({
+          transaction_id: t.id,
+          user_id: t.user_id,
+          action: "create",
+          snapshot: { ...auditSnapshot(t), source: "recurring" },
+        })),
+      });
+    }
+    return createdRows.length;
+  });
+
+  if (inserted > 0) {
+    const last = dates[dates.length - 1];
+    await notify(rec.user_id, {
+      kind: "recurring",
+      type: "info",
+      template: rec.type === "income" ? "recurringIncome" : "recurringExpense",
+      params: { name: rec.name, amount: toNumber(rec.amount), date: last.toISOString(), next: nextRunDate.toISOString() },
+      link: "/recurring",
+      dedupeKey: `recurring:${rec.id}:${toYmd(last)}`,
+    });
+    if (rec.type === "expense") {
+      const months = new Set(dates.map((d) => toYmd(d).slice(0, 7)));
+      for (const month of months) await evaluateBudgetAlerts(rec.user_id, month, rec.category_id);
+    }
+  }
+  return inserted;
 }
 
 export interface UpcomingItem {

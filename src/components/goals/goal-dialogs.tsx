@@ -28,6 +28,7 @@ export function GoalFormDialog({ goal, onClose }: { goal: GoalDTO | null; onClos
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // chống gửi trùng khi bấm đúp / nhấn Enter liên tiếp
     const amount = parseCurrencyInput(target);
     const next = { name: name.trim() ? undefined : l.nameRequired, target: amount > 0 ? undefined : l.targetRequired };
     setErrors(next);
@@ -115,6 +116,7 @@ export function ContributionDialog({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // chống gửi trùng khi bấm đúp / nhấn Enter liên tiếp
     const value = parseCurrencyInput(amount);
     if (value <= 0) return setError(t.validation.amountPositive);
     if (!deposit && value > goal.currentAmount) return setError(t.validation.maxAmount(formatVND(goal.currentAmount)));

@@ -1,6 +1,6 @@
-import { formatDate } from "@/lib/utils/date";
+import { formatDate, formatDateTime } from "@/lib/utils/date";
 import { formatPercent, formatVND } from "@/lib/utils/money";
-import type { InsightDictionary, NotificationDictionary, PointReason } from "../templates";
+import type { InsightDictionary, NotificationDictionary, PointReason, TipDictionary } from "../templates";
 
 const monthName = (m: number, y: number) => `Tháng ${m}/${y}`;
 
@@ -45,6 +45,18 @@ const notificationTemplates: NotificationDictionary = {
   pointsEarned: {
     title: (p) => `+${p.points} Campus Points`,
     message: (p) => POINT_REASONS[p.reason],
+  },
+  passwordChanged: {
+    title: () => "Mật khẩu đã được đổi",
+    message: (p) => `Mật khẩu tài khoản vừa được đổi lúc ${formatDateTime(p.at)}. Các thiết bị khác đã bị đăng xuất. Nếu không phải bạn, hãy dùng “Quên mật khẩu” ngay.`,
+  },
+  passwordReset: {
+    title: () => "Mật khẩu đã được đặt lại",
+    message: (p) => `Mật khẩu được đặt lại qua email lúc ${formatDateTime(p.at)}. Mọi phiên đăng nhập cũ đã bị hủy.`,
+  },
+  sessionsRevoked: {
+    title: () => "Đã đăng xuất các thiết bị khác",
+    message: (p) => `Bạn đã đăng xuất khỏi mọi thiết bị khác lúc ${formatDateTime(p.at)}.`,
   },
 };
 
@@ -93,6 +105,34 @@ const insights: InsightDictionary = {
 
 const WEEKDAYS = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 
+const tipTemplates: TipDictionary = {
+  aboveAverage: {
+    title: (p) => `Chi ${p.category} đang cao hơn thường lệ`,
+    description: (p) =>
+      `Với tốc độ hiện tại, tháng này bạn sẽ chi khoảng ${formatVND(p.projected)} cho ${p.category}, trong khi trung bình các tháng trước là ${formatVND(p.average)}. Thử đặt một hạn mức mỗi tuần để kéo về mức cũ.`,
+  },
+  budgetRisk: {
+    title: (p) => `Ngân sách ${p.category} sắp vượt`,
+    description: (p) =>
+      `Nếu giữ tốc độ chi hiện tại, ngân sách ${formatVND(p.limit)} sẽ bị vượt trước cuối tháng. Giữ chi ${p.category} dưới ${formatVND(p.weekly)} mỗi tuần để còn trong hạn mức.`,
+  },
+  smallPurchases: {
+    title: () => "Nhiều khoản chi nhỏ lặp lại",
+    description: (p) =>
+      `Tháng này có ${p.count} khoản chi dưới 50.000 ₫ (tổng ${formatVND(p.total)}). Cà phê, trà sữa, đồ ăn vặt cộng lại khá nhanh – thử cắt bớt khoảng một phần ba.`,
+  },
+  subscriptions: {
+    title: () => "Rà soát các dịch vụ số đang trả",
+    description: (p) =>
+      `Bạn đang trả định kỳ ${p.count} dịch vụ số, khoảng ${formatVND(p.monthly)} mỗi tháng. Hủy dịch vụ ít dùng hoặc chuyển sang gói sinh viên/gói gia đình.`,
+  },
+  savingsGap: {
+    title: () => "Chưa chạm mục tiêu tiết kiệm tháng",
+    description: (p) =>
+      `Để giữ lại ${formatVND(p.goal)} cuối tháng, cần giảm chi linh hoạt khoảng ${formatVND(p.daily)} mỗi ngày từ giờ tới cuối tháng.`,
+  },
+};
+
 export const vi = {
   meta: {
     description: "Quản lý tiền thông minh cho đời sống sinh viên – thu chi, ngân sách, mục tiêu tiết kiệm và dự báo cuối tháng.",
@@ -100,6 +140,8 @@ export const vi = {
     register: "Đăng ký",
     adminLogin: "Đăng nhập quản trị",
     forgotPassword: "Quên mật khẩu",
+    changePassword: "Đặt mật khẩu mới",
+    onboarding: "Thiết lập ban đầu",
     resetPassword: "Đặt lại mật khẩu",
     homeTitle: "Campus Coin – Quản lý tài chính cho sinh viên",
     homeDescription: "Theo dõi thu chi, ngân sách và biết mỗi ngày bạn còn có thể tiêu bao nhiêu.",
@@ -158,6 +200,7 @@ export const vi = {
     SESSION_EXPIRED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
     ACCOUNT_DISABLED: "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.",
+    PASSWORD_CHANGE_REQUIRED: "Bạn cần đổi mật khẩu tạm thời trước khi tiếp tục.",
     INVALID_CREDENTIALS: "Email hoặc mật khẩu không chính xác.",
     EMAIL_TAKEN: "Email này đã được sử dụng.",
     VALIDATION_ERROR: "Dữ liệu không hợp lệ.",
@@ -171,7 +214,9 @@ export const vi = {
     CONFLICT: "Dữ liệu đã tồn tại.",
     CATEGORY_IN_USE: "Danh mục đang được sử dụng, không thể xóa hoặc đổi loại.",
     INSUFFICIENT_GOAL_BALANCE: "Số tiền rút vượt quá số đã tiết kiệm cho mục tiêu này.",
+    GOAL_HAS_HISTORY: "Mục tiêu đã có lịch sử nạp/rút tiền. Hãy lưu trữ thay vì xóa để giữ lịch sử.",
     RATE_LIMITED: "Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.",
+    EMAIL_UNAVAILABLE: "Hệ thống chưa bật gửi email. Vui lòng liên hệ quản trị viên để được đặt lại mật khẩu.",
     INVALID_JSON: "Dữ liệu gửi lên không hợp lệ.",
     CONFIGURATION_ERROR: "Máy chủ chưa được cấu hình đúng.",
     INTERNAL_ERROR: "Đã có lỗi xảy ra. Vui lòng thử lại.",
@@ -238,7 +283,6 @@ export const vi = {
     adminSection: "Quản trị",
     mainNav: "Điều hướng chính",
     quickNav: "Điều hướng nhanh",
-    more: "Thêm",
     collapse: "Thu gọn",
     collapseSidebar: "Thu gọn thanh bên",
     expandSidebar: "Mở rộng thanh bên",
@@ -266,6 +310,33 @@ export const vi = {
     toLight: "Chuyển sang giao diện sáng",
     toDark: "Chuyển sang giao diện tối",
     language: "Ngôn ngữ",
+  },
+  categoryEdit: {
+    title: "Sửa danh mục",
+    name: "Tên danh mục",
+    type: "Loại",
+    typeHint: "Chỉ đổi được loại thu/chi khi danh mục chưa được dùng.",
+    editLabel: (n: string) => `Sửa ${n}`,
+    saved: "Đã lưu danh mục",
+    systemHint: "Áp dụng cho mọi người dùng. Đổi tên danh mục mặc định sẽ tắt gợi ý tự động theo từ khóa cho danh mục này.",
+  },
+  onboarding: {
+    title: "Thiết lập nhanh",
+    subtitle: "Vài thông tin để Campus Coin tính đúng số tiền bạn có thể chi mỗi ngày. Chỉ mất khoảng một phút.",
+    income: "Trợ cấp / thu nhập mỗi tháng",
+    incomeHint: "Tiền gia đình gửi, lương làm thêm… Có thể sửa sau trong Cài đặt.",
+    payDay: "Ngày nhận tiền hằng tháng",
+    payDayOption: (d: number) => `Ngày ${d}`,
+    savings: "Muốn để dành mỗi tháng (không bắt buộc)",
+    savingsHint: "Số tiền này được giữ lại khi tính số tiền có thể chi.",
+    autoAllowance: "Tự ghi khoản thu này vào ngày nhận mỗi tháng",
+    autoAllowanceHint: "Bắt đầu từ lần nhận kế tiếp. Có thể tạm dừng ở trang Định kỳ.",
+    budgetsTitle: "Ngân sách khởi đầu",
+    budgetsHint: "Gợi ý theo thu nhập của bạn – bỏ chọn hoặc sửa số tiền tùy ý.",
+    submit: "Bắt đầu dùng Campus Coin",
+    skip: "Bỏ qua, thiết lập sau",
+    done: "Đã thiết lập xong. Chúc bạn chi tiêu thông minh!",
+    failed: "Không thể lưu thiết lập",
   },
   auth: {
     loginTitle: "Đăng nhập",
@@ -298,6 +369,8 @@ export const vi = {
     forgotSubtitle: "Nhập email tài khoản, chúng tôi sẽ gửi link đặt lại mật khẩu.",
     forgotSubmit: "Gửi link đặt lại",
     forgotSent: "Nếu email này thuộc một tài khoản đang hoạt động, link đặt lại mật khẩu đã được gửi. Link có hiệu lực 30 phút.",
+    emailUnavailableTitle: "Chưa thể gửi email đặt lại mật khẩu",
+    emailUnavailableBody: "Hệ thống hiện chưa bật gửi email. Hãy liên hệ quản trị viên – họ có thể cấp mật khẩu tạm để bạn đăng nhập và đặt mật khẩu mới.",
     backToLogin: "← Quay lại đăng nhập",
     resetTitle: "Đặt lại mật khẩu",
     resetSubtitle: "Chọn mật khẩu mới cho tài khoản của bạn.",
@@ -306,6 +379,12 @@ export const vi = {
     resetDone: "Đã đặt lại mật khẩu. Vui lòng đăng nhập bằng mật khẩu mới.",
     resetMissingToken: "Link đặt lại mật khẩu không hợp lệ. Hãy yêu cầu link mới.",
     requestNewLink: "Yêu cầu link mới",
+    forceChangeTitle: "Đặt mật khẩu mới",
+    forceChangeSubtitle: "Bạn đang đăng nhập bằng mật khẩu tạm do quản trị viên cấp. Hãy đặt mật khẩu mới để tiếp tục.",
+    temporaryPassword: "Mật khẩu tạm",
+    forceChangeSubmit: "Lưu và tiếp tục",
+    forceChangeDone: "Đã đổi mật khẩu. Chào mừng bạn trở lại!",
+    forceChangeLogout: "Đăng xuất",
     reasons: {
       expired: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
       disabled: "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.",
@@ -484,6 +563,18 @@ export const vi = {
     } as Record<string, [string, string]>,
   },
   dashboard: {
+    tips: {
+      title: "Mẹo tiết kiệm",
+      description: "Gợi ý từ dữ liệu chi tiêu của bạn, xếp theo số tiền có thể tiết kiệm.",
+      empty: "Chưa có mẹo nào. Hãy ghi chép thêm vài ngày để có gợi ý phù hợp.",
+      potential: (a: string) => `Có thể tiết kiệm ~${a}/tháng`,
+      pin: "Ghim mẹo",
+      unpin: "Bỏ ghim",
+      dismiss: "Bỏ qua mẹo",
+      pinned: "Đã ghim",
+      system: "Mẹo chung",
+      failed: "Không thể cập nhật mẹo",
+    },
     subtitle: "Tổng quan tài chính của bạn trong tháng này.",
     quickAdd: { title: "Ghi nhanh", expense: "Khoản chi", income: "Khoản thu" },
     summary: {
@@ -531,6 +622,12 @@ export const vi = {
       emptyBody: "Theo dõi khoản thu chi đầu tiên để bắt đầu.",
     },
     planning: {
+      emptyTitle: "Chưa có dữ liệu",
+      emptyBody: "Thêm giao dịch đầu tiên để biết mỗi ngày còn có thể chi bao nhiêu.",
+      addFirst: "Thêm giao dịch",
+      forecastEmpty: "Chưa đủ dữ liệu để dự báo. Hãy ghi chép thêm vài ngày.",
+      confidence: { insufficient: "Chưa đủ dữ liệu", low: "Độ tin cậy thấp", medium: "Độ tin cậy trung bình", high: "Độ tin cậy cao" },
+      basedOn: (n: number) => `Dựa trên ${n} ngày dữ liệu giao dịch.`,
       safeTitle: "Số tiền có thể chi",
       forecastTitle: "Dự kiến cuối tháng",
       canSpend: "Bạn có thể chi khoảng",
@@ -581,6 +678,7 @@ export const vi = {
     },
   },
   insights,
+  tips: tipTemplates,
   transactions: {
     title: "Giao dịch",
     description: "Toàn bộ khoản thu chi của bạn.",
@@ -751,6 +849,14 @@ export const vi = {
   },
   goals: {
     title: "Mục tiêu tiết kiệm",
+    archive: "Lưu trữ",
+    archiveLabel: (n: string) => `Lưu trữ ${n}`,
+    archiveTitle: "Lưu trữ mục tiêu?",
+    archiveMessage: (n: string) => `"${n}" sẽ được chuyển vào mục Đã lưu trữ. Tiền đã để dành không còn tính vào phần giữ lại. Bạn có thể khôi phục bất cứ lúc nào.`,
+    archived: "Đã lưu trữ mục tiêu",
+    archivedSection: "Đã lưu trữ",
+    restore: "Khôi phục",
+    restored: "Đã khôi phục mục tiêu",
     description: "Để dành cho những điều quan trọng.",
     saving: (amount: string, n: number) => `Đang để dành ${amount} cho ${n} mục tiêu.`,
     new: "Mục tiêu mới",
@@ -862,6 +968,35 @@ export const vi = {
     },
   },
   reports: {
+    email: {
+      send: "Gửi qua email",
+      sent: (to: string) => `Đã gửi báo cáo tới ${to}`,
+      savedDev: "Môi trường phát triển: email được lưu trong thư mục .mail/",
+      failed: "Không thể gửi báo cáo",
+      subject: (label: string) => `Campus Coin – Báo cáo ${label}`,
+      greeting: (name: string) => `Xin chào ${name},`,
+      intro: (label: string, from: string, to: string) => `Đây là tóm tắt tài chính ${label} (${from} – ${to}) của bạn.`,
+      income: "Tổng thu",
+      expense: "Tổng chi",
+      net: "Chênh lệch (tiết kiệm)",
+      avgDaily: "Chi trung bình mỗi ngày",
+      transactions: "Số giao dịch",
+      topCategories: "Chi nhiều nhất",
+      largest: "Khoản chi lớn nhất",
+      budgets: (n: number, over: number) => `Ngân sách: ${n} danh mục, ${over} danh mục vượt hạn mức.`,
+      open: "Xem báo cáo đầy đủ",
+      footer: "Email được gửi theo yêu cầu của bạn từ trang Báo cáo. Campus Coin không liên kết tài khoản ngân hàng.",
+    },
+    history: {
+      title: "Nhận định các tháng trước",
+      description: "Tự lưu mỗi tháng. Đánh dấu tháng quan trọng để xem lại.",
+      empty: "Chưa có nhận định nào được lưu. Nhận định được lưu tự động khi bạn dùng app trong tháng.",
+      bookmark: "Đánh dấu",
+      unbookmark: "Bỏ đánh dấu",
+      bookmarked: "Đã đánh dấu",
+      tipsHeading: "Mẹo của tháng",
+      failed: "Không thể cập nhật",
+    },
     title: "Báo cáo",
     description: "Phân tích thu chi theo kỳ.",
     period: "Kỳ báo cáo",
@@ -925,6 +1060,7 @@ export const vi = {
       recurring: "Định kỳ",
       goal: "Mục tiêu",
       unusual: "Chi tiêu bất thường",
+      security: "Bảo mật",
       system: "Hệ thống",
     },
     templates: notificationTemplates,
@@ -1041,16 +1177,55 @@ export const vi = {
     },
     security: {
       title: "Bảo mật",
-      description: "Đổi mật khẩu đăng nhập.",
+      description: "Đổi mật khẩu và quản lý phiên đăng nhập.",
       current: "Mật khẩu hiện tại",
       new: "Mật khẩu mới",
       confirm: "Nhập lại mật khẩu mới",
       submit: "Đổi mật khẩu",
       changed: "Đã đổi mật khẩu",
       failed: "Không thể đổi mật khẩu",
+      signOutAll: "Đăng xuất khỏi mọi thiết bị khác",
+      signOutAllHint: "Dùng khi bạn quên đăng xuất trên máy tính công cộng hoặc nghi ngờ tài khoản bị lộ.",
+      signOutAllTitle: "Đăng xuất mọi thiết bị khác?",
+      signOutAllMessage: "Mọi phiên đăng nhập trên thiết bị khác sẽ kết thúc ngay. Thiết bị này vẫn giữ đăng nhập.",
+      signOutAllDone: "Đã đăng xuất khỏi mọi thiết bị khác",
+      signOutAllFailed: "Không thể đăng xuất các thiết bị khác",
     },
   },
   admin: {
+    tips: {
+      title: "Mẫu mẹo tiết kiệm",
+      hint: "Mẹo chung hiển thị cho mọi sinh viên, cùng với mẹo tính từ dữ liệu của từng người.",
+      titleLabel: "Tiêu đề",
+      contentLabel: "Nội dung",
+      potentialLabel: "Tiết kiệm ước tính/tháng (không bắt buộc)",
+      add: "Thêm mẹo",
+      added: "Đã thêm mẹo",
+      addFailed: "Không thể thêm mẹo",
+      empty: "Chưa có mẫu mẹo nào.",
+      deleteTitle: "Xóa mẫu mẹo?",
+      deleteMessage: (n: string) => `"${n}" sẽ không còn hiển thị cho sinh viên.`,
+      deleted: "Đã xóa mẹo",
+      deleteFailed: "Không thể xóa mẹo",
+    },
+    audit: {
+      title: "Nhật ký quản trị",
+      hint: "30 thao tác gần nhất của quản trị viên. Không bao giờ ghi mật khẩu.",
+      empty: "Chưa có thao tác nào được ghi lại.",
+      by: (name: string) => `bởi ${name}`,
+      unknownActor: "tài khoản đã xóa",
+      actions: {
+        "user.update": "Cập nhật tài khoản",
+        "user.reset_password": "Đặt lại mật khẩu",
+        "category.create": "Thêm danh mục hệ thống",
+        "category.update": "Sửa danh mục hệ thống",
+        "category.delete": "Xóa danh mục hệ thống",
+        "announcement.send": "Gửi thông báo",
+        "users.export": "Xuất danh sách người dùng",
+        "tip.create": "Thêm mẫu mẹo tiết kiệm",
+        "tip.delete": "Xóa mẫu mẹo tiết kiệm",
+      },
+    },
     dashboardDescription: "Tình hình hoạt động toàn hệ thống. Không hiển thị dữ liệu xác thực của người dùng.",
     totalStudents: "Tổng sinh viên",
     active30: "Hoạt động (30 ngày)",

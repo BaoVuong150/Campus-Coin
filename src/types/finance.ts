@@ -7,6 +7,7 @@ import type {
 } from "@/constants/finance";
 import type { BudgetHealth } from "@/lib/finance/budget";
 import type { FinancialInsight } from "@/lib/finance/insights";
+import type { TipTemplate } from "@/i18n/templates";
 
 export type { TransactionType, FinancialInsight, BudgetHealth };
 
@@ -103,6 +104,8 @@ export interface CategoryBreakdownItem {
 
 export interface PlanningDTO {
   month: string;
+  /** false khi user chưa có giao dịch nào – UI hiển thị trạng thái trống thay vì con số 0 / cảnh báo thiếu hụt. */
+  hasActivity: boolean;
   remainingDays: number;
   currentBalance: number;
   remainingFixedExpenses: number;
@@ -126,6 +129,9 @@ export interface PlanningDTO {
     projectedVariableSpend: number;
     projectedEndBalance: number;
     shortfall: number;
+    /** Số ngày có dữ liệu giao dịch làm cơ sở dự báo. */
+    dataDays: number;
+    confidence: "insufficient" | "low" | "medium" | "high";
   };
   upcomingFixed: { id: string; name: string; amount: number; date: string; type: TransactionType }[];
 }
@@ -202,4 +208,43 @@ export interface ReportDTO {
   categories: CategoryBreakdownItem[];
   largestTransactions: TransactionDTO[];
   budgetPerformance: { categoryName: string; limit: number; spent: number; percentage: number }[];
+}
+
+/** Mẹo tiết kiệm hiển thị trên dashboard: tính từ dữ liệu của user, mẹo hệ thống (admin) hoặc mẹo riêng đã lưu. */
+export type SavingTipDTO =
+  | {
+      key: string;
+      source: "personal";
+      template: TipTemplate;
+      params: Record<string, unknown>;
+      potentialSaving: number;
+      pinned: boolean;
+    }
+  | {
+      key: string;
+      source: "system" | "own";
+      title: string;
+      content: string;
+      potentialSaving: number | null;
+      pinned: boolean;
+    };
+
+export interface SystemTipDTO {
+  id: number;
+  title: string;
+  content: string;
+  potentialSaving: number | null;
+  createdAt: string;
+}
+
+/** Ảnh chụp nhận định của một tháng; dữ liệu phiên bản cũ (văn bản thuần) nằm ở legacy*. */
+export interface InsightHistoryDTO {
+  id: number;
+  month: string;
+  pinned: boolean;
+  generatedAt: string;
+  insights: FinancialInsight[] | null;
+  tips: { template: TipTemplate; params: Record<string, unknown>; potentialSaving: number }[] | null;
+  legacySummary: string | null;
+  legacyTip: string | null;
 }

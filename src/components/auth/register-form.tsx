@@ -51,7 +51,8 @@ export function RegisterForm() {
         },
         skipAuthRedirect: true,
       });
-      router.replace("/dashboard");
+      // Tài khoản mới → thiết lập nhanh trước khi vào dashboard (có thể bỏ qua).
+      router.replace("/onboarding");
       router.refresh();
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "EMAIL_TAKEN") setErrors({ email: t.errors.EMAIL_TAKEN });

@@ -1,7 +1,8 @@
 import { after } from "next/server";
 import { handle, ok, parseBody } from "@/lib/api/response";
 import { AUTH_RATE_LIMIT, clientIp, rateLimit } from "@/lib/auth/rate-limit";
-import { appBaseUrl } from "@/lib/mail/mailer";
+import { ApiError } from "@/lib/api/errors";
+import { appBaseUrl, canDeliverEmail } from "@/lib/mail/mailer";
 import { forgotPasswordSchema } from "@/lib/validations/auth.schema";
 import { requestPasswordReset } from "@/services/user.service";
 
@@ -12,9 +13,12 @@ const REQUESTS_PER_EMAIL = 3;
  * (after), nên cả nội dung lẫn thời gian phản hồi đều không cho biết email có tồn tại hay không.
  */
 export const POST = handle(async (req) => {
-  rateLimit(`forgot:${clientIp(req)}`, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
+  await rateLimit(`forgot:${clientIp(req)}`, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
   const { email } = await parseBody(req, forgotPasswordSchema);
-  rateLimit(`forgot-email:${email}`, REQUESTS_PER_EMAIL, AUTH_RATE_LIMIT.windowMs);
+  await rateLimit(`forgot-email:${email}`, REQUESTS_PER_EMAIL, AUTH_RATE_LIMIT.windowMs);
+
+  // Không giả vờ "đã gửi" khi hệ thống không thể gửi email (production chưa cấu hình) – lỗi cấu hình, không tiết lộ tài khoản.
+  if (!canDeliverEmail()) throw new ApiError(503, "EMAIL_UNAVAILABLE", "Hệ thống chưa bật gửi email.");
 
   const baseUrl = appBaseUrl(req);
   after(async () => {

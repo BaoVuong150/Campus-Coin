@@ -103,6 +103,7 @@ export function TransactionFormDialog({ open, onClose, transaction, defaults }: 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // chống gửi trùng khi bấm đúp / nhấn Enter liên tiếp
     const found = validate();
     setErrors(found);
     if (Object.keys(found).length > 0 || !categoryId) return;

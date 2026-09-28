@@ -1,14 +1,18 @@
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/database/prisma";
 import { ApiError, Errors } from "@/lib/api/errors";
 import type { SessionGrant } from "@/lib/auth/cookies";
 import { sessionVersion, signResetToken, verifyResetToken, RESET_TOKEN_MAX_AGE_SECONDS } from "@/lib/auth/jwt";
-import { sendMail } from "@/lib/mail/mailer";
+import { emailLayout, sendMail } from "@/lib/mail/mailer";
+import { logEvent } from "@/lib/observability/log";
+import { mustChangePassword, sessionNonce, withPasswordChangeFlag, withSessionNonce } from "@/lib/auth/account-flags";
 import type { LoginInput, RegisterInput } from "@/lib/validations/auth.schema";
 import type { UpdateProfileInput } from "@/lib/validations/profile.schema";
 import type { ProfileDTO } from "@/types/finance";
-import { readNotificationPreferences } from "./notification.service";
+import { notify, readNotificationPreferences } from "./notification.service";
+import { syncAllowanceRecurring } from "./onboarding.service";
 import { toNumber } from "./mappers";
 
 const BCRYPT_ROUNDS = 12;
@@ -32,8 +36,30 @@ export async function authenticate(input: LoginInput): Promise<SessionGrant> {
 
   await prisma.user.update({ where: { id: user.id }, data: { last_login_at: new Date() } });
   return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role === "admin" ? "admin" : "student" },
-    sv: sessionVersion(user.password_hash),
+    user: sessionUserOf(user),
+    sv: userSessionVersion(user),
+  };
+}
+
+/** Phiên bản phiên của user = vân tay mật khẩu (+ nonce nếu đã từng "đăng xuất mọi thiết bị"). */
+function userSessionVersion(user: { password_hash: string; preferences: Prisma.JsonValue }): string {
+  return sessionVersion(user.password_hash, sessionNonce(user.preferences));
+}
+
+/** Thông báo bảo mật trong app (luôn gửi, không phụ thuộc tùy chọn thông báo). */
+async function notifySecurity(userId: string, template: "passwordChanged" | "passwordReset" | "sessionsRevoked") {
+  await notify(userId, { kind: "security", type: "warning", template, params: { at: new Date().toISOString() }, link: "/settings" });
+}
+
+type SessionSource = { id: string; name: string; email: string; role: string; preferences: Prisma.JsonValue };
+
+function sessionUserOf(user: SessionSource): SessionGrant["user"] {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role === "admin" ? "admin" : "student",
+    mustChangePassword: mustChangePassword(user.preferences),
   };
 }
 
@@ -51,7 +77,7 @@ export async function registerStudent(input: RegisterInput): Promise<SessionGran
         last_login_at: new Date(),
       },
     });
-    return { user: { id: user.id, name: user.name, email: user.email, role: "student" }, sv: sessionVersion(user.password_hash) };
+    return { user: sessionUserOf(user), sv: userSessionVersion(user) };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw Errors.conflict("EMAIL_TAKEN", "Email này đã được sử dụng.");
@@ -94,6 +120,9 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
     data.preferences = { ...base, notifications: input.notifications };
   }
   await prisma.user.update({ where: { id: userId }, data });
+  // Trợ cấp / ngày nhận đổi trong Cài đặt → cập nhật luôn khoản thu định kỳ đã liên kết (nếu có).
+  const current = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
+  await syncAllowanceRecurring(userId, current?.preferences ?? null, input.monthly_allowance_baseline, input.salary_pay_day);
   return getProfile(userId);
 }
 
@@ -104,11 +133,11 @@ export async function changePassword(userId: string, currentPassword: string, ne
     throw Errors.badRequest("Mật khẩu hiện tại không đúng.", { currentPassword: "Mật khẩu hiện tại không đúng." });
   }
   const password_hash = await hashPassword(newPassword);
-  await prisma.user.update({ where: { id: userId }, data: { password_hash } });
-  return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role === "admin" ? "admin" : "student" },
-    sv: sessionVersion(password_hash),
-  };
+  // Đổi mật khẩu thành công → tắt cờ "phải đổi mật khẩu tạm" (nếu có).
+  const preferences = withPasswordChangeFlag(user.preferences, false);
+  await prisma.user.update({ where: { id: userId }, data: { password_hash, preferences } });
+  await notifySecurity(userId, "passwordChanged");
+  return { user: sessionUserOf({ ...user, preferences }), sv: userSessionVersion({ password_hash, preferences }) };
 }
 
 // ---------- Quên mật khẩu ----------
@@ -120,15 +149,14 @@ export async function changePassword(userId: string, currentPassword: string, ne
 export async function requestPasswordReset(email: string, baseUrl: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.is_active) return;
-  if (!baseUrl) {
-    console.warn("[auth] APP_URL chưa được cấu hình – không thể dựng link đặt lại mật khẩu.");
-    return;
-  }
+  if (!baseUrl) return; // appBaseUrl đã ghi log mail.unsafe_base_url
 
-  const token = signResetToken(user.id, sessionVersion(user.password_hash));
+  const token = signResetToken(user.id, userSessionVersion(user));
   const link = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   const minutes = RESET_TOKEN_MAX_AGE_SECONDS / 60;
+  logEvent("info", "auth.reset_requested");
   await sendMail({
+    kind: "password_reset",
     to: user.email,
     subject: "Campus Coin – Đặt lại mật khẩu / Reset your password",
     text: [
@@ -140,13 +168,19 @@ export async function requestPasswordReset(email: string, baseUrl: string): Prom
       `Open this link to reset your password (valid for ${minutes} minutes, single use):`,
       link,
       "",
-      "Nếu bạn không yêu cầu, hãy bỏ qua email này. / If you did not request this, ignore this email.",
+      "Nếu bạn không yêu cầu, hãy bỏ qua email này – mật khẩu hiện tại không thay đổi.",
+      "If you did not request this, ignore this email – your password stays the same.",
     ].join("\n"),
-    html:
-      `<p>Xin chào ${escapeHtml(user.name)},</p>` +
-      `<p>Nhấn vào link sau để đặt lại mật khẩu (hiệu lực ${minutes} phút, dùng một lần):<br>` +
-      `<a href="${escapeHtml(link)}">Đặt lại mật khẩu / Reset password</a></p>` +
-      "<p>Nếu bạn không yêu cầu, hãy bỏ qua email này. / If you did not request this, ignore this email.</p>",
+    html: emailLayout({
+      heading: "Đặt lại mật khẩu",
+      paragraphs: [
+        `Xin chào ${user.name},`,
+        `Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Campus Coin của bạn. Link có hiệu lực ${minutes} phút và chỉ dùng được một lần.`,
+        `We received a request to reset your Campus Coin password. The link is valid for ${minutes} minutes and works once.`,
+      ],
+      action: { label: "Đặt lại mật khẩu / Reset password", url: link },
+      footer: "Nếu bạn không yêu cầu, hãy bỏ qua email này – mật khẩu hiện tại không thay đổi. / If you did not request this, you can ignore this email.",
+    }),
   });
 }
 
@@ -158,17 +192,31 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
   const payload = verifyResetToken(token);
   if (!payload) throw invalidResetLink();
 
-  const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { password_hash: true, is_active: true } });
-  if (!user || !user.is_active || sessionVersion(user.password_hash) !== payload.sv) throw invalidResetLink();
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { password_hash: true, is_active: true, preferences: true },
+  });
+  if (!user || !user.is_active || userSessionVersion(user) !== payload.sv) throw invalidResetLink();
 
   // Điều kiện theo password_hash cũ: hai request dùng cùng token song song thì chỉ một request thành công.
   const { count } = await prisma.user.updateMany({
     where: { id: payload.userId, password_hash: user.password_hash },
-    data: { password_hash: await hashPassword(newPassword) },
+    data: { password_hash: await hashPassword(newPassword), preferences: withPasswordChangeFlag(user.preferences, false) },
   });
   if (count === 0) throw invalidResetLink();
+  await notifySecurity(payload.userId, "passwordReset");
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
+/**
+ * Đăng xuất khỏi mọi thiết bị: đổi session nonce → mọi token cũ mất hiệu lực (kể cả link đặt lại mật khẩu đang chờ).
+ * Trả về phiên mới để thiết bị hiện tại vẫn đăng nhập.
+ */
+export async function signOutAllDevices(userId: string): Promise<SessionGrant> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw Errors.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng.");
+  const preferences = withSessionNonce(user.preferences, randomUUID());
+  await prisma.user.update({ where: { id: userId }, data: { preferences } });
+  await notifySecurity(userId, "sessionsRevoked");
+  return { user: sessionUserOf({ ...user, preferences }), sv: userSessionVersion({ password_hash: user.password_hash, preferences }) };
 }

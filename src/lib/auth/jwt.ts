@@ -30,8 +30,10 @@ export type VerifyResult =
  * Dấu vân tay ngắn của password_hash. Đổi mật khẩu (tự đổi, admin đặt lại, quên mật khẩu) làm hash đổi,
  * nên mọi token cũ tự động mất hiệu lực mà không cần bảng lưu phiên. Không lộ hash vì chỉ là SHA-256 cắt ngắn.
  */
-export function sessionVersion(passwordHash: string): string {
-  return createHash("sha256").update(passwordHash).digest("hex").slice(0, 16);
+export function sessionVersion(passwordHash: string, nonce?: string | null): string {
+  // nonce: đổi khi user chọn "Đăng xuất mọi thiết bị". Chưa có nonce → giữ nguyên giá trị cũ để phiên hiện tại không bị hủy.
+  const source = nonce ? `${passwordHash}:${nonce}` : passwordHash;
+  return createHash("sha256").update(source).digest("hex").slice(0, 16);
 }
 
 export function signToken(payload: TokenPayload): string {

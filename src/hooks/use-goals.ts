@@ -16,8 +16,9 @@ export interface GoalInput {
   status?: GoalStatus;
 }
 
-export function useGoals() {
-  return useApi<GoalDTO[]>("/api/goals");
+/** includeArchived: trang Mục tiêu cần cả mục đã lưu trữ để khôi phục; dashboard chỉ cần mục đang dùng. */
+export function useGoals(includeArchived = false) {
+  return useApi<GoalDTO[]>(includeArchived ? "/api/goals?archived=true" : "/api/goals");
 }
 
 export function useGoalMutations() {

@@ -72,6 +72,8 @@ async function main() {
     prisma.category.deleteMany(),
     prisma.user.deleteMany(),
   ]);
+  // Nhật ký quản trị (bảng có từ migration 20260929000000) – bỏ qua nếu DB chưa chạy migration đó.
+  await prisma.adminAudit.deleteMany().catch(() => undefined);
 
   const [studentHash, adminHash] = await Promise.all([
     bcrypt.hash("Student@123", 12),

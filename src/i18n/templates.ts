@@ -11,6 +11,9 @@ export interface NotificationParams {
   goalMilestone: { goal: string; percent: number; current: number; target: number };
   unusualExpense: { description: string; amount: number; date: string; category: string; typical: number };
   pointsEarned: { points: number; reason: PointReason };
+  passwordChanged: { at: string };
+  passwordReset: { at: string };
+  sessionsRevoked: { at: string };
 }
 
 export type NotificationTemplate = keyof NotificationParams;
@@ -31,6 +34,21 @@ export interface InsightParams {
 }
 
 export type InsightTemplate = keyof InsightParams;
+
+/** Mẹo tiết kiệm cá nhân hóa (lib/finance/tips.ts). */
+export interface TipParams {
+  aboveAverage: { category: string; projected: number; average: number };
+  budgetRisk: { category: string; limit: number; weekly: number };
+  smallPurchases: { count: number; total: number };
+  subscriptions: { count: number; monthly: number };
+  savingsGap: { goal: number; daily: number };
+}
+
+export type TipTemplate = keyof TipParams;
+
+export type TipDictionary = {
+  [K in TipTemplate]: { title: (p: TipParams[K]) => string; description: (p: TipParams[K]) => string };
+};
 
 export type InsightDictionary = {
   [K in InsightTemplate]: {

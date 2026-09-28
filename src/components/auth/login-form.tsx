@@ -50,7 +50,7 @@ export function LoginForm({ portal }: { portal: "student" | "admin" }) {
         skipAuthRedirect: true,
       });
       const home = user.role === "admin" ? "/admin" : "/dashboard";
-      router.replace(safeNext(params.get("next"), home));
+      router.replace(user.mustChangePassword ? "/change-password" : safeNext(params.get("next"), home));
       router.refresh();
     } catch (error) {
       setFormError(fmt.error(error) || l.loginFailed);

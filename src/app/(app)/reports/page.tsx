@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, FileBarChart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileBarChart, Mail } from "lucide-react";
 import { BudgetRow } from "@/components/budgets/budget-row";
+import { InsightHistoryCard } from "@/components/reports/insight-history-card";
 import { buildSlices, CategoryDonut } from "@/components/charts/category-donut";
 import { CashFlowBars } from "@/components/charts/cash-flow-bars";
 import { Amount } from "@/components/common/amount";
@@ -22,7 +23,9 @@ import { useReport } from "@/hooks/use-dashboard";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { currentMonthKey, formatDate, parseMonthKey, shiftMonthKey } from "@/lib/utils/date";
 import { formatPercent, formatVND } from "@/lib/utils/money";
+import { useApi } from "@/hooks/use-api";
 import { useI18n } from "@/i18n/provider";
+import { apiFetch } from "@/lib/api-client";
 import type { BudgetItemDTO, ReportPeriod } from "@/types/finance";
 
 const STEP: Record<ReportPeriod, number> = { month: 1, quarter: 3, year: 12 };
@@ -60,6 +63,24 @@ export default function ReportsPage() {
   const slices = useMemo(() => buildSlices(data?.categories ?? [], order, colors.series, colors.other), [data, order, colors]);
   const current = currentMonthKey();
   const canNext = periodIndex(period, shiftMonthKey(anchor, STEP[period])) <= periodIndex(period, current);
+
+  const { data: emailEnabled } = useApi<{ enabled: boolean }>("/api/reports/email");
+  const [emailing, setEmailing] = useState(false);
+  const handleEmail = async () => {
+    if (emailing) return;
+    setEmailing(true);
+    try {
+      const res = await apiFetch<{ delivery: "sent" | "saved_locally"; to: string }>("/api/reports/email", {
+        method: "POST",
+        body: { period, anchor },
+      });
+      toast.success(res.delivery === "sent" ? l.email.sent(res.to) : l.email.savedDev);
+    } catch (err) {
+      toast.error(l.email.failed, fmt.error(err));
+    } finally {
+      setEmailing(false);
+    }
+  };
 
   const handleExport = async () => {
     if (!data) return;
@@ -110,6 +131,12 @@ export default function ReportsPage() {
             <Button onClick={handleExport} loading={exporting} disabled={!hasData}>
               <Download /> {l.export}
             </Button>
+            {/* Chỉ hiện khi hệ thống thực sự gửi được email (production đã cấu hình Resend). */}
+            {emailEnabled?.enabled && (
+              <Button variant="outline" onClick={handleEmail} loading={emailing} disabled={!hasData}>
+                <Mail /> {l.email.send}
+              </Button>
+            )}
           </>
         }
       />
@@ -242,6 +269,11 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Nhận định đã lưu các tháng trước – độc lập với kỳ báo cáo đang chọn. */}
+      <div className="mt-4">
+        <InsightHistoryCard />
+      </div>
     </div>
   );
 }

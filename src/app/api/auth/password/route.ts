@@ -7,8 +7,9 @@ import { changePassword } from "@/services/user.service";
 
 /** Đổi mật khẩu: các phiên trên thiết bị khác bị đăng xuất, thiết bị hiện tại nhận cookie phiên mới. */
 export const POST = handle(async (req) => {
-  const user = await requireAuth();
-  rateLimit(`password:${user.id}`, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
+  // Được phép khi đang phải đổi mật khẩu tạm – đây chính là bước đổi mật khẩu.
+  const user = await requireAuth({ allowPendingPasswordChange: true });
+  await rateLimit(`password:${user.id}`, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
   const input = await parseBody(req, changePasswordSchema);
   const grant = await changePassword(user.id, input.currentPassword, input.newPassword);
 

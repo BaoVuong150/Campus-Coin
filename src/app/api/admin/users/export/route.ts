@@ -3,15 +3,11 @@ import { handle } from "@/lib/api/response";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 import { withSmartRetry } from "@/lib/database/resilience";
-
-function escapeCsvField(val: unknown): string {
-  if (val === null || val === undefined) return '""';
-  const str = String(val);
-  return `"${str.replace(/"/g, '""')}"`;
-}
+import { toCsv } from "@/lib/csv/escape";
+import { recordAdminAction } from "@/services/audit.service";
 
 export const GET = handle(async () => {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   // Lấy danh sách toàn bộ người dùng và số lượng giao dịch kèm cơ chế Smart Retry
   const users = await withSmartRetry(() =>
@@ -50,25 +46,23 @@ export const GET = handle(async () => {
   ];
 
   const rows = users.map((u) => [
-    escapeCsvField(u.id),
-    escapeCsvField(u.name),
-    escapeCsvField(u.email),
-    escapeCsvField(u.academic_year || "Chưa cập nhật"),
-    escapeCsvField(u.role === "admin" ? "Quản trị viên" : "Sinh viên"),
-    escapeCsvField(u.is_active ? "Hoạt động" : "Đã khóa"),
-    escapeCsvField(u.monthly_allowance_baseline ? Number(u.monthly_allowance_baseline) : 0),
-    escapeCsvField(u.monthly_savings_goal ? Number(u.monthly_savings_goal) : 0),
-    escapeCsvField(u._count.transactions),
-    escapeCsvField(u.created_at.toISOString()),
-    escapeCsvField(u.last_login_at ? u.last_login_at.toISOString() : "Chưa đăng nhập"),
+    u.id,
+    u.name,
+    u.email,
+    u.academic_year || "Chưa cập nhật",
+    u.role === "admin" ? "Quản trị viên" : "Sinh viên",
+    u.is_active ? "Hoạt động" : "Đã khóa",
+    Number(u.monthly_allowance_baseline ?? 0),
+    Number(u.monthly_savings_goal ?? 0),
+    u._count.transactions,
+    u.created_at.toISOString(),
+    u.last_login_at ? u.last_login_at.toISOString() : "Chưa đăng nhập",
   ]);
 
-  // Thêm UTF-8 BOM (\uFEFF) để Excel trên Windows/Mac tự động nhận diện tiếng Việt có dấu chuẩn 100%
-  const csvContent =
-    "\uFEFF" +
-    headers.map((h) => `"${h}"`).join(",") +
-    "\r\n" +
-    rows.map((r) => r.join(",")).join("\r\n");
+  // Mọi ô đi qua csvCell: chống CSV/formula injection (tên/email do người dùng tự nhập) và kèm BOM cho Excel.
+  const csvContent = toCsv([headers, ...rows]);
+  // Xuất dữ liệu cá nhân của toàn bộ user là thao tác nhạy cảm → ghi nhật ký.
+  await recordAdminAction(admin.id, { action: "users.export", targetType: "users", details: { count: users.length } });
 
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10);

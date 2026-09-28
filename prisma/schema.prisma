@@ -201,7 +201,8 @@ model Insight {
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id, month])
+  // Mỗi tháng một ảnh chụp nhận định (cập nhật khi đồng bộ; tháng đã qua giữ nguyên làm lịch sử).
+  @@unique([user_id, month])
   @@map("insights")
 }
 
@@ -214,10 +215,13 @@ model SavingTip {
   potential_saving Decimal? @db.Decimal(12, 2)
   is_pinned        Boolean  @default(false)
   is_dismissed     Boolean  @default(false)
+  /// Khóa mẹo cá nhân (ví dụ "above-average:6:2026-09" hoặc "system:12") – dòng lưu trạng thái ghim/bỏ qua của user.
+  tip_key          String?
   created_at       DateTime @default(now())
 
   user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  @@unique([user_id, tip_key])
   @@map("saving_tips")
 }
 
@@ -259,4 +263,20 @@ model PointEvent {
   @@unique([user_id, dedupe_key])
   @@index([user_id, created_at])
   @@map("point_events")
+}
+
+// Nhật ký thao tác quản trị (khóa/mở tài khoản, đổi quyền, đặt lại mật khẩu, danh mục hệ thống, thông báo, xuất dữ liệu).
+// Không đặt khóa ngoại tới users để nhật ký vẫn còn khi tài khoản bị xóa.
+model AdminAudit {
+  id          Int      @id @default(autoincrement())
+  actor_id    String
+  action      String
+  target_type String
+  target_id   String?
+  details     Json?
+  created_at  DateTime @default(now())
+
+  @@index([created_at])
+  @@index([actor_id, created_at])
+  @@map("admin_audits")
 }

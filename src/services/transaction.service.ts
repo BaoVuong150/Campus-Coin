@@ -13,27 +13,16 @@ import { getUsableCategory, rememberCategoryChoice, usableCategoryWhere } from "
 import { evaluateBudgetAlerts } from "./budget.service";
 import { notify } from "./notification.service";
 import { onTransactionLogged } from "./points.service";
-import { toNumber, toTransactionDTO } from "./mappers";
+import { auditSnapshot, toNumber, toTransactionDTO } from "./mappers";
 
 const notFound = () => Errors.notFound("TRANSACTION_NOT_FOUND", "Không tìm thấy giao dịch.");
 
 /** Số giao dịch chi gần nhất dùng làm mẫu so sánh cho phát hiện bất thường. */
 const ANOMALY_HISTORY_SIZE = 200;
 
-function snapshot(t: Transaction): Prisma.InputJsonValue {
-  return {
-    amount: toNumber(t.amount),
-    type: t.type,
-    description: t.description,
-    category_id: t.category_id,
-    date: t.date.toISOString(),
-    recurring_id: t.recurring_id,
-  };
-}
-
 async function audit(tx: Prisma.TransactionClient, t: Transaction, action: "create" | "update" | "delete") {
   await tx.transactionAudit.create({
-    data: { transaction_id: t.id, user_id: t.user_id, action, snapshot: snapshot(t) },
+    data: { transaction_id: t.id, user_id: t.user_id, action, snapshot: auditSnapshot(t) },
   });
 }
 

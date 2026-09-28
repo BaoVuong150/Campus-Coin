@@ -30,6 +30,7 @@ export const FINANCE_KEYS = [
   "/api/goals",
   "/api/recurring",
   "/api/points",
+  "/api/tips",
 ];
 
 export interface ApiState<T> {

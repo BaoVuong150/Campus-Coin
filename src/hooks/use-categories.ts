@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { apiFetch } from "@/lib/api-client";
 import type { CategoryDTO, CategorySuggestion, TransactionType } from "@/types/finance";
-import { invalidate, useApi } from "./use-api";
+import { FINANCE_KEYS, invalidate, useApi } from "./use-api";
 
 export function useCategories() {
   return useApi<CategoryDTO[]>("/api/categories");
@@ -34,5 +34,10 @@ export function useCategoryMutations() {
     await apiFetch(`/api/categories/${id}`, { method: "DELETE" });
     invalidate("/api/categories");
   }, []);
-  return { create, remove };
+  const update = useCallback(async (id: number, input: { name?: string; type?: TransactionType }) => {
+    await apiFetch(`/api/categories/${id}`, { method: "PATCH", body: input });
+    // Tên danh mục hiển thị ở giao dịch, ngân sách, báo cáo… → làm mới các màn hình đó.
+    invalidate("/api/categories", ...FINANCE_KEYS);
+  }, []);
+  return { create, update, remove };
 }

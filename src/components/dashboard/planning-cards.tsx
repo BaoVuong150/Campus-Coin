@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, Gauge, Pencil, Target } from "lucide-react";
-import { ErrorState } from "@/components/common/states";
+import { AlertTriangle, CalendarClock, CheckCircle2, Gauge, Pencil, Plus, Target } from "lucide-react";
+import { useTransactionUI } from "@/components/transactions/transaction-provider";
+import { EmptyState, ErrorState } from "@/components/common/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -213,12 +214,20 @@ function SafeToSpendExplain({ p }: { p: PlanningDTO }) {
   );
 }
 
+const CONFIDENCE_TONE = { insufficient: "neutral", low: "warning", medium: "info", high: "success" } as const;
+
 function ForecastBody({ p }: { p: PlanningDTO }) {
   const { t } = useI18n();
   const l = t.dashboard.planning;
   const f = p.forecast;
+  // Quá ít dữ liệu: không hiện con số dự báo (tránh độ chính xác giả).
+  if (f.confidence === "insufficient") return <p className="text-sm text-muted">{l.forecastEmpty}</p>;
   return (
     <div>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Badge tone={CONFIDENCE_TONE[f.confidence]}>{l.confidence[f.confidence]}</Badge>
+        <span className="text-[12px] text-subtle">{l.basedOn(f.dataDays)}</span>
+      </div>
       <Line label={l.balance} value={p.currentBalance} />
       {p.expectedIncome > 0 && <Line label={l.expectedIncome} value={p.expectedIncome} sign="+" />}
       <Line label={l.fixedLeft} value={p.remainingFixedExpenses} sign="−" />
@@ -257,6 +266,7 @@ export function PlanningCards() {
   const { data, error, reload } = usePlanning();
   const upcoming = data?.upcomingFixed.filter((u) => u.type === "expense").slice(0, UPCOMING_PREVIEW) ?? [];
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const { openCreate } = useTransactionUI();
 
   return (
     <>
@@ -278,6 +288,18 @@ export function PlanningCards() {
               <ErrorState onRetry={reload} />
             ) : !data ? (
               <LoadingBody />
+            ) : !data.hasActivity ? (
+              <EmptyState
+                compact
+                icon={<Gauge />}
+                title={l.emptyTitle}
+                description={l.emptyBody}
+                action={
+                  <Button size="sm" onClick={() => openCreate()}>
+                    <Plus /> {l.addFirst}
+                  </Button>
+                }
+              />
             ) : (
               <SafeToSpendBody p={data} onEditGoal={() => setGoalDialogOpen(true)} />
             )}

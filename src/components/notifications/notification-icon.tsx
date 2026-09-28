@@ -1,4 +1,4 @@
-import { AlertTriangle, Bell, Repeat, Target, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, Bell, Repeat, ShieldCheck, Target, TrendingUp, Wallet } from "lucide-react";
 import type { NotificationKind } from "@/constants/finance";
 import type { NotificationDTO } from "@/types/finance";
 import { cn } from "@/lib/utils/cn";
@@ -9,6 +9,7 @@ const ICONS: Record<NotificationKind, typeof Bell> = {
   recurring: Repeat,
   goal: Target,
   unusual: TrendingUp,
+  security: ShieldCheck,
   system: Bell,
 };
 

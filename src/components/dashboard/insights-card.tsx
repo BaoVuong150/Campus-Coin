@@ -5,8 +5,7 @@ import { EmptyState, ErrorState } from "@/components/common/states";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { useInsights } from "@/hooks/use-dashboard";
-import { localizeParams } from "@/i18n/format";
-import type { Messages } from "@/i18n";
+import { renderInsight } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils/cn";
 import type { FinancialInsight } from "@/types/finance";
@@ -26,13 +25,6 @@ const TONES: Record<FinancialInsight["tone"], string> = {
   negative: "bg-danger-soft text-danger",
   neutral: "bg-info-soft text-info",
 };
-
-/** Dựng văn bản của một nhận định theo ngôn ngữ hiện tại. */
-function renderInsight(t: Messages, insight: FinancialInsight) {
-  const entry = t.insights[insight.template] as Record<"title" | "description" | "value", (p: unknown) => string>;
-  const params = localizeParams(t, insight.params as Record<string, unknown>);
-  return { title: entry.title(params), description: entry.description(params), value: entry.value(params) };
-}
 
 export function InsightsCard({ limit = 4 }: { limit?: number }) {
   const { t } = useI18n();

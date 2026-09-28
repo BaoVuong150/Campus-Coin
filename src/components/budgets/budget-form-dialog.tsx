@@ -34,6 +34,7 @@ export function BudgetFormDialog({ open, onClose, month, categories, existing, e
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // chống gửi trùng khi bấm đúp / nhấn Enter liên tiếp
     const amount = parseCurrencyInput(limit);
     const next = {
       category: categoryId ? undefined : t.validation.categoryRequired,

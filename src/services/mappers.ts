@@ -5,6 +5,18 @@ import type { NotificationKind } from "@/constants/finance";
 export const toNumber = (value: Prisma.Decimal | number | null | undefined): number =>
   value === null || value === undefined ? 0 : Number(value);
 
+/** Ảnh chụp giao dịch lưu vào bảng transaction_audits (dùng chung cho nhập tay, định kỳ, CSV). */
+export function auditSnapshot(t: Transaction): { [key: string]: string | number | null } {
+  return {
+    amount: toNumber(t.amount),
+    type: t.type,
+    description: t.description,
+    category_id: t.category_id,
+    date: t.date.toISOString(),
+    recurring_id: t.recurring_id,
+  };
+}
+
 export const asType = (value: string): TransactionType => (value === "income" ? "income" : "expense");
 
 export function toCategoryDTO(c: Category): CategoryDTO {

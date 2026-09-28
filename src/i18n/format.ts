@@ -3,7 +3,8 @@ import { DAY_MS, parseMonthKey, todayYmd, toYmd, vnHour } from "@/lib/utils/date
 import { ApiClientError } from "@/lib/api-client";
 import type { Locale } from "./config";
 import type { Messages } from "./index";
-import type { NotificationParams, NotificationTemplate } from "./templates";
+import type { NotificationParams, NotificationTemplate, TipTemplate } from "./templates";
+import type { FinancialInsight } from "@/lib/finance/insights";
 
 const CANONICAL_BY_NAME = new Map(
   (Object.entries(CANONICAL_CATEGORY_NAMES) as [CanonicalCategory, string][]).map(([key, name]) => [name, key])
@@ -140,4 +141,18 @@ export function createFormatters(t: Messages, locale: Locale): Formatters {
     error: (error) => errorText(t, locale, error),
     fieldError: (message) => fieldErrorText(t, locale, message),
   };
+}
+
+/** Văn bản một nhận định theo ngôn ngữ hiện tại (dashboard và lịch sử nhận định). */
+export function renderInsight(t: Messages, insight: FinancialInsight) {
+  const entry = t.insights[insight.template] as Record<"title" | "description" | "value", (p: unknown) => string>;
+  const params = localizeParams(t, insight.params as Record<string, unknown>);
+  return { title: entry.title(params), description: entry.description(params), value: entry.value(params) };
+}
+
+/** Văn bản một mẹo tiết kiệm cá nhân (template + params) theo ngôn ngữ hiện tại. */
+export function renderTip(t: Messages, template: TipTemplate, params: Record<string, unknown>) {
+  const entry = t.tips[template] as Record<"title" | "description", (p: unknown) => string>;
+  const localized = localizeParams(t, params);
+  return { title: entry.title(localized), description: entry.description(localized) };
 }

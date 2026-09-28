@@ -1,15 +1,8 @@
 import { prisma } from "@/lib/database/prisma";
-import { forecastMonthEnd } from "@/lib/finance/forecast";
+import { forecastConfidence, forecastMonthEnd } from "@/lib/finance/forecast";
 import { calculateSafeToSpend } from "@/lib/finance/safe-to-spend";
-import {
-  currentMonthKey,
-  daysInMonth,
-  elapsedDaysInMonth,
-  monthRange,
-  parseMonthKey,
-  remainingDaysInMonth,
-  shiftMonthKey,
-} from "@/lib/utils/date";
+import { sampleDays, upcomingAllowance } from "@/lib/finance/sampling";
+import { currentMonthKey, monthRange, remainingDaysInMonth, shiftMonthKey } from "@/lib/utils/date";
 import type { PlanningDTO } from "@/types/finance";
 import { balanceBefore, endOfToday } from "./analytics.service";
 import { getBudgetOverview } from "./budget.service";
@@ -28,17 +21,18 @@ async function variableExpense(userId: string, start: Date, end: Date): Promise<
   return toNumber(agg._sum.amount);
 }
 
-async function historicalDailyVariable(userId: string, month: string): Promise<number | null> {
-  const first = shiftMonthKey(month, -HISTORY_MONTHS);
-  const start = monthRange(first).start;
+/** Lịch sử quá ngắn (dưới 1 tuần có dữ liệu) thì không đủ tin cậy để làm tốc độ chi tham chiếu. */
+const MIN_HISTORY_SAMPLE_DAYS = 7;
+
+/**
+ * Chi tiêu linh hoạt trung bình/ngày của 3 tháng trước. Mẫu số là số ngày THỰC SỰ có dữ liệu
+ * (từ giao dịch đầu tiên của user), không phải toàn bộ ~90 ngày – nếu không, user mới sẽ bị đánh giá thấp tốc độ chi.
+ */
+async function historicalDailyVariable(userId: string, month: string, firstActivity: Date | null): Promise<number | null> {
+  const start = monthRange(shiftMonthKey(month, -HISTORY_MONTHS)).start;
   const end = monthRange(month).start;
-  const count = await prisma.transaction.count({ where: { user_id: userId, date: { gte: start, lt: end } } });
-  if (count === 0) return null;
-  let days = 0;
-  for (let i = 0; i < HISTORY_MONTHS; i++) {
-    const { year, month: m } = parseMonthKey(shiftMonthKey(first, i));
-    days += daysInMonth(year, m);
-  }
+  const days = sampleDays(start, end, firstActivity);
+  if (days < MIN_HISTORY_SAMPLE_DAYS) return null;
   return (await variableExpense(userId, start, end)) / days;
 }
 
@@ -53,18 +47,41 @@ async function goalDepositsThisMonth(userId: string, month: string): Promise<num
 
 export async function getPlanning(userId: string, now = new Date()): Promise<PlanningDTO> {
   const month = currentMonthKey(now);
+  const monthStart = monthRange(month).start;
   const todayEnd = endOfToday(now);
 
-  const [balance, upcoming, goalReserved, budget, user, variableSoFar, history, deposits] = await Promise.all([
-    balanceBefore(userId, todayEnd),
-    upcomingInMonth(userId, month, now),
-    reservedInGoals(userId),
-    getBudgetOverview(userId, month),
-    prisma.user.findUnique({ where: { id: userId }, select: { monthly_savings_goal: true } }),
-    variableExpense(userId, monthRange(month).start, todayEnd),
-    historicalDailyVariable(userId, month),
-    goalDepositsThisMonth(userId, month),
-  ]);
+  const first = await prisma.transaction.aggregate({ where: { user_id: userId }, _min: { date: true } });
+  const firstActivity = first._min.date;
+
+  const [balance, recurringUpcoming, goalReserved, budget, user, variableSoFar, history, deposits, recurringIncomeCount] =
+    await Promise.all([
+      balanceBefore(userId, todayEnd),
+      upcomingInMonth(userId, month, now),
+      reservedInGoals(userId),
+      getBudgetOverview(userId, month),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { monthly_savings_goal: true, monthly_allowance_baseline: true, salary_pay_day: true },
+      }),
+      variableExpense(userId, monthStart, todayEnd),
+      historicalDailyVariable(userId, month, firstActivity),
+      goalDepositsThisMonth(userId, month),
+      prisma.recurringTransaction.count({ where: { user_id: userId, status: "active", type: "income" } }),
+    ]);
+
+  // Trợ cấp cơ bản trong Cài đặt được tính là thu nhập sắp nhận khi user chưa khai báo khoản thu định kỳ.
+  const allowance = upcomingAllowance({
+    allowance: toNumber(user?.monthly_allowance_baseline),
+    payDay: user?.salary_pay_day ?? null,
+    hasRecurringIncome: recurringIncomeCount > 0,
+    now,
+  });
+  const upcoming = allowance
+    ? [
+        ...recurringUpcoming,
+        { id: "allowance", name: "allowance", amount: allowance.amount, date: allowance.date, type: "income" as const, isFixed: true },
+      ]
+    : recurringUpcoming;
 
   const remainingFixedExpenses = upcoming.filter((u) => u.type === "expense").reduce((a, u) => a + u.amount, 0);
   const expectedIncome = upcoming.filter((u) => u.type === "income").reduce((a, u) => a + u.amount, 0);
@@ -86,15 +103,20 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
   const forecast = forecastMonthEnd({
     currentBalance: balance,
     variableSpentThisMonth: variableSoFar,
-    elapsedDays: elapsedDaysInMonth(month, now),
+    // Số ngày có dữ liệu trong tháng (tính từ giao dịch đầu tiên nếu user mới bắt đầu giữa tháng).
+    elapsedDays: sampleDays(monthStart, todayEnd, firstActivity),
     daysAfterToday: Math.max(0, remainingDays - 1),
     remainingFixedExpenses,
     expectedIncome,
     historicalDailyVariable: history,
   });
 
+  // Tổng số ngày có dữ liệu (từ giao dịch đầu tiên tới hôm nay) – hiển thị "Dựa trên N ngày dữ liệu".
+  const dataDays = sampleDays(new Date(0), todayEnd, firstActivity);
+
   return {
     month,
+    hasActivity: firstActivity !== null,
     remainingDays,
     currentBalance: balance,
     remainingFixedExpenses,
@@ -104,7 +126,12 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
     monthlySavingsGoal: toNumber(user?.monthly_savings_goal),
     budgetRemaining,
     safeToSpend: safe,
-    forecast: { ...forecast, variableSpentThisMonth: variableSoFar },
+    forecast: {
+      ...forecast,
+      variableSpentThisMonth: variableSoFar,
+      dataDays,
+      confidence: forecastConfidence(dataDays, forecast.paceSource),
+    },
     upcomingFixed: upcoming.map((u) => ({
       id: u.id,
       name: u.name,

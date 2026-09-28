@@ -5,7 +5,7 @@ import { registerSchema } from "@/lib/validations/auth.schema";
 import { registerStudent } from "@/services/user.service";
 
 export const POST = handle(async (req) => {
-  rateLimit(`register:${clientIp(req)}`, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
+  await rateLimit(`register:${clientIp(req)}`, AUTH_RATE_LIMIT.limit, AUTH_RATE_LIMIT.windowMs);
   const input = await parseBody(req, registerSchema);
   const grant = await registerStudent(input);
 

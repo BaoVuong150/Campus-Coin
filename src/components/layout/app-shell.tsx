@@ -3,13 +3,15 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MoreHorizontal, Plus, Search } from "lucide-react";
+import { Menu, Plus, Search } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TransactionProvider, useTransactionUI } from "@/components/transactions/transaction-provider";
 import { ADMIN_NAV, FOOTER_NAV, isActivePath, MAIN_NAV, type NavItem } from "@/constants/navigation";
+import { FINANCE_KEYS, invalidate } from "@/hooks/use-api";
 import { useLocalStorage } from "@/hooks/use-client-store";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useI18n } from "@/i18n/provider";
+import { apiFetch } from "@/lib/api-client";
 import type { SessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils/cn";
 import { GlobalSearch } from "./global-search";
@@ -23,15 +25,15 @@ import { UserMenu } from "./user-menu";
 
 /*
  * Khung app theo kích thước (một nguồn điều hướng MAIN_NAV cho mọi tầng):
- *   < 768      header mobile (logo + tên trang) + thanh điều hướng dưới, menu "Thêm" mở drawer
+ *   < 768      header mobile (logo + tên trang + menu) + thanh điều hướng dưới
  *   768–1279   rail chỉ icon (64px → 76px từ 1024) + header đầy đủ
  *   ≥ 1280     sidebar 248px (người dùng có thể thu gọn thành rail)
  */
 
 const COLLAPSE_KEY = "campuscoin_sidebar_collapsed";
 
-/** Các mục cố định trên thanh điều hướng dưới (mobile); mọi mục còn lại nằm trong "Thêm". */
-const BOTTOM_NAV_HREFS = ["/dashboard", "/transactions", "/budgets"];
+/** Các mục cố định trên thanh điều hướng dưới (mobile); mọi mục còn lại nằm trong menu ở header. */
+const BOTTOM_NAV_HREFS = ["/dashboard", "/transactions", "/budgets", "/goals"];
 
 function MobileDrawer({ open, onClose, unread }: { open: boolean; onClose: () => void; unread: number }) {
   const { t } = useI18n();
@@ -61,13 +63,12 @@ function MobileDrawer({ open, onClose, unread }: { open: boolean; onClose: () =>
   );
 }
 
-/** Thanh điều hướng dưới (< 768px): Tổng quan · Giao dịch · [+] · Ngân sách · Thêm. Cao 64px + safe-area iPhone. */
-function MobileBottomNav({ onOpenMore, moreOpen }: { onOpenMore: () => void; moreOpen: boolean }) {
+/** Thanh điều hướng dưới (< 768px): Tổng quan · Giao dịch · [+] · Ngân sách · Mục tiêu. Cao 64px + safe-area iPhone. */
+function MobileBottomNav() {
   const pathname = usePathname();
   const { openCreate } = useTransactionUI();
   const { t } = useI18n();
   const items = BOTTOM_NAV_HREFS.map((href) => MAIN_NAV.find((i) => i.href === href)).filter((i): i is NavItem => !!i);
-  const moreActive = !items.some((i) => isActivePath(pathname, i.href));
 
   const tabClass = (active: boolean) =>
     cn(
@@ -104,10 +105,6 @@ function MobileBottomNav({ onOpenMore, moreOpen }: { onOpenMore: () => void; mor
           </button>
         </div>
         {items.slice(2).map(renderItem)}
-        <button type="button" onClick={onOpenMore} aria-expanded={moreOpen} aria-haspopup="dialog" className={tabClass(moreActive)}>
-          <MoreHorizontal className="size-5" aria-hidden />
-          <span className="max-w-full truncate px-0.5">{t.nav.more}</span>
-        </button>
       </div>
     </nav>
   );
@@ -121,7 +118,7 @@ function useCurrentPageTitle(): string {
   return item ? t.nav[item.labelKey] : "Campus Coin";
 }
 
-function Header() {
+function Header({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; menuOpen: boolean }) {
   const { openCreate } = useTransactionUI();
   const { t } = useI18n();
   const title = useCurrentPageTitle();
@@ -145,14 +142,35 @@ function Header() {
           <LanguageToggle className="hidden md:inline-flex" />
           <ThemeToggle className="hidden md:inline-flex" />
           <UserMenu />
+          {/* Mobile: báo cáo, định kỳ, điểm, thông báo, cài đặt… nằm trong menu này. */}
+          <Button variant="ghost" size="icon" className="size-11 md:hidden" onClick={onOpenMenu} aria-label={t.nav.openMenu} aria-expanded={menuOpen} aria-haspopup="dialog">
+            <Menu />
+          </Button>
         </div>
       </div>
     </header>
   );
 }
 
+/**
+ * Mở app → POST /api/sync một lần (sinh giao dịch định kỳ đến hạn, cộng điểm kỳ đã qua).
+ * Có dữ liệu mới thì làm mới các màn hình tài chính đang hiển thị.
+ */
+function useBackgroundSync() {
+  useEffect(() => {
+    apiFetch<{ created: number; awarded: number }>("/api/sync", { method: "POST" })
+      .then((r) => {
+        if (r.created > 0 || r.awarded > 0) invalidate(...FINANCE_KEYS);
+      })
+      .catch(() => {
+        // Không chặn giao diện: lần mở app sau (hoặc cron) sẽ đồng bộ lại.
+      });
+  }, []);
+}
+
 function ShellFrame({ children }: { children: ReactNode }) {
   const { t } = useI18n();
+  useBackgroundSync();
   const [collapsedFlag, setCollapsedFlag] = useLocalStorage(COLLAPSE_KEY, "0");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: notifications } = useNotifications(1, 5);
@@ -167,13 +185,13 @@ function ShellFrame({ children }: { children: ReactNode }) {
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsedFlag(collapsed ? "0" : "1")} unread={unread} />
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} unread={unread} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header />
+        <Header onOpenMenu={() => setDrawerOpen(true)} menuOpen={drawerOpen} />
         {/* Mobile: chừa chỗ cho thanh điều hướng dưới + safe-area để nội dung cuối trang không bị che. */}
         <main id="main" className="app-page flex-1 pt-5 pb-[calc(var(--mobile-nav-height)_+_env(safe-area-inset-bottom)_+_20px)] md:pt-6 md:pb-10 xl:pt-8">
           {children}
         </main>
       </div>
-      <MobileBottomNav onOpenMore={() => setDrawerOpen(true)} moreOpen={drawerOpen} />
+      <MobileBottomNav />
     </div>
   );
 }

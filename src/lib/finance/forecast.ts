@@ -58,3 +58,19 @@ export function forecastMonthEnd(input: ForecastInput): ForecastResult {
     shortfall: projectedEndBalance < 0 ? -projectedEndBalance : 0,
   };
 }
+
+export type ForecastConfidence = "insufficient" | "low" | "medium" | "high";
+
+/** Ngưỡng số ngày có dữ liệu cho từng mức tin cậy của dự báo. */
+export const FORECAST_CONFIDENCE_DAYS = { minimum: 3, medium: 14, high: 45 };
+
+/**
+ * Mức tin cậy của dự báo theo số ngày thực sự có dữ liệu. Dưới 3 ngày không hiển thị con số dự báo
+ * (tránh độ chính xác giả); càng nhiều ngày càng đáng tin.
+ */
+export function forecastConfidence(dataDays: number, paceSource: ForecastResult["paceSource"]): ForecastConfidence {
+  if (paceSource === "none" || dataDays < FORECAST_CONFIDENCE_DAYS.minimum) return "insufficient";
+  if (dataDays < FORECAST_CONFIDENCE_DAYS.medium) return "low";
+  if (dataDays < FORECAST_CONFIDENCE_DAYS.high) return "medium";
+  return "high";
+}

@@ -16,9 +16,6 @@ export const PATCH = handle<IdContext>(async (req, ctx) => {
   return ok(await updateTransaction(user.id, id, input));
 });
 
-// Giữ PUT để tương thích client cũ.
-export const PUT = PATCH;
-
 export const DELETE = handle<IdContext>(async (_req, ctx) => {
   const user = await requireAuth();
   await deleteTransaction(user.id, await uuidParam(ctx));

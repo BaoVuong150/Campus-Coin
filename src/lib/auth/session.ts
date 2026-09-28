@@ -3,12 +3,15 @@ import { cache } from "react";
 import { prisma } from "@/lib/database/prisma";
 import { Errors } from "@/lib/api/errors";
 import { SESSION_COOKIE, sessionVersion, verifyToken, type Role } from "./jwt";
+import { mustChangePassword, sessionNonce } from "./account-flags";
 
 export interface SessionUser {
   id: string;
   name: string;
   email: string;
   role: Role;
+  /** Đăng nhập bằng mật khẩu tạm do admin cấp → phải đổi mật khẩu trước khi dùng app. */
+  mustChangePassword: boolean;
 }
 
 export type SessionState =
@@ -31,16 +34,22 @@ export const getSessionState = cache(async (): Promise<SessionState> => {
 
   const user = await prisma.user.findUnique({
     where: { id: result.payload.userId },
-    select: { id: true, name: true, email: true, role: true, is_active: true, password_hash: true },
+    select: { id: true, name: true, email: true, role: true, is_active: true, password_hash: true, preferences: true },
   });
   if (!user) return { status: "anonymous" };
   if (!user.is_active) return { status: "disabled" };
-  // Mật khẩu đã đổi sau khi token được cấp → phiên cũ hết hiệu lực (báo "hết hạn" để UI yêu cầu đăng nhập lại).
-  if (sessionVersion(user.password_hash) !== result.payload.sv) return { status: "expired" };
+  // Mật khẩu đã đổi hoặc user đã "đăng xuất mọi thiết bị" sau khi token được cấp → phiên cũ hết hiệu lực.
+  if (sessionVersion(user.password_hash, sessionNonce(user.preferences)) !== result.payload.sv) return { status: "expired" };
 
   return {
     status: "authenticated",
-    user: { id: user.id, name: user.name, email: user.email, role: user.role === "admin" ? "admin" : "student" },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role === "admin" ? "admin" : "student",
+      mustChangePassword: mustChangePassword(user.preferences),
+    },
   };
 });
 
@@ -49,9 +58,17 @@ export async function getSession(): Promise<SessionUser | null> {
   return state.status === "authenticated" ? state.user : null;
 }
 
-export async function requireAuth(): Promise<SessionUser> {
+interface RequireAuthOptions {
+  /** Cho phép gọi khi user còn phải đổi mật khẩu tạm (chỉ dành cho API đổi mật khẩu / đọc phiên). */
+  allowPendingPasswordChange?: boolean;
+}
+
+export async function requireAuth({ allowPendingPasswordChange = false }: RequireAuthOptions = {}): Promise<SessionUser> {
   const state = await getSessionState();
-  if (state.status === "authenticated") return state.user;
+  if (state.status === "authenticated") {
+    if (state.user.mustChangePassword && !allowPendingPasswordChange) throw Errors.passwordChangeRequired();
+    return state.user;
+  }
   if (state.status === "expired") throw Errors.sessionExpired();
   if (state.status === "disabled") throw Errors.accountDisabled();
   throw Errors.unauthorized();

@@ -29,5 +29,6 @@ export function useProfileMutations() {
       apiFetch("/api/auth/password", { method: "POST", body: { currentPassword, newPassword } }),
     []
   );
-  return { update, changePassword };
+  const signOutOtherDevices = useCallback(() => apiFetch("/api/auth/sessions", { method: "DELETE" }), []);
+  return { update, changePassword, signOutOtherDevices };
 }

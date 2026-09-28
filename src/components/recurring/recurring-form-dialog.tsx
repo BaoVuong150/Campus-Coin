@@ -37,6 +37,7 @@ export function RecurringFormDialog({ item, onClose }: { item: RecurringDTO | nu
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // chống gửi trùng khi bấm đúp / nhấn Enter liên tiếp
     const value = parseCurrencyInput(amount);
     const next = {
       name: name.trim() ? undefined : t.validation.nameRequired,

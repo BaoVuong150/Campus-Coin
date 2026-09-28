@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Minus, Pencil, Plus, RotateCcw, Target, Trash2 } from "lucide-react";
+import { Archive, CheckCircle2, Minus, Pencil, Plus, RotateCcw, Target, Trash2 } from "lucide-react";
 import { CategoryIcon } from "@/components/common/category-icon";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { ContributionDialog, GoalFormDialog } from "@/components/goals/goal-dialogs";
@@ -31,11 +31,16 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
   const { t, fmt } = useI18n();
   const l = t.goals;
   const completed = goal.status === "completed";
+  const archived = goal.status === "archived";
 
-  const setStatus = async (status: "active" | "completed") => {
+  const setStatus = async (status: "active" | "completed" | "archived") => {
+    if (status === "archived") {
+      const ok = await confirm({ title: l.archiveTitle, message: l.archiveMessage(goal.name), confirmText: l.archive });
+      if (!ok) return;
+    }
     try {
       await update(goal.id, { status });
-      toast.success(status === "completed" ? l.completedToast(goal.name) : l.reopened);
+      toast.success(status === "completed" ? l.completedToast(goal.name) : status === "archived" ? l.archived : archived ? l.restored : l.reopened);
     } catch (e) {
       toast.error(l.updateFailed, fmt.error(e));
     }
@@ -96,7 +101,11 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
       </div>
 
       <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-        {!completed ? (
+        {archived ? (
+          <Button size="sm" variant="outline" onClick={() => setStatus("active")}>
+            <RotateCcw /> {l.restore}
+          </Button>
+        ) : !completed ? (
           <>
             <Button size="sm" onClick={() => onDialog({ kind: "contribution", goal, direction: "deposit" })}>
               <Plus /> {l.deposit}
@@ -117,6 +126,11 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
           <Button size="icon-sm" variant="ghost" onClick={() => onDialog({ kind: "form", goal })} aria-label={l.editLabel(goal.name)}>
             <Pencil />
           </Button>
+          {!archived && (
+            <Button size="icon-sm" variant="ghost" onClick={() => setStatus("archived")} aria-label={l.archiveLabel(goal.name)} title={l.archive}>
+              <Archive />
+            </Button>
+          )}
           <Button size="icon-sm" variant="ghost" onClick={handleDelete} aria-label={l.deleteLabel(goal.name)}>
             <Trash2 />
           </Button>
@@ -129,7 +143,7 @@ function GoalCard({ goal, onDialog }: { goal: GoalDTO; onDialog: (d: DialogState
 function GoalsView() {
   const params = useSearchParams();
   const router = useRouter();
-  const { data, error, reload } = useGoals();
+  const { data, error, reload } = useGoals(true);
   const { t } = useI18n();
   const l = t.goals;
   const [dialog, setDialog] = useState<DialogState>(params.get("new") === "1" ? { kind: "form", goal: null } : null);
@@ -141,6 +155,7 @@ function GoalsView() {
 
   const active = data?.filter((g) => g.status === "active") ?? [];
   const completed = data?.filter((g) => g.status === "completed") ?? [];
+  const archivedGoals = data?.filter((g) => g.status === "archived") ?? [];
   const totalSaved = active.reduce((a, g) => a + g.currentAmount, 0);
 
   return (
@@ -192,6 +207,16 @@ function GoalsView() {
               <h2 className="mb-3 text-sm font-semibold text-muted">{l.completedSection}</h2>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {completed.map((g) => (
+                  <GoalCard key={g.id} goal={g} onDialog={setDialog} />
+                ))}
+              </div>
+            </section>
+          )}
+          {archivedGoals.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-muted">{l.archivedSection}</h2>
+              <div className="grid gap-4 opacity-80 md:grid-cols-2 xl:grid-cols-3">
+                {archivedGoals.map((g) => (
                   <GoalCard key={g.id} goal={g} onDialog={setDialog} />
                 ))}
               </div>

@@ -2,6 +2,7 @@ import { handle, ok, parseBody } from "@/lib/api/response";
 import { requireAdmin } from "@/lib/auth/session";
 import { createCategorySchema } from "@/lib/validations/category.schema";
 import { createDefaultCategory, listDefaultCategories } from "@/services/category.service";
+import { recordAdminAction } from "@/services/audit.service";
 
 export const GET = handle(async () => {
   await requireAdmin();
@@ -9,7 +10,9 @@ export const GET = handle(async () => {
 });
 
 export const POST = handle(async (req) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const input = await parseBody(req, createCategorySchema);
-  return ok(await createDefaultCategory(input), { status: 201 });
+  const category = await createDefaultCategory(input);
+  await recordAdminAction(admin.id, { action: "category.create", targetType: "category", targetId: category.id, details: { ...input } });
+  return ok(category, { status: 201 });
 });

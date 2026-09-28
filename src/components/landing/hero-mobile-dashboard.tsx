@@ -1,4 +1,4 @@
-import { LayoutDashboard, MoreHorizontal, Plus, Receipt, Wallet } from "lucide-react";
+import { LayoutDashboard, Plus, Receipt, Target, Wallet } from "lucide-react";
 import type { CSSProperties } from "react";
 import { DEMO_FINANCE } from "@/data/demo-finance";
 import type { Messages } from "@/i18n";
@@ -16,12 +16,12 @@ import { currentMonthNumber } from "./demo-helpers";
  */
 export function HeroMobileDashboard({ t }: { t: Messages }) {
   const d = t.landing.demo;
-  // Giống hệt thanh điều hướng dưới của app thật: Tổng quan · Giao dịch · + · Ngân sách · Thêm.
+  // Giống hệt thanh điều hướng dưới của app thật: Tổng quan · Giao dịch · + · Ngân sách · Mục tiêu.
   const nav = [
     { Icon: LayoutDashboard, label: d.sidebar[0] },
     { Icon: Receipt, label: d.sidebar[1] },
     { Icon: Wallet, label: d.sidebar[2] },
-    { Icon: MoreHorizontal, label: t.nav.more },
+    { Icon: Target, label: d.sidebar[3] },
   ];
   return (
     <figure

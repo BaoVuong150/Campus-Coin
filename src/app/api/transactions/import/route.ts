@@ -8,7 +8,7 @@ const IMPORTS_PER_HOUR = 20;
 
 export const POST = handle(async (req) => {
   const user = await requireAuth();
-  rateLimit(`import:${user.id}`, IMPORTS_PER_HOUR, 60 * 60 * 1000);
+  await rateLimit(`import:${user.id}`, IMPORTS_PER_HOUR, 60 * 60 * 1000);
   const input = await parseBody(req, importTransactionsSchema);
   return ok(await importTransactions(user.id, input), { status: 201 });
 });

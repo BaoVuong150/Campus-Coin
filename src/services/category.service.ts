@@ -70,13 +70,23 @@ export async function updateUserCategory(
   return toCategoryDTO(updated);
 }
 
+/**
+ * Danh mục đang được giao dịch, lịch định kỳ hoặc ngân sách dùng thì không được xóa/đổi loại thu-chi.
+ * Ngân sách có quan hệ ON DELETE CASCADE ở DB, nên nếu không chặn ở đây việc xóa danh mục sẽ âm thầm xóa
+ * ngân sách của user (với danh mục hệ thống: ngân sách của MỌI user), và đổi loại sẽ để lại ngân sách
+ * gắn với danh mục thu nhập.
+ */
 async function assertCategoryUnused(id: number) {
-  const [txCount, recurringCount] = await Promise.all([
+  const [txCount, recurringCount, budgetCount] = await Promise.all([
     prisma.transaction.count({ where: { category_id: id } }),
     prisma.recurringTransaction.count({ where: { category_id: id } }),
+    prisma.budget.count({ where: { category_id: id } }),
   ]);
-  if (txCount + recurringCount > 0) {
-    throw Errors.conflict("CATEGORY_IN_USE", "Danh mục đang được sử dụng bởi giao dịch, không thể xóa hoặc đổi loại.");
+  if (txCount + recurringCount + budgetCount > 0) {
+    throw Errors.conflict(
+      "CATEGORY_IN_USE",
+      "Danh mục đang được dùng bởi giao dịch, khoản định kỳ hoặc ngân sách, không thể xóa hoặc đổi loại."
+    );
   }
 }
 

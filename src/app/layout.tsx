@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { I18nProvider } from "@/i18n/provider";
 import { getLocale, getServerMessages } from "@/i18n/server";
+import { siteUrl } from "@/lib/seo/site-url";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin", "latin-ext"] });
@@ -14,6 +15,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerMessages();
   return {
+    // URL tuyệt đối cho OpenGraph / canonical dựa trên APP_URL.
+    metadataBase: new URL(siteUrl()),
     title: { default: "Campus Coin", template: "%s · Campus Coin" },
     description: t.meta.description,
     keywords: ["Campus Coin", "student finance", "quản lý tài chính sinh viên", "budget", "Techwiz 7"],

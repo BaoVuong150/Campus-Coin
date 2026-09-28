@@ -8,7 +8,7 @@ const SUGGEST_LIMIT_PER_MINUTE = 120;
 
 export const POST = handle(async (req) => {
   const user = await requireAuth();
-  rateLimit(`suggest:${user.id}`, SUGGEST_LIMIT_PER_MINUTE, 60_000);
+  await rateLimit(`suggest:${user.id}`, SUGGEST_LIMIT_PER_MINUTE, 60_000);
   const { text, type } = await parseBody(req, suggestCategorySchema);
   return ok({ suggestion: await suggestCategory(user.id, text, type) });
 });

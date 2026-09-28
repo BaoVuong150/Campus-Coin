@@ -13,6 +13,7 @@ import { onGoalCompleted, onGoalDeposit } from "./points.service";
 import { toNumber } from "./mappers";
 
 const notFound = () => Errors.notFound("GOAL_NOT_FOUND", "Không tìm thấy mục tiêu.");
+const notActive = () => Errors.badRequest("Chỉ nạp/rút được với mục tiêu đang thực hiện. Hãy mở lại mục tiêu trước.");
 const MILESTONES = [50, 100];
 
 export function toGoalDTO(g: SavingGoal, now = new Date()): GoalDTO {
@@ -68,8 +69,15 @@ async function ownGoal(userId: string, id: string) {
   return goal;
 }
 
+/**
+ * Trạng thái mục tiêu: active ⇄ completed, active ⇄ archived, completed → archived.
+ * Mục tiêu đã lưu trữ phải kích hoạt lại trước khi đánh dấu hoàn thành.
+ */
 export async function updateGoal(userId: string, id: string, input: z.infer<typeof updateGoalSchema>): Promise<GoalDTO> {
-  await ownGoal(userId, id);
+  const existing = await ownGoal(userId, id);
+  if (input.status === "completed" && existing.status === "archived") {
+    throw Errors.badRequest("Hãy kích hoạt lại mục tiêu đã lưu trữ trước khi đánh dấu hoàn thành.");
+  }
   const goal = await prisma.savingGoal.update({
     where: { id },
     data: {
@@ -87,8 +95,13 @@ export async function updateGoal(userId: string, id: string, input: z.infer<type
   return toGoalDTO(goal);
 }
 
+/** Chỉ xóa được mục tiêu chưa từng nạp/rút; mục tiêu đã có lịch sử phải lưu trữ để không mất dữ liệu tài chính. */
 export async function deleteGoal(userId: string, id: string): Promise<void> {
   await ownGoal(userId, id);
+  const history = await prisma.goalContribution.count({ where: { goal_id: id } });
+  if (history > 0) {
+    throw Errors.conflict("GOAL_HAS_HISTORY", "Mục tiêu đã có lịch sử nạp/rút tiền. Hãy lưu trữ thay vì xóa để giữ lịch sử.");
+  }
   await prisma.savingGoal.delete({ where: { id } });
 }
 
@@ -98,9 +111,7 @@ export async function contributeToGoal(
   input: z.infer<typeof goalContributionSchema>
 ): Promise<GoalDTO> {
   const goal = await ownGoal(userId, id);
-  if (goal.status === "archived") {
-    throw Errors.badRequest("Mục tiêu đã lưu trữ, không thể nạp hoặc rút tiền.");
-  }
+  if (goal.status !== "active") throw notActive();
   const delta = input.direction === "deposit" ? input.amount : -input.amount;
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -109,7 +120,7 @@ export async function contributeToGoal(
     const where: Prisma.SavingGoalWhereInput = {
       id,
       user_id: userId,
-      status: { not: "archived" },
+      status: "active",
       current_amount: delta < 0 ? { gte: -delta } : { lte: MAX_AMOUNT - delta },
     };
     const { count } = await tx.savingGoal.updateMany({ where, data: { current_amount: { increment: delta } } });
@@ -117,13 +128,18 @@ export async function contributeToGoal(
       // Phân biệt lý do: mục tiêu vừa bị xóa/lưu trữ song song thì báo đúng lỗi, không báo "không đủ số dư".
       const fresh = await tx.savingGoal.findFirst({ where: { id, user_id: userId }, select: { status: true } });
       if (!fresh) throw notFound();
-      if (fresh.status === "archived") throw Errors.badRequest("Mục tiêu đã lưu trữ, không thể nạp hoặc rút tiền.");
+      if (fresh.status !== "active") throw notActive();
       throw delta < 0
         ? new ApiError(400, "INSUFFICIENT_GOAL_BALANCE", "Số tiền rút vượt quá số đã tiết kiệm cho mục tiêu này.")
         : Errors.badRequest("Số tiền của mục tiêu vượt quá giới hạn cho phép.");
     }
     await tx.goalContribution.create({ data: { goal_id: id, amount: delta, note: input.note } });
-    return tx.savingGoal.findUniqueOrThrow({ where: { id } });
+    const after = await tx.savingGoal.findUniqueOrThrow({ where: { id } });
+    // Đạt đủ số tiền → tự chuyển sang "hoàn thành" trong cùng transaction.
+    if (toNumber(after.current_amount) >= toNumber(after.target_amount)) {
+      return tx.savingGoal.update({ where: { id }, data: { status: "completed" } });
+    }
+    return after;
   });
 
   if (delta > 0) await onGoalDeposit(userId);

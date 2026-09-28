@@ -34,32 +34,37 @@
 
 ### 4. Tinh gọn Giao diện & Trải nghiệm Người dùng (Dashboard & Navigation)
 - **Mức Tiết kiệm hàng tháng:** Được đưa ra ngoài hiển thị trực tiếp ngay trong thẻ **"Số tiền có thể chi"** (Safe-to-Spend) trên Dashboard, kèm modal chỉnh sửa nhanh.
-- **Tháo mục tiêu mua sắm thứ cấp:** Đã ẩn tính năng mục tiêu mua sắm dài hạn khỏi thanh điều hướng và landing page để tập trung tuyệt đối vào giải pháp tài chính cốt lõi (3-tier architecture).
+- **Mục tiêu tiết kiệm:** đã bật lại đầy đủ (menu, thanh điều hướng mobile, dashboard, landing) kèm lưu trữ/khôi phục – xem mục 5.
 - **Sitemap trực quan:** Tích hợp khối Sitemap chi tiết ở chân Trang chủ theo đúng yêu cầu mục số 5 trong thông báo nộp bài của Aptech.
 
 ### 5. Chất lượng & Kiểm thử (Quality Assurance)
-- **Unit & Integration Tests:** Đạt **148/148 tests passed 100%** (12 test suites, bao gồm kiểm thử tự động Circuit Breaker, Smart Retry, Auth, Tài chính).
-- **TypeScript:** `0 errors` (`tsc --noEmit` exit 0).
-- **Next.js Production Build:** 53/53 trang và API serverless build thành công.
+- **Unit & Integration Tests:** xem kết quả mới nhất bằng `npm test` / `npm run test:coverage`; CI (GitHub Actions) chạy lint, typecheck, test, build cho mọi push/PR.
+- **TypeScript:** `npm run typecheck`.
+- **Next.js Production Build:** `npm run build`.
 - **File CSDL nộp bài:** `database.sql` đã sẵn sàng ở thư mục gốc chứa cấu trúc bảng và dữ liệu mẫu (Seed Data).
 
 ---
 
 ## 1. Cài đặt
 
+Yêu cầu: Node.js ≥ 20.9 (khuyến nghị 22), PostgreSQL ≥ 13 (Supabase/Neon/local).
+
 ```bash
-npm install
-cp .env.example .env        # điền DATABASE_URL, JWT_SECRET (≥ 32 ký tự)
-npx prisma migrate deploy   # tạo/cập nhật bảng (chỉ bổ sung, không xóa dữ liệu)
+npm ci
+cp .env.example .env        # điền DATABASE_URL, JWT_SECRET (≥ 32 ký tự), CRON_SECRET, APP_URL
+npx prisma migrate deploy   # tạo/cập nhật bảng (chỉ bổ sung, không xóa dữ liệu) – Supabase: dùng cổng 5432, xem docs/DEPLOYMENT.md
 npm run dev                 # http://localhost:3000
 ```
+
+**Triển khai production:** xem [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (biến môi trường, migration, email, cron, Vercel, smoke test).
 
 - Xin chuỗi kết nối DB qua kênh riêng của nhóm – **không** commit `.env` hay dán secret vào README/issue.
 - Thiếu `JWT_SECRET` → server báo lỗi cấu hình (không có giá trị dự phòng).
 - Quên mật khẩu: production cần `APP_URL` (link trong email) và `RESEND_API_KEY` + `MAIL_FROM` để gửi email.
-  Ở môi trường dev chưa cấu hình email, link đặt lại mật khẩu được in ra **console của server**.
+  Ở môi trường dev chưa cấu hình email, email được lưu vào thư mục **`.mail/`** (mở file `.html` để bấm link).
 - DB mới hoàn toàn: có thể chạy `database.sql` (sinh từ Prisma schema) hoặc `npx prisma migrate deploy`.
-- Dữ liệu demo đầy đủ (**xóa toàn bộ dữ liệu cũ**): `SEED_RESET=true npm run db:seed`.
+- Dữ liệu demo đầy đủ (**xóa toàn bộ dữ liệu cũ**, chỉ dùng cho DB demo riêng): `DEMO_RESET_CONFIRM=<host DB> npm run demo:reset`
+  (từ chối khi `NODE_ENV=production` hoặc host nằm trong `PROTECTED_DATABASE_HOSTS`). Production không bao giờ tự seed.
 
 ### Tài khoản demo
 
@@ -79,6 +84,8 @@ npm run dev                 # http://localhost:3000
 | `npm run db:migrate` | `prisma migrate deploy` |
 | `npm run db:seed` | Nạp dữ liệu demo (cần `SEED_RESET=true`) |
 | `npm run db:fix-categories` | Kiểm tra giao dịch có danh mục lệch loại thu/chi (dry-run); thêm `-- --apply` để sửa, có audit |
+| `npm run demo:reset` | Đặt lại dữ liệu demo (nhiều lớp xác nhận, từ chối DB production) |
+| `npm run cron:recurring` | Chạy scheduler giao dịch định kỳ một lần (giống cron), tự kiểm tra idempotent |
 
 ---
 
@@ -86,19 +93,19 @@ npm run dev                 # http://localhost:3000
 
 | Khu vực | Nội dung |
 | --- | --- |
-| **Tổng quan** | Số dư, thu/chi tháng (so với tháng trước), ngân sách còn lại, *Số tiền có thể chi*, *Dự kiến cuối tháng*, dòng tiền 7 ngày → 12 tháng, chi tiêu theo danh mục (click để lọc giao dịch), ngân sách, giao dịch gần đây, nhận định, mục tiêu |
+| **Tổng quan** | Số dư, thu/chi tháng (so với tháng trước), ngân sách còn lại, *Số tiền có thể chi*, *Dự kiến cuối tháng*, dòng tiền 7 ngày → 12 tháng, chi tiêu theo danh mục (click để lọc giao dịch), ngân sách, giao dịch gần đây, nhận định, mục tiêu; **mẹo tiết kiệm cá nhân hóa** xếp theo số tiền có thể tiết kiệm (ghim / bỏ qua) |
 | **Giao dịch** | Tìm kiếm (debounce), lọc thu/chi, danh mục, khoảng ngày, khoảng tiền; sắp xếp; phân trang phía server; bảng (desktop) / thẻ (mobile); chi tiết, sửa, xóa có xác nhận; lưu vết kiểm toán |
 | **Thêm giao dịch** | Toggle thu/chi, ô số tiền lớn, *Gợi ý danh mục* theo mô tả (user luôn đổi được), chọn danh mục bằng icon, lặp lại định kỳ; cảnh báo trùng lặp và khoản chi bất thường trước khi lưu |
 | **Ngân sách** | Chọn tháng, tổng quan, thêm/sửa/xóa, sao chép từ tháng trước; cảnh báo ≥ 80% và khi vượt |
 | **Định kỳ & chi phí cố định** | Tiền nhà, Netflix, trợ cấp… trạng thái Đang chạy / Tạm dừng / Đã hủy; scheduler tự ghi giao dịch khi đến hạn, **idempotent** |
-| **Mục tiêu tiết kiệm** | Nạp / rút tiền, sửa, hoàn thành, số ngày còn lại, số tiền cần để dành mỗi tháng |
-| **Báo cáo** | Tháng / quý / năm: tổng kết, xu hướng, danh mục, top chi tiêu, giao dịch lớn nhất, hiệu quả ngân sách; **xuất PDF** (font tiếng Việt, biểu đồ vector) |
+| **Mục tiêu tiết kiệm** | Nạp / rút tiền (không rút quá số đã để dành), sửa, hoàn thành (tự hoàn thành khi đủ tiền), lưu trữ / khôi phục, số ngày còn lại, số tiền cần để dành mỗi tháng; mục tiêu đã có lịch sử không xóa được |
+| **Báo cáo** | Tháng / quý / năm: tổng kết, xu hướng, danh mục, top chi tiêu, giao dịch lớn nhất, hiệu quả ngân sách; **xuất PDF** (font tiếng Việt, biểu đồ vector); **gửi tóm tắt qua email** tới chính tài khoản (chỉ hiện khi đã cấu hình Resend); **lịch sử nhận định** các tháng trước, đánh dấu để xem lại |
 | **Nhập CSV** | Tải file mẫu; nhận cột tiếng Việt/tiếng Anh, ngày `YYYY-MM-DD`/`DD/MM/YYYY`, số tiền `45.000`/`-45000`; xem trước, gợi ý danh mục hàng loạt, sửa từng dòng, bỏ qua giao dịch trùng; tối đa 500 dòng |
 | **Campus Points** | Điểm thưởng nội bộ (không phải tiền, không quy đổi): +10 giao dịch đầu tiên, +2 mỗi ngày có ghi chép, +5 để dành cho mục tiêu, +10 giữ ngân sách trọn tuần, +25 đạt tiết kiệm tháng, +25 hoàn thành mục tiêu; cấp độ, chuỗi ngày, thành tựu |
 | **Song ngữ** | Tiếng Việt / English – nút VI/EN trên header, trang đăng nhập, landing và trong Cài đặt |
 | **Thông báo** | Ngân sách, định kỳ, mục tiêu, chi tiêu bất thường, hệ thống; chống spam bằng `dedupe_key`; đánh dấu đã đọc |
-| **Cài đặt** | Hồ sơ, giao diện sáng/tối + cỡ chữ, tiền tệ/múi giờ, thiết lập tài chính, danh mục cá nhân, tùy chọn thông báo, đổi mật khẩu |
-| **Quản trị** | Tổng quan hệ thống (người dùng hoạt động, tăng trưởng, khối lượng giao dịch, phân bổ danh mục), quản lý người dùng (vô hiệu hóa, phân quyền), danh mục mặc định, thông báo toàn hệ thống |
+| **Cài đặt** | Hồ sơ, giao diện sáng/tối + cỡ chữ, ngôn ngữ, thiết lập tài chính (trợ cấp, ngày nhận, tiết kiệm tháng – ảnh hưởng trực tiếp Số tiền có thể chi/dự báo), danh mục cá nhân (thêm/sửa/xóa), tùy chọn thông báo, đổi mật khẩu, đăng xuất mọi thiết bị khác. Tiền tệ (VND) và múi giờ (Việt Nam) cố định – chỉ hiển thị |
+| **Quản trị** | Tổng quan hệ thống (người dùng hoạt động, tăng trưởng, khối lượng giao dịch, phân bổ danh mục, tình trạng DB), quản lý người dùng (tìm kiếm, vô hiệu hóa, phân quyền, đặt lại mật khẩu – bắt đổi khi đăng nhập, xuất CSV), danh mục mặc định (thêm/sửa/xóa), mẫu mẹo tiết kiệm, thông báo toàn hệ thống, nhật ký quản trị |
 
 ### Cách tính các chỉ số
 
@@ -203,6 +210,42 @@ Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm 
 ---
 
 ## 5. Nhật ký thay đổi
+
+### Hoàn thiện sản phẩm (triển khai được)
+
+- **Thiết lập nhanh sau đăng ký** (`/onboarding`): trợ cấp tháng, ngày nhận, tiết kiệm tháng, tùy chọn tự ghi khoản trợ cấp
+  (khoản thu định kỳ từ lần nhận kế tiếp) và ngân sách khởi đầu gợi ý theo thu nhập; có thể bỏ qua. Đổi trợ cấp/ngày nhận trong
+  Cài đặt → khoản thu định kỳ liên kết tự cập nhật.
+- **Mục tiêu tiết kiệm** bật lại đầy đủ; thêm **Lưu trữ / Khôi phục**; mục tiêu đã có lịch sử nạp/rút không xóa được (phải lưu trữ).
+- **Điều hướng mobile:** Tổng quan · Giao dịch · **+** · Ngân sách · Mục tiêu; các trang khác trong menu ở header.
+- **Bảo mật tài khoản:** "Đăng xuất khỏi mọi thiết bị khác" (Cài đặt → Bảo mật); thông báo bảo mật khi đổi/đặt lại mật khẩu.
+- **Tài khoản mới không có dữ liệu:** thẻ "có thể chi" và dự báo hiển thị hướng dẫn thay vì con số 0 / cảnh báo thiếu hụt giả.
+- **Dự báo cuối tháng:** mức tin cậy (thấp / trung bình / cao) và "Dựa trên N ngày dữ liệu"; dưới 3 ngày không hiện con số.
+- **Email:** khung HTML responsive + bản chữ thuần; dev lưu vào `.mail/`; production từ chối link localhost/không https; không log token.
+- **Cron thật:** `vercel.json` chạy `/api/cron/recurring` 00:05 giờ VN mỗi ngày; một lịch lỗi không chặn lịch khác; log có cấu trúc.
+- **Hoàn thiện tính năng còn dở:** mẹo tiết kiệm cá nhân hóa + mẫu mẹo của admin (bảng `saving_tips` trước đây chưa dùng),
+  lịch sử nhận định theo tháng + đánh dấu (bảng `insights`), sửa danh mục (cá nhân và hệ thống), gửi báo cáo qua email,
+  trang quên mật khẩu báo rõ khi hệ thống chưa bật email thay vì "đã gửi".
+- **Hạ tầng:** header bảo mật (CSP, HSTS, X-Frame-Options…), kiểm tra Origin cho request ghi dữ liệu, `GET /api/health`,
+  `robots.txt` + `sitemap.xml`, CI GitHub Actions, timeout 30 giây cho request, chống gửi trùng ở form tài chính.
+
+### Rà soát cuối (bảo mật, dữ liệu, kế hoạch chi tiêu)
+
+- **Cần chạy migration** `20260929000000_admin_audit_constraints` (chỉ bổ sung: bảng `admin_audits` + ràng buộc CHECK dạng
+  `NOT VALID`, không đụng dữ liệu cũ). Với Supabase, dùng chuỗi kết nối **trực tiếp cổng 5432** (pooler 6543 không chạy được migrate):
+  `DATABASE_URL="<chuỗi 5432>" npx prisma migrate deploy`. Trước khi chạy, app vẫn hoạt động (nhật ký quản trị tạm bỏ qua).
+- **Mật khẩu tạm bắt buộc đổi**: admin đặt lại mật khẩu → lần đăng nhập sau phải đặt mật khẩu mới ở `/change-password`
+  (mọi API khác trả 403 `PASSWORD_CHANGE_REQUIRED`).
+- **Nhật ký quản trị** (Quản trị → Hệ thống): khóa/mở, đổi quyền, đặt lại mật khẩu, danh mục hệ thống, thông báo, xuất CSV.
+- **API GET chỉ đọc**: sinh giao dịch định kỳ và cộng điểm theo kỳ chuyển sang `POST /api/sync` (app gọi khi mở);
+  cron `/api/cron/recurring` vẫn giữ nguyên.
+- **Giao dịch định kỳ** được ghi lưu vết kiểm toán như giao dịch nhập tay.
+- **Kế hoạch chi tiêu**: trợ cấp tháng + ngày nhận trong Cài đặt được tính là thu nhập sắp nhận (nếu chưa có khoản thu định kỳ);
+  tốc độ chi/ngày và trung bình lịch sử chia cho **số ngày thực sự có dữ liệu** (user mới không bị đánh giá thấp).
+- **Mục tiêu**: chỉ nạp/rút khi đang thực hiện; đạt đủ tiền tự chuyển "hoàn thành"; mục tiêu lưu trữ phải mở lại trước khi hoàn thành.
+- **Danh mục** đang có ngân sách không xóa/đổi loại được (trước đây xóa danh mục hệ thống sẽ xóa ngân sách của mọi user).
+- **CSV xuất người dùng** chống formula injection (`=`, `+`, `-`, `@` ở đầu ô).
+- **Rate limit** dùng Upstash Redis nếu có `UPSTASH_REDIS_REST_URL`/`TOKEN` (chung cho mọi instance), tự lùi về bộ nhớ khi không có/lỗi.
 
 ### Responsive toàn diện (desktop lớn → điện thoại)
 

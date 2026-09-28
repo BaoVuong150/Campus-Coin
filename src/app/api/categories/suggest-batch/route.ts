@@ -9,7 +9,7 @@ const BATCHES_PER_MINUTE = 10;
 /** Gợi ý danh mục hàng loạt khi nhập CSV (chỉ dựa trên dữ liệu của chính user). */
 export const POST = handle(async (req) => {
   const user = await requireAuth();
-  rateLimit(`suggest-batch:${user.id}`, BATCHES_PER_MINUTE, 60_000);
+  await rateLimit(`suggest-batch:${user.id}`, BATCHES_PER_MINUTE, 60_000);
   const { items } = await parseBody(req, suggestBatchSchema);
   return ok({ suggestions: await suggestCategories(user.id, items) });
 });

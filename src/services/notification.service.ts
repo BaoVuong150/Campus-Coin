@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/database/prisma";
 import type { NotificationKind } from "@/constants/finance";
@@ -117,6 +118,14 @@ export async function markAllRead(userId: string): Promise<number> {
     data: { is_read: true },
   });
   return result.count;
+}
+
+/** Cửa sổ chống gửi trùng: cùng tiêu đề + nội dung trong 10 phút chỉ gửi một lần (bấm đúp, gửi lại do mạng chậm). */
+const ANNOUNCEMENT_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
+
+export function announcementDedupeKey(title: string, message: string, now = Date.now()): string {
+  const digest = createHash("sha256").update(`${title}\u0000${message}`).digest("hex").slice(0, 24);
+  return `announcement:${digest}:${Math.floor(now / ANNOUNCEMENT_DEDUPE_WINDOW_MS)}`;
 }
 
 export async function broadcast(title: string, message: string, dedupeKey: string): Promise<number> {

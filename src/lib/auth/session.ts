@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { prisma } from "@/lib/database/prisma";
 import { Errors } from "@/lib/api/errors";
-import { SESSION_COOKIE, verifyToken, type Role } from "./jwt";
+import { SESSION_COOKIE, sessionVersion, verifyToken, type Role } from "./jwt";
 
 export interface SessionUser {
   id: string;
@@ -31,10 +31,12 @@ export const getSessionState = cache(async (): Promise<SessionState> => {
 
   const user = await prisma.user.findUnique({
     where: { id: result.payload.userId },
-    select: { id: true, name: true, email: true, role: true, is_active: true },
+    select: { id: true, name: true, email: true, role: true, is_active: true, password_hash: true },
   });
   if (!user) return { status: "anonymous" };
   if (!user.is_active) return { status: "disabled" };
+  // Mật khẩu đã đổi sau khi token được cấp → phiên cũ hết hiệu lực (báo "hết hạn" để UI yêu cầu đăng nhập lại).
+  if (sessionVersion(user.password_hash) !== result.payload.sv) return { status: "expired" };
 
   return {
     status: "authenticated",

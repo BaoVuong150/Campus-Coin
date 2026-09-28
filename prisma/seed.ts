@@ -43,6 +43,20 @@ async function main() {
     console.error("Seed sẽ xóa toàn bộ dữ liệu. Chạy lại với SEED_RESET=true nếu bạn chắc chắn.");
     process.exit(1);
   }
+  // Chốt chặn thứ hai: môi trường production cần xác nhận riêng, tránh lỡ tay xóa dữ liệu thật
+  // (SEED_RESET=true có thể còn sót trong shell hoặc file .env).
+  if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PRODUCTION !== "true") {
+    console.error("Từ chối seed khi NODE_ENV=production. Đặt thêm SEED_ALLOW_PRODUCTION=true nếu thực sự muốn xóa dữ liệu production.");
+    process.exit(1);
+  }
+  const target = (() => {
+    try {
+      return new URL(process.env.DATABASE_URL ?? "").host;
+    } catch {
+      return "(không đọc được DATABASE_URL)";
+    }
+  })();
+  console.warn(`Đang xóa toàn bộ dữ liệu và nạp dữ liệu demo vào: ${target}`);
 
   await prisma.$transaction([
     prisma.notification.deleteMany(),

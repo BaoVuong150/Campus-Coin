@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, Eye, EyeOff, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,13 @@ export function LoginForm({ portal }: { portal: "student" | "admin" }) {
           </div>
         )}
       </Field>
+      {portal === "student" && (
+        <div className="-mt-2 text-right">
+          <Link href="/forgot-password" className="text-[13px] font-medium text-primary-ink hover:underline">
+            {l.forgotLink}
+          </Link>
+        </div>
+      )}
       <Button type="submit" size="lg" className="w-full" loading={loading}>
         {portal === "admin" ? l.submitAdmin : l.submitLogin}
       </Button>

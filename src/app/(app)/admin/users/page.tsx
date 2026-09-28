@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, UserX } from "lucide-react";
+import { Copy, KeyRound, Search, UserX } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { PageHeader } from "@/components/layout/page-header";
 import { useSessionUser } from "@/components/layout/session-context";
@@ -9,6 +9,7 @@ import { Avatar } from "@/components/layout/user-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/field";
 import { Pagination } from "@/components/ui/pagination";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -19,9 +20,48 @@ import { formatDate } from "@/lib/utils/date";
 import { useI18n } from "@/i18n/provider";
 import { formatNumber } from "@/lib/utils/money";
 
+/** Hiển thị mật khẩu tạm đúng một lần; đóng dialog là xóa khỏi bộ nhớ. */
+function TemporaryPasswordDialog({ user, password, onClose }: { user: AdminUserDTO; password: string | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const { t } = useI18n();
+  const l = t.admin.users;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(password ?? "");
+      toast.success(l.copied);
+    } catch {
+      // Trình duyệt chặn clipboard: admin vẫn có thể chọn và sao chép thủ công.
+    }
+  };
+  return (
+    <Dialog
+      open={password !== null}
+      onClose={onClose}
+      size="sm"
+      title={l.resetDoneTitle}
+      footer={
+        <>
+          <Button variant="outline" onClick={copy}>
+            <Copy className="size-4" aria-hidden /> {l.copy}
+          </Button>
+          <Button onClick={onClose} data-autofocus>
+            {l.close}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm leading-relaxed text-muted">{l.resetDoneMessage(user.name)}</p>
+      <p className="tabular mt-3 rounded-md border border-border bg-surface-secondary px-3 py-2.5 text-center font-mono text-lg tracking-wider text-foreground select-all">
+        {password}
+      </p>
+    </Dialog>
+  );
+}
+
 function UserActions({ user }: { user: AdminUserDTO }) {
   const me = useSessionUser();
-  const { updateUser } = useAdminMutations();
+  const { updateUser, resetPassword } = useAdminMutations();
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const { toast, confirm } = useToast();
   const { t, fmt } = useI18n();
   const l = t.admin.users;
@@ -37,6 +77,20 @@ function UserActions({ user }: { user: AdminUserDTO }) {
       toast.success(done);
     } catch (e) {
       toast.error(l.failed, fmt.error(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reset = async () => {
+    const ok = await confirm({ title: l.resetTitle, message: l.resetMessage(user.name), confirmText: l.resetConfirm, isDestructive: true });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const result = await resetPassword(user.id);
+      setTemporaryPassword(result.temporaryPassword);
+    } catch (e) {
+      toast.error(l.resetFailed, fmt.error(e));
     } finally {
       setBusy(false);
     }
@@ -90,6 +144,10 @@ function UserActions({ user }: { user: AdminUserDTO }) {
       >
         {user.role === "admin" ? l.removeAdmin : l.makeAdmin}
       </Button>
+      <Button size="sm" variant="ghost" disabled={busy} onClick={reset} aria-label={`${l.resetPassword} – ${user.name}`} title={l.resetPassword}>
+        <KeyRound className="size-4" aria-hidden />
+      </Button>
+      <TemporaryPasswordDialog user={user} password={temporaryPassword} onClose={() => setTemporaryPassword(null)} />
     </div>
   );
 }

@@ -1,7 +1,13 @@
 export const TRANSACTION_TYPES = ["income", "expense"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
-export const MAX_AMOUNT = 10_000_000_000;
+/** Giới hạn số tiền: cột DB là Decimal(12, 2) nên giá trị tối đa phải < 10 tỷ. */
+export const MAX_AMOUNT = 9_999_999_999;
+/** Số tiền lưu tối đa 2 chữ số thập phân (khớp Decimal(12, 2)). */
+export const AMOUNT_DECIMALS = 2;
+/** Khoảng năm hợp lệ cho mọi ngày người dùng nhập (chặn năm 0001 / 9999 làm lệch báo cáo). */
+export const MIN_DATE_YEAR = 2000;
+export const MAX_DATE_YEAR = 2100;
 export const MAX_DESCRIPTION_LENGTH = 200;
 export const MAX_NAME_LENGTH = 80;
 

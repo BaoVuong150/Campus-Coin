@@ -9,7 +9,7 @@ import type {
   UpdateTransactionInput,
 } from "@/lib/validations/transaction.schema";
 import type { Paginated, TransactionDTO, TransactionWarnings } from "@/types/finance";
-import { getUsableCategory, rememberCategoryChoice } from "./category.service";
+import { getUsableCategory, rememberCategoryChoice, usableCategoryWhere } from "./category.service";
 import { evaluateBudgetAlerts } from "./budget.service";
 import { notify } from "./notification.service";
 import { onTransactionLogged } from "./points.service";
@@ -105,8 +105,23 @@ export async function getTransaction(userId: string, id: string): Promise<Transa
 }
 
 
+/**
+ * Mã danh mục được gợi ý do client gửi lên chỉ là dữ liệu tham khảo, nhưng vẫn không tin tuyệt đối:
+ * chỉ lưu nếu đó là danh mục user được phép dùng (không lưu id danh mục riêng của người khác).
+ */
+async function usableSuggestionId(userId: string, suggestedId: number | null | undefined, chosenId: number) {
+  if (!suggestedId) return null;
+  if (suggestedId === chosenId) return suggestedId;
+  const found = await prisma.category.findFirst({
+    where: { id: suggestedId, ...usableCategoryWhere(userId) },
+    select: { id: true },
+  });
+  return found ? suggestedId : null;
+}
+
 export async function createTransaction(userId: string, input: CreateTransactionInput): Promise<TransactionDTO> {
   await getUsableCategory(userId, input.category_id, input.type);
+  const suggestedId = await usableSuggestionId(userId, input.suggested_category_id, input.category_id);
 
   const created = await prisma.$transaction(async (tx) => {
     const t = await tx.transaction.create({
@@ -117,7 +132,7 @@ export async function createTransaction(userId: string, input: CreateTransaction
         description: input.description,
         category_id: input.category_id,
         date: ymdToStorageDate(input.date),
-        ai_suggested_category: input.suggested_category_id ?? null,
+        ai_suggested_category: suggestedId,
       },
       include: { category: true },
     });

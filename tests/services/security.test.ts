@@ -19,7 +19,7 @@ const db = vi.hoisted(() => ({
 
 vi.mock("@/lib/database/prisma", () => ({ prisma: db }));
 
-import { signToken, verifyToken } from "@/lib/auth/jwt";
+import { sessionVersion, signToken, verifyToken } from "@/lib/auth/jwt";
 import { requireAdmin, requireAuth } from "@/lib/auth/session";
 import { ApiError } from "@/lib/api/errors";
 import { authenticate, INVALID_CREDENTIALS_MESSAGE } from "@/services/user.service";
@@ -30,12 +30,16 @@ const USER_A = "11111111-1111-4111-8111-111111111111";
 const USER_B = "22222222-2222-4222-8222-222222222222";
 const TX_B = "33333333-3333-4333-8333-333333333333";
 
+const PASSWORD_HASH = "$2b$04$storedhashstoredhashstoredhashstoredhashstoredhash12";
+const SV = sessionVersion(PASSWORD_HASH);
+
 const activeUser = (id: string, role = "student") => ({
   id,
   name: "Test",
   email: `${id}@test.dev`,
   role,
   is_active: true,
+  password_hash: PASSWORD_HASH,
 });
 
 beforeEach(() => {
@@ -52,8 +56,9 @@ describe("auth: login", () => {
   it("đăng nhập đúng trả về user", async () => {
     const hash = await bcrypt.hash("Student@123", 4);
     db.user.findUnique.mockResolvedValue({ ...activeUser(USER_A), password_hash: hash });
-    const user = await authenticate({ email: "a@test.dev", password: "Student@123", portal: "student" });
-    expect(user.id).toBe(USER_A);
+    const grant = await authenticate({ email: "a@test.dev", password: "Student@123", portal: "student" });
+    expect(grant.user.id).toBe(USER_A);
+    expect(grant.sv).toBe(sessionVersion(hash));
   });
 
   it("sai mật khẩu và email không tồn tại trả về cùng một thông báo", async () => {
@@ -91,7 +96,7 @@ describe("auth: session", () => {
   });
 
   it("tài khoản bị vô hiệu hóa không dùng được phiên cũ", async () => {
-    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "student", name: "A" });
+    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "student", name: "A", sv: SV });
     db.user.findUnique.mockResolvedValue({ ...activeUser(USER_A), is_active: false });
     await expectApiError(requireAuth(), "ACCOUNT_DISABLED");
   });
@@ -99,19 +104,19 @@ describe("auth: session", () => {
 
 describe("admin: phân quyền server-side", () => {
   it("non-admin bị từ chối", async () => {
-    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "student", name: "A" });
+    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "student", name: "A", sv: SV });
     db.user.findUnique.mockResolvedValue(activeUser(USER_A, "student"));
     await expectApiError(requireAdmin(), "FORBIDDEN");
   });
 
   it("token ghi role admin nhưng DB là student → vẫn bị từ chối", async () => {
-    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "admin", name: "A" });
+    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "admin", name: "A", sv: SV });
     db.user.findUnique.mockResolvedValue(activeUser(USER_A, "student"));
     await expectApiError(requireAdmin(), "FORBIDDEN");
   });
 
   it("admin được phép", async () => {
-    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "admin", name: "A" });
+    cookieStore.value = signToken({ userId: USER_A, email: "a", role: "admin", name: "A", sv: SV });
     db.user.findUnique.mockResolvedValue(activeUser(USER_A, "admin"));
     await expect(requireAdmin()).resolves.toMatchObject({ id: USER_A, role: "admin" });
   });

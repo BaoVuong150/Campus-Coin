@@ -2,6 +2,8 @@
  * Tiện ích ngày giờ theo múi giờ Asia/Ho_Chi_Minh (UTC+7, không có DST).
  * DB lưu thời điểm tuyệt đối (UTC); mọi phép tính "ngày", "tháng" đều quy về giờ Việt Nam.
  */
+import { MAX_DATE_YEAR, MIN_DATE_YEAR } from "@/constants/finance";
+
 export const APP_TIMEZONE = "Asia/Ho_Chi_Minh";
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -49,6 +51,12 @@ export function isValidYmd(value: string): boolean {
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
   if (mo < 1 || mo > 12 || d < 1) return false;
   return d <= daysInMonth(y, mo);
+}
+
+/** Năm của "YYYY-MM-DD" / "YYYY-MM" nằm trong khoảng hệ thống hỗ trợ (dùng chung cho Zod và parser CSV). */
+export function isSupportedYear(value: string): boolean {
+  const year = Number(value.slice(0, 4));
+  return year >= MIN_DATE_YEAR && year <= MAX_DATE_YEAR;
 }
 
 export function isValidMonthKey(value: string): boolean {

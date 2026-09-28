@@ -1,6 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { Spinner } from "./spinner";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 export type ButtonSize = "sm" | "md" | "lg" | "xl" | "icon" | "icon-sm";
@@ -51,7 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       className={buttonClasses(variant, size, className)}
       {...props}
     >
-      {loading && <Loader2 className="animate-spin" aria-hidden />}
+      {loading && <Spinner />}
       {children}
     </button>
   );

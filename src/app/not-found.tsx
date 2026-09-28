@@ -1,19 +1,49 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft, LayoutDashboard, LogIn } from "lucide-react";
+import { StatusScreen } from "@/components/common/status-screen";
 import { buttonClasses } from "@/components/ui/button";
-import { LogoMark } from "@/components/layout/logo";
+import { getSession } from "@/lib/auth/session";
 import { getServerMessages } from "@/i18n/server";
 
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getServerMessages()).common.notFoundTitle, robots: { index: false } };
+}
+
+/** 404 toàn trang. Đã đăng nhập → ưu tiên quay về tổng quan; chưa đăng nhập → trang chủ + đăng nhập. */
 export default async function NotFound() {
-  const t = await getServerMessages();
+  const [t, user] = await Promise.all([getServerMessages(), getSession()]);
+  const c = t.common;
+  const action = "w-full min-[480px]:w-auto";
+
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-4 text-center">
-      <LogoMark className="size-10" />
-      <p className="mt-6 text-sm font-medium text-primary-ink">404</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{t.common.notFoundTitle}</h1>
-      <p className="mt-2 text-muted">{t.common.notFoundBody}</p>
-      <Link href="/" className={buttonClasses("primary", "md", "mt-6")}>
-        {t.common.backHome}
-      </Link>
-    </main>
+    <StatusScreen
+      code="404"
+      eyebrow={c.notFoundCode}
+      title={c.notFoundTitle}
+      description={c.notFoundBody}
+      homeLabel={t.brand.home}
+      actions={
+        user ? (
+          <>
+            <Link href="/dashboard" className={buttonClasses("primary", "lg", action)}>
+              <LayoutDashboard /> {c.goDashboard}
+            </Link>
+            <Link href="/" className={buttonClasses("outline", "lg", action)}>
+              {c.backHome}
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href="/" className={buttonClasses("primary", "lg", action)}>
+              <ArrowLeft /> {c.backHome}
+            </Link>
+            <Link href="/login" className={buttonClasses("outline", "lg", action)}>
+              <LogIn /> {c.goLogin}
+            </Link>
+          </>
+        )
+      }
+    />
   );
 }

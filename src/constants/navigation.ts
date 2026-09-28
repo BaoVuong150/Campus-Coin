@@ -8,7 +8,6 @@ import {
   Repeat,
   Settings,
   ShieldCheck,
-  Target,
   Users,
   Wallet,
   type LucideIcon,
@@ -26,7 +25,7 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/transactions", labelKey: "transactions", icon: Receipt },
   { href: "/budgets", labelKey: "budgets", icon: Wallet },
   { href: "/reports", labelKey: "reports", icon: PieChart },
-  { href: "/goals", labelKey: "goals", icon: Target },
+  // Mục tiêu tạm thời tháo khỏi menu điều hướng: { href: "/goals", labelKey: "goals", icon: Target } (import Target từ lucide-react khi bật lại).
   { href: "/recurring", labelKey: "recurring", icon: Repeat },
   { href: "/points", labelKey: "points", icon: Award },
   { href: "/notifications", labelKey: "notifications", icon: Bell },

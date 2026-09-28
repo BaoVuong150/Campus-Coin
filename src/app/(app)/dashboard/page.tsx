@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { BudgetOverviewCard } from "@/components/dashboard/budget-overview-card";
 import { CashFlowCard } from "@/components/dashboard/cash-flow-card";
 import { CategoryBreakdownCard } from "@/components/dashboard/category-breakdown-card";
-import { GoalsPreviewCard } from "@/components/dashboard/goals-preview-card";
 import { InsightsCard } from "@/components/dashboard/insights-card";
 import { PlanningCards } from "@/components/dashboard/planning-cards";
 import { QuickAddCard } from "@/components/dashboard/quick-add-card";
@@ -21,11 +20,11 @@ import { useI18n } from "@/i18n/provider";
  * Một lưới duy nhất, vị trí từng khối theo kích thước màn hình:
  *
  *   Mobile (1 cột) – ưu tiên quyết định:  số liệu → có thể chi → ghi nhanh → ngân sách → giao dịch gần đây
- *                                          → dòng tiền → danh mục → mục tiêu → nhận định
+ *                                          → dòng tiền → danh mục → nhận định
  *   Laptop ≥ 1024 (2 cột):                 số liệu | kế hoạch | dòng tiền (cả hàng) | ngân sách + danh mục
- *                                          | giao dịch gần đây (cả hàng) | nhận định + mục tiêu
+ *                                          | giao dịch gần đây (cả hàng) | nhận định (cả hàng)
  *   Desktop ≥ 1440 (12 cột):               số liệu 12 | dòng tiền 8 + kế hoạch 4 | ngân sách 5 + danh mục 3
- *                                          + gần đây 4 | nhận định 6 + mục tiêu 6
+ *                                          + gần đây 4 | nhận định 12
  */
 const SLOT = {
   summary: "order-1 lg:col-span-2 min-[1440px]:col-span-12",
@@ -35,8 +34,7 @@ const SLOT = {
   recent: "order-5 lg:order-7 lg:col-span-2 min-[1440px]:order-6 min-[1440px]:col-span-4",
   cashFlow: "order-6 lg:order-3 lg:col-span-2 min-[1440px]:order-2 min-[1440px]:col-span-8",
   category: "order-7 lg:order-5 min-[1440px]:col-span-3",
-  goals: "order-8 lg:order-9 min-[1440px]:col-span-6",
-  insights: "order-9 lg:order-8 min-[1440px]:order-8 min-[1440px]:col-span-6",
+  insights: "order-8 lg:col-span-2 min-[1440px]:col-span-12",
 };
 
 /** Dashboard: sắp xếp theo mức độ quan trọng – con số chính → kế hoạch → xu hướng → chi tiết. */
@@ -73,12 +71,10 @@ export default function DashboardPage() {
         <div className={`min-w-0 ${SLOT.category}`}>
           <CategoryBreakdownCard month={month} />
         </div>
-        <div className={`min-w-0 ${SLOT.goals}`}>
-          <GoalsPreviewCard />
-        </div>
         <div className={`min-w-0 ${SLOT.insights}`}>
           <InsightsCard />
         </div>
+        {/* <GoalsPreviewCard /> – tạm thời tháo mục tiêu tiết kiệm khỏi giao diện dashboard (component vẫn giữ trong code). */}
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import { useAdminOverview } from "@/hooks/use-admin";
 import { formatDate } from "@/lib/utils/date";
 import { formatNumber, formatPercent, formatVND } from "@/lib/utils/money";
 import { useI18n } from "@/i18n/provider";
+import { SystemHealthCard } from "@/components/admin/system-health-card";
 
 function Kpi({ label, value, hint, icon: Icon }: { label: string; value: string; hint?: string; icon: typeof Users }) {
   return (
@@ -59,6 +60,8 @@ export default function AdminDashboardPage() {
             <Kpi label={l.newThisMonth} value={formatNumber(data.totals.newUsersThisMonth)} icon={UserPlus} />
             <Kpi label={l.txThisMonth} value={formatNumber(data.totals.transactionsThisMonth)} hint={l.txHint(formatNumber(data.totals.transactions), formatVND(data.totals.volumeThisMonth))} icon={ArrowRightLeft} />
           </div>
+
+          <SystemHealthCard health={data.systemHealth} onRefresh={reload} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="min-w-0">

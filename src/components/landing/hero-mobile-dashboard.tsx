@@ -1,4 +1,4 @@
-import { LayoutDashboard, Plus, Receipt, Target, Wallet } from "lucide-react";
+import { LayoutDashboard, MoreHorizontal, Plus, Receipt, Wallet } from "lucide-react";
 import type { CSSProperties } from "react";
 import { DEMO_FINANCE } from "@/data/demo-finance";
 import type { Messages } from "@/i18n";
@@ -9,8 +9,6 @@ import { RecentTransactions } from "./dashboard/recent-transactions";
 import { SafeToSpendCard } from "./dashboard/safe-to-spend-card";
 import { currentMonthNumber } from "./demo-helpers";
 
-const NAV_ICONS = [LayoutDashboard, Receipt, Wallet, Target];
-
 /**
  * Mockup hero cho điện thoại (< 768px): một màn hình app Campus Coin thật sự – một cột,
  * số dư → có thể chi hôm nay → ngân sách → giao dịch gần đây → thanh điều hướng dưới.
@@ -18,7 +16,13 @@ const NAV_ICONS = [LayoutDashboard, Receipt, Wallet, Target];
  */
 export function HeroMobileDashboard({ t }: { t: Messages }) {
   const d = t.landing.demo;
-  const labels = d.sidebar;
+  // Giống hệt thanh điều hướng dưới của app thật: Tổng quan · Giao dịch · + · Ngân sách · Thêm.
+  const nav = [
+    { Icon: LayoutDashboard, label: d.sidebar[0] },
+    { Icon: Receipt, label: d.sidebar[1] },
+    { Icon: Wallet, label: d.sidebar[2] },
+    { Icon: MoreHorizontal, label: t.nav.more },
+  ];
   return (
     <figure
       className="relative mx-auto w-full max-w-[420px] animate-rise"
@@ -42,8 +46,8 @@ export function HeroMobileDashboard({ t }: { t: Messages }) {
 
         {/* Thanh điều hướng dưới của app, nút + ở giữa như app thật. */}
         <div className="flex items-center border-t border-border bg-surface px-2 pt-2 pb-3" aria-hidden>
-          {NAV_ICONS.slice(0, 2).map((Icon, i) => (
-            <NavIcon key={labels[i]} label={labels[i]} active={i === 0}>
+          {nav.slice(0, 2).map(({ Icon, label }, i) => (
+            <NavIcon key={label} label={label} active={i === 0}>
               <Icon className="size-5" strokeWidth={1.75} />
             </NavIcon>
           ))}
@@ -52,8 +56,8 @@ export function HeroMobileDashboard({ t }: { t: Messages }) {
               <Plus className="size-5" />
             </span>
           </div>
-          {NAV_ICONS.slice(2).map((Icon, i) => (
-            <NavIcon key={labels[i + 2]} label={labels[i + 2]}>
+          {nav.slice(2).map(({ Icon, label }) => (
+            <NavIcon key={label} label={label}>
               <Icon className="size-5" strokeWidth={1.75} />
             </NavIcon>
           ))}

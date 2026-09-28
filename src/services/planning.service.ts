@@ -101,6 +101,7 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
     expectedIncome,
     goalReserved,
     savingsTarget,
+    monthlySavingsGoal: toNumber(user?.monthly_savings_goal),
     budgetRemaining,
     safeToSpend: safe,
     forecast: { ...forecast, variableSpentThisMonth: variableSoFar },

@@ -4,7 +4,6 @@ import { Container } from "@/components/layout/container";
 import { BudgetSection } from "@/components/landing/budget-section";
 import { CashFlowSection } from "@/components/landing/cash-flow-section";
 import { FinalCta } from "@/components/landing/final-cta";
-import { GoalsSection } from "@/components/landing/goals-section";
 import { Hero } from "@/components/landing/hero";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingNavbar } from "@/components/landing/landing-navbar";
@@ -42,7 +41,7 @@ export default async function HomePage() {
         <SafeToSpendSection t={t} />
         <BudgetSection t={t} />
         <CashFlowSection />
-        <GoalsSection t={t} />
+        {/* <GoalsSection t={t} /> – tạm thời tháo khỏi landing page (component vẫn giữ trong code, import lại khi bật). */}
         <PrivacySection t={t} />
         <FinalCta t={t} signedIn={signedIn} />
         <div className="border-t border-border bg-background">

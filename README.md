@@ -3,11 +3,45 @@
 > Quản lý tiền thông minh cho đời sống sinh viên – *Spend smarter. Study easier.*
 > Dự án Techwiz 7 (Aptech) · NextGen BudgetBee · End-to-End Web Solutions
 
-Campus Coin giúp sinh viên ghi thu chi trong vài giây, đặt ngân sách theo danh mục, theo dõi mục tiêu tiết kiệm
-và luôn biết **mỗi ngày còn tiêu được bao nhiêu** đến cuối tháng. Mọi con số (Safe-to-Spend, dự báo, nhận định,
-cảnh báo bất thường) đều tính bằng quy tắc thống kê trên dữ liệu thật của người dùng – có giải thích cách tính, không dùng LLM.
+🔗 **Trang web đang chạy thực tế (Live Production on Vercel):**  
+👉 **[https://campus-coin-psi.vercel.app](https://campus-coin-psi.vercel.app)**
 
-**Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL (Supabase) · Recharts · Zod · Vitest.
+---
+
+## 🌟 Tóm tắt nâng cấp & Bàn giao hệ thống (Pre-Submission Handover)
+
+> **Dành cho thành viên nhóm và AI tiếp quản dự án:** Toàn bộ hệ thống đã được kiểm thử, tối ưu hóa hạ tầng và triển khai thành công 100% trước hạn nộp TechWiz 7 (29/09). Dưới đây là các phần việc đã hoàn thiện từ tối đến giờ:
+
+### 1. Triển khai đám mây (Production Deployment on Vercel)
+- **URL chính thức:** `https://campus-coin-psi.vercel.app`
+- **Cơ sở dữ liệu:** Supabase PostgreSQL Cloud (Singapore `ap-southeast-1`).
+- **Khắc phục kết nối Serverless:** Tích hợp đường truyền **Supabase Connection Pooler IPv4** (`aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true`), giải quyết triệt để vấn đề mạng IPv6 timeout giữa AWS Lambda (Vercel) và Supabase.
+- **Tự động build Prisma:** Cấu hình build script `"build": "prisma generate && next build"` trong `package.json` đảm bảo Vercel luôn sinh mới client trước khi đóng gói.
+
+### 2. Kiến trúc Chống sập & Tự phục hồi CSDL (Database Resilience Engine)
+- **Mã nguồn:** `src/lib/database/resilience.ts` & `tests/services/resilience.test.ts`.
+- **Circuit Breaker Pattern:** Cầu dao tự ngắt bảo vệ máy chủ (State machine: `CLOSED`, `OPEN`, `HALF_OPEN`). Ngắt nhanh (Fail-Fast) khi lỗi liên tiếp chạm ngưỡng 5 lần để tránh treo luồng Node.js và tràn RAM; tự động thăm dò phục hồi sau 10 giây.
+- **Smart Retry:** Thử lại tự động theo hàm mũ kèm jitter (`withSmartRetry`: 200ms -> 500ms -> 1250ms) chống hiện tượng stampede khi mạng chập chờn.
+- **Active Ping:** Đo độ trễ thời gian thực chính xác từng mili-giây qua truy vấn siêu nhẹ `SELECT 1`.
+
+### 3. Nâng cấp Bảng điều khiển Quản trị viên (Admin Portal)
+- **Widget Giám sát Trạng thái Hệ thống (`/admin`):**
+  - Hiển thị trực quan Ping PostgreSQL (ms), Trạng thái Cầu dao Circuit Breaker, Thuật toán Smart Retry, Server Uptime và Bộ nhớ RAM Heap Node.js.
+  - Tích hợp nút **"Kiểm tra lại"** tương tác đo Live Ping trực tiếp.
+- **Xuất danh sách Sinh viên (`/admin/users`):**
+  - Endpoint `GET /api/admin/users/export` tích hợp nút **"Xuất danh sách (CSV)"** trên header trang quản trị.
+  - Hỗ trợ mã hóa **UTF-8 BOM (`\uFEFF`)** chuẩn quốc tế giúp mở trên Microsoft Excel hiển thị tiếng Việt có dấu chuẩn 100% không vỡ font.
+
+### 4. Tinh gọn Giao diện & Trải nghiệm Người dùng (Dashboard & Navigation)
+- **Mức Tiết kiệm hàng tháng:** Được đưa ra ngoài hiển thị trực tiếp ngay trong thẻ **"Số tiền có thể chi"** (Safe-to-Spend) trên Dashboard, kèm modal chỉnh sửa nhanh.
+- **Tháo mục tiêu mua sắm thứ cấp:** Đã ẩn tính năng mục tiêu mua sắm dài hạn khỏi thanh điều hướng và landing page để tập trung tuyệt đối vào giải pháp tài chính cốt lõi (3-tier architecture).
+- **Sitemap trực quan:** Tích hợp khối Sitemap chi tiết ở chân Trang chủ theo đúng yêu cầu mục số 5 trong thông báo nộp bài của Aptech.
+
+### 5. Chất lượng & Kiểm thử (Quality Assurance)
+- **Unit & Integration Tests:** Đạt **148/148 tests passed 100%** (12 test suites, bao gồm kiểm thử tự động Circuit Breaker, Smart Retry, Auth, Tài chính).
+- **TypeScript:** `0 errors` (`tsc --noEmit` exit 0).
+- **Next.js Production Build:** 53/53 trang và API serverless build thành công.
+- **File CSDL nộp bài:** `database.sql` đã sẵn sàng ở thư mục gốc chứa cấu trúc bảng và dữ liệu mẫu (Seed Data).
 
 ---
 

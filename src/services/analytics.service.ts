@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/database/prisma";
 import { generateInsights, type CategoryAmounts, type FinancialInsight } from "@/lib/finance/insights";
 import { computeBudget } from "@/lib/finance/budget";
+import { DAILY_GRANULARITY_MAX_DAYS, daysBetween, groupByWeek } from "@/lib/finance/report";
 import {
   cashFlowBuckets,
   currentMonthKey,
@@ -46,10 +47,15 @@ export async function balanceBefore(userId: string, before: Date): Promise<numbe
   return balance;
 }
 
-export async function totalsInRange(userId: string, range: DateRange) {
+/** Bộ lọc báo cáo: một danh mục (danh mục thu = "nguồn thu" theo SRS). */
+export interface ReportFilter {
+  categoryId?: number;
+}
+
+export async function totalsInRange(userId: string, range: DateRange, filter: ReportFilter = {}) {
   const rows = await prisma.transaction.groupBy({
     by: ["type"],
-    where: { user_id: userId, date: { gte: range.start, lt: range.end } },
+    where: { user_id: userId, date: { gte: range.start, lt: range.end }, ...(filter.categoryId ? { category_id: filter.categoryId } : {}) },
     _sum: { amount: true },
     _count: { _all: true },
     orderBy: { type: "asc" },
@@ -98,12 +104,13 @@ interface KeyedSum {
   total: number;
 }
 
-async function sumsByPeriod(userId: string, range: DateRange, granularity: "day" | "month"): Promise<KeyedSum[]> {
+async function sumsByPeriod(userId: string, range: DateRange, granularity: "day" | "month", filter: ReportFilter = {}): Promise<KeyedSum[]> {
   const format = granularity === "day" ? "YYYY-MM-DD" : "YYYY-MM";
+  const category = filter.categoryId ? Prisma.sql`AND "category_id" = ${filter.categoryId}` : Prisma.empty;
   return prisma.$queryRaw<KeyedSum[]>`
     SELECT to_char("date" + ${VN_SHIFT}, ${format}) AS key, "type", SUM("amount")::float8 AS total
     FROM "transactions"
-    WHERE "user_id" = ${userId} AND "date" >= ${range.start} AND "date" < ${range.end}
+    WHERE "user_id" = ${userId} AND "date" >= ${range.start} AND "date" < ${range.end} ${category}
     GROUP BY 1, 2`;
 }
 
@@ -127,11 +134,12 @@ export async function getCashFlow(userId: string, preset: CashFlowPreset, now = 
 export async function getCategoryBreakdown(
   userId: string,
   range: DateRange,
-  type: TransactionType = "expense"
+  type: TransactionType = "expense",
+  filter: ReportFilter = {}
 ): Promise<CategoryBreakdownItem[]> {
   const rows = await prisma.transaction.groupBy({
     by: ["category_id"],
-    where: { user_id: userId, type, date: { gte: range.start, lt: range.end } },
+    where: { user_id: userId, type, date: { gte: range.start, lt: range.end }, ...(filter.categoryId ? { category_id: filter.categoryId } : {}) },
     _sum: { amount: true },
   });
   if (rows.length === 0) return [];
@@ -278,26 +286,53 @@ function reportRange(period: ReportPeriod, anchor: string): { range: DateRange; 
   };
 }
 
-export async function getReport(userId: string, period: ReportPeriod, anchor: string, now = new Date()): Promise<ReportDTO> {
-  const { range, months } = reportRange(period, anchor);
-  const granularity = period === "month" ? "day" : "month";
+/** Các tháng (YYYY-MM) giao với khoảng ngày tùy chọn. */
+function monthsBetween(from: string, to: string): string[] {
+  const months: string[] = [];
+  for (let key = from.slice(0, 7); key <= to.slice(0, 7); key = shiftMonthKey(key, 1)) months.push(key);
+  return months;
+}
+
+export interface ReportOptions extends ReportFilter {
+  /** Khoảng ngày tùy chọn (YYYY-MM-DD) – ghi đè kỳ tháng/quý/năm. */
+  from?: string;
+  to?: string;
+}
+
+export async function getReport(
+  userId: string,
+  period: ReportPeriod,
+  anchor: string,
+  now = new Date(),
+  options: ReportOptions = {}
+): Promise<ReportDTO> {
+  const custom = options.from && options.to ? { from: options.from, to: options.to } : null;
+  const { range, months } = custom
+    ? { range: { start: dayRange(custom.from).start, end: dayRange(custom.to).end }, months: monthsBetween(custom.from, custom.to) }
+    : reportRange(period, anchor);
+  const customDays = custom ? daysBetween(custom.from, custom.to) : [];
+  const granularity = custom ? (customDays.length <= DAILY_GRANULARITY_MAX_DAYS ? "day" : "month") : period === "month" ? "day" : "month";
   const { year, month } = parseMonthKey(anchor);
   const keys =
     granularity === "day"
-      ? Array.from({ length: daysInMonth(year, month) }, (_, i) => `${anchor}-${String(i + 1).padStart(2, "0")}`)
+      ? custom
+        ? customDays
+        : Array.from({ length: daysInMonth(year, month) }, (_, i) => `${anchor}-${String(i + 1).padStart(2, "0")}`)
       : months;
+  const filter: ReportFilter = { categoryId: options.categoryId };
+  const categoryWhere = options.categoryId ? { category_id: options.categoryId } : {};
 
   const [totals, trendRows, categories, largest, budgets] = await Promise.all([
-    totalsInRange(userId, range),
-    sumsByPeriod(userId, range, granularity),
-    getCategoryBreakdown(userId, range, "expense"),
+    totalsInRange(userId, range, filter),
+    sumsByPeriod(userId, range, granularity, filter),
+    getCategoryBreakdown(userId, range, "expense", filter),
     prisma.transaction.findMany({
-      where: { user_id: userId, type: "expense", date: { gte: range.start, lt: range.end } },
+      where: { user_id: userId, type: "expense", date: { gte: range.start, lt: range.end }, ...categoryWhere },
       include: { category: true },
       orderBy: { amount: "desc" },
       take: LARGEST_TRANSACTIONS,
     }),
-    prisma.budget.findMany({ where: { user_id: userId, month: { in: months } }, include: { category: true } }),
+    prisma.budget.findMany({ where: { user_id: userId, month: { in: months }, ...categoryWhere }, include: { category: true } }),
   ]);
 
   const spentRows = budgets.length
@@ -319,9 +354,13 @@ export async function getReport(userId: string, period: ReportPeriod, anchor: st
   const effectiveEnd = Math.min(range.end.getTime(), endOfToday(now).getTime());
   const days = Math.max(1, Math.round((effectiveEnd - range.start.getTime()) / DAY_MS));
 
+  const trend = toPoints(keys, trendRows);
+
   return {
     period,
     anchor,
+    custom: !!custom,
+    categoryId: options.categoryId ?? null,
     from: range.start.toISOString(),
     to: new Date(range.end.getTime() - 1).toISOString(),
     totals: {
@@ -331,7 +370,9 @@ export async function getReport(userId: string, period: ReportPeriod, anchor: st
       transactionCount: totals.count,
       averageDailySpend: effectiveEnd > range.start.getTime() ? Math.round(totals.expense / days) : 0,
     },
-    trend: toPoints(keys, trendRows),
+    trend,
+    // Tổng kết theo tuần (SRS: "daily and weekly spending summaries") – chỉ khi báo cáo theo ngày.
+    weekly: granularity === "day" ? groupByWeek(trend) : [],
     categories,
     largestTransactions: largest.map(toTransactionDTO),
     budgetPerformance: [...perf.values()]

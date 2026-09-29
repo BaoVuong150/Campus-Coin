@@ -6,7 +6,7 @@ import { categoryName, periodLabel } from "@/i18n/format";
 import { formatDate } from "@/lib/utils/date";
 import { formatVND } from "@/lib/utils/money";
 import type { ReportPeriod } from "@/types/finance";
-import { getReport } from "./analytics.service";
+import { getReport, type ReportOptions } from "./analytics.service";
 
 const TOP_CATEGORIES = 3;
 
@@ -14,12 +14,19 @@ const TOP_CATEGORIES = 3;
  * Gửi tóm tắt báo cáo kỳ đang xem tới email của CHÍNH người dùng (SRS 3.10) – không cho nhập địa chỉ khác
  * để không thể dùng làm công cụ gửi thư rác. Số liệu lấy từ cùng báo cáo phía server như trên màn hình.
  */
-export async function emailReport(userId: string, period: ReportPeriod, anchor: string, t: Messages, baseUrl: string): Promise<"sent" | "saved_locally"> {
+export async function emailReport(
+  userId: string,
+  period: ReportPeriod,
+  anchor: string,
+  t: Messages,
+  baseUrl: string,
+  options: ReportOptions = {}
+): Promise<"sent" | "saved_locally"> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
   if (!user) throw Errors.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng.");
-  const report = await getReport(userId, period, anchor);
+  const report = await getReport(userId, period, anchor, new Date(), options);
   const e = t.reports.email;
-  const label = periodLabel(t, period, anchor);
+  const label = report.custom ? t.reports.filters.custom(formatDate(report.from), formatDate(report.to)) : periodLabel(t, period, anchor);
   const net = report.totals.net;
 
   const lines = [

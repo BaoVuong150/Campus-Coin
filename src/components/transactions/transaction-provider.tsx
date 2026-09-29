@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { useSessionUser } from "@/components/layout/session-context";
+import { useRecentTransactions } from "@/hooks/use-recent-transactions";
 import type { TransactionDTO } from "@/types/finance";
 import { TransactionDetailSheet } from "./transaction-detail-sheet";
 import { TransactionFormDialog, type TransactionFormDefaults } from "./transaction-form-dialog";
@@ -21,6 +23,8 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     tx: null,
   });
   const [detail, setDetail] = useState<{ tx: TransactionDTO; unusual: boolean } | null>(null);
+  const user = useSessionUser();
+  const { record } = useRecentTransactions(user.id);
 
   // key mới mỗi lần mở → form được mount lại với state sạch.
   const openCreate = useCallback(
@@ -28,12 +32,16 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     []
   );
   const openEdit = useCallback((tx: TransactionDTO) => {
+    record(tx, "edited");
     setDetail(null);
     setForm((f) => ({ open: true, key: f.key + 1, tx }));
-  }, []);
+  }, [record]);
   const openDetail = useCallback(
-    (tx: TransactionDTO, options?: { unusual?: boolean }) => setDetail({ tx, unusual: !!options?.unusual }),
-    []
+    (tx: TransactionDTO, options?: { unusual?: boolean }) => {
+      record(tx, "viewed");
+      setDetail({ tx, unusual: !!options?.unusual });
+    },
+    [record]
   );
 
   const value = useMemo(() => ({ openCreate, openEdit, openDetail }), [openCreate, openEdit, openDetail]);

@@ -46,7 +46,7 @@ export function StatusScreen({ code, eyebrow, title, description, homeLabel, act
           </p>
           <h1 className="mt-4 text-[clamp(26px,7vw,32px)] leading-tight font-semibold tracking-tight text-balance text-foreground">{title}</h1>
           <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-pretty text-muted">{description}</p>
-          <div className="mt-8 grid gap-2 min-[480px]:flex min-[480px]:justify-center min-[480px]:gap-3">{actions}</div>
+          <div className="mt-8 grid gap-2 phablet:flex phablet:justify-center phablet:gap-3">{actions}</div>
         </div>
       </main>
     </div>

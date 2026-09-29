@@ -29,16 +29,17 @@ import { useI18n } from "@/i18n/provider";
  *                                          + gần đây 4 | mẹo 4 + nhận định 4 + mục tiêu 4
  */
 const SLOT = {
-  summary: "order-1 lg:col-span-2 min-[1440px]:col-span-12",
-  planning: "order-2 lg:col-span-2 min-[1440px]:order-3 min-[1440px]:col-span-4",
+  summary: "order-1 lg:col-span-2 desk:col-span-12",
+  planning: "order-2 lg:col-span-2 desk:order-3 desk:col-span-4",
   quickAdd: "order-3 lg:hidden",
-  budget: "order-4 min-[1440px]:col-span-5",
-  tips: "order-5 lg:order-7 min-[1440px]:col-span-4",
-  recent: "order-6 lg:col-span-2 min-[1440px]:col-span-4",
-  cashFlow: "order-7 lg:order-3 lg:col-span-2 min-[1440px]:order-2 min-[1440px]:col-span-8",
-  category: "order-8 lg:order-5 min-[1440px]:col-span-3",
-  goals: "order-9 lg:col-span-2 min-[1440px]:col-span-4",
-  insights: "order-10 lg:order-8 min-[1440px]:col-span-4",
+  budget: "order-4 desk:col-span-5",
+  tips: "order-5 lg:order-7 desk:col-span-4",
+  recent: "order-6 lg:col-span-2 desk:col-span-4",
+  // Desktop lớn: thẻ dòng tiền cao bằng cột kế hoạch bên cạnh (không để khoảng trống bên dưới).
+  cashFlow: "order-7 lg:order-3 lg:col-span-2 desk:order-2 desk:col-span-8 desk:*:h-full",
+  category: "order-8 lg:order-5 desk:col-span-3",
+  goals: "order-9 lg:col-span-2 desk:col-span-4",
+  insights: "order-10 lg:order-8 desk:col-span-4",
 };
 
 /** Dashboard: sắp xếp theo mức độ quan trọng – con số chính → kế hoạch → xu hướng → chi tiết. */
@@ -53,7 +54,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader title={`${greeting(t)}, ${firstName}`} description={t.dashboard.subtitle} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:gap-5 min-[1440px]:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:gap-5 desk:grid-cols-12">
         <div className={`min-w-0 ${SLOT.summary}`}>
           <SummaryCards summary={summary} />
         </div>

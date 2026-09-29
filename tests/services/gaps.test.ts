@@ -8,12 +8,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const db = vi.hoisted(() => ({
   savingTip: { updateMany: vi.fn(), count: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
   insight: { findMany: vi.fn(), updateMany: vi.fn() },
+  transactionAudit: { findMany: vi.fn() },
 }));
 vi.mock("@/lib/database/prisma", () => ({ prisma: db }));
 
 import { ApiError } from "@/lib/api/errors";
 import { generateSavingTips, type TipInput } from "@/lib/finance/tips";
 import { deleteSystemTip, listInsightHistory, setInsightPinned, setTipState } from "@/services/tips.service";
+import { getTransactionHistory } from "@/services/transaction.service";
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
 
@@ -147,6 +149,21 @@ describe("lịch sử nhận định", () => {
     db.insight.updateMany.mockResolvedValue({ count: 0 });
     await expectApiError(setInsightPinned(USER_A, 5, true), "NOT_FOUND");
     expect(db.insight.updateMany.mock.calls[0][0].where).toEqual({ id: 5, user_id: USER_A });
+  });
+});
+
+describe("lịch sử thay đổi giao dịch", () => {
+  it("chỉ đọc nhật ký của chính user, mới nhất trước, chuyển snapshot sang DTO", async () => {
+    db.transactionAudit.findMany.mockResolvedValue([
+      { id: 2, action: "update", created_at: new Date("2026-09-10T03:00:00Z"), snapshot: { amount: 50000, type: "expense", description: "Cơm", category_id: 6, date: "2026-09-09T00:00:00.000Z" } },
+      { id: 1, action: "create", created_at: new Date("2026-09-09T03:00:00Z"), snapshot: { amount: 45000, type: "expense", description: "Cơm", category_id: 6, date: "2026-09-09T00:00:00.000Z" } },
+    ]);
+    const history = await getTransactionHistory(USER_A, "tx-1");
+    expect(db.transactionAudit.findMany.mock.calls[0][0]).toMatchObject({ where: { transaction_id: "tx-1", user_id: USER_A }, orderBy: { created_at: "desc" } });
+    expect(history.map((h) => [h.action, h.snapshot.amount, h.snapshot.categoryId])).toEqual([
+      ["update", 50000, 6],
+      ["create", 45000, 6],
+    ]);
   });
 });
 

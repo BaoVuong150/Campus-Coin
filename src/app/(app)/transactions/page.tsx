@@ -6,6 +6,7 @@ import { FileUp, Plus, Receipt, SearchX } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { PageHeader } from "@/components/layout/page-header";
 import { CsvImportDialog } from "@/components/transactions/csv-import-dialog";
+import { RecentTransactionsStrip } from "@/components/transactions/recent-transactions-strip";
 import { TransactionFiltersBar } from "@/components/transactions/transaction-filters";
 import { TransactionListItem } from "@/components/transactions/transaction-list-item";
 import { useTransactionUI } from "@/components/transactions/transaction-provider";
@@ -108,6 +109,8 @@ function TransactionsView() {
           </>
         }
       />
+
+      <RecentTransactionsStrip />
 
       <TransactionFiltersBar
         key={resetKey}

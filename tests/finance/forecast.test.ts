@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastMonthEnd } from "@/lib/finance/forecast";
+import { forecastMonthEnd, forecastNextMonth } from "@/lib/finance/forecast";
 
 const base = {
   currentBalance: 3_800_000,
@@ -49,5 +49,24 @@ describe("forecastMonthEnd", () => {
     const r = forecastMonthEnd({ ...base, daysAfterToday: 0, remainingFixedExpenses: 0 });
     expect(r.projectedVariableSpend).toBe(0);
     expect(r.projectedEndBalance).toBe(base.currentBalance);
+  });
+});
+
+describe("dự báo tháng tới", () => {
+  it("chưa đủ dữ liệu chi tiêu → không dự báo", () => {
+    expect(forecastNextMonth({ fixedIncome: 4_500_000, fixedExpenses: 2_000_000, dailyVariable: null, daysInMonth: 31 })).toBeNull();
+  });
+
+  it("thu cố định − chi cố định − tốc độ chi linh hoạt × số ngày", () => {
+    expect(forecastNextMonth({ fixedIncome: 4_500_000, fixedExpenses: 2_299_000, dailyVariable: 60_000, daysInMonth: 31 })).toEqual({
+      expectedIncome: 4_500_000,
+      fixedExpenses: 2_299_000,
+      variableExpenses: 1_860_000,
+      projectedNet: 341_000,
+    });
+  });
+
+  it("chi vượt thu → số dư dự kiến âm (cảnh báo thiếu tiền)", () => {
+    expect(forecastNextMonth({ fixedIncome: 0, fixedExpenses: 1_800_000, dailyVariable: 50_000, daysInMonth: 30 })?.projectedNet).toBe(-3_300_000);
   });
 });

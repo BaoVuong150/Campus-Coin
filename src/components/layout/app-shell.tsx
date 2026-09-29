@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Plus, Search } from "lucide-react";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { TransactionProvider, useTransactionUI } from "@/components/transactions/transaction-provider";
 import { ADMIN_NAV, FOOTER_NAV, isActivePath, MAIN_NAV, type NavItem } from "@/constants/navigation";
@@ -14,11 +15,12 @@ import { useI18n } from "@/i18n/provider";
 import { apiFetch } from "@/lib/api-client";
 import type { SessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils/cn";
+import { Breadcrumbs } from "./breadcrumbs";
 import { GlobalSearch } from "./global-search";
 import { LanguageToggle } from "./language-switcher";
 import { LogoMark } from "./logo";
 import { NotificationBell } from "./notification-bell";
-import { SessionProvider } from "./session-context";
+import { SessionProvider, useSessionUser } from "./session-context";
 import { Sidebar, SidebarContent } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
@@ -170,6 +172,7 @@ function useBackgroundSync() {
 
 function ShellFrame({ children }: { children: ReactNode }) {
   const { t } = useI18n();
+  const user = useSessionUser();
   useBackgroundSync();
   const [collapsedFlag, setCollapsedFlag] = useLocalStorage(COLLAPSE_KEY, "0");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -186,12 +189,15 @@ function ShellFrame({ children }: { children: ReactNode }) {
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} unread={unread} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onOpenMenu={() => setDrawerOpen(true)} menuOpen={drawerOpen} />
-        {/* Mobile: chừa chỗ cho thanh điều hướng dưới + safe-area để nội dung cuối trang không bị che. */}
-        <main id="main" className="app-page flex-1 pt-5 pb-[calc(var(--mobile-nav-height)_+_env(safe-area-inset-bottom)_+_20px)] md:pt-6 md:pb-10 xl:pt-8">
+        {/* Chừa chỗ cho thanh điều hướng dưới (mobile), safe-area và nút trợ lý để nội dung cuối trang không bị che. */}
+        <main id="main" className="app-page flex-1 pt-5 pb-[calc(var(--mobile-nav-height)_+_env(safe-area-inset-bottom)_+_76px)] md:pt-6 md:pb-24 xl:pt-8">
+          <Breadcrumbs />
           {children}
         </main>
       </div>
       <MobileBottomNav />
+      {/* Trợ lý hỗ trợ chỉ dành cho sinh viên (trả lời bằng dữ liệu tài chính cá nhân). */}
+      {user.role === "student" && <AssistantWidget />}
     </div>
   );
 }

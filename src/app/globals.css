@@ -69,11 +69,15 @@
 
 /*
  * Breakpoint dùng chung (thay vì mỗi component tự đặt số riêng):
- *   xs 390 · sm 640 · md 768 (tablet – có rail, không còn bottom nav) · lg 1024 (laptop)
- *   xl 1280 (desktop – sidebar đầy đủ) · 2xl 1536 · 3xl 1600 (màn hình lớn)
+ *   xs 390 · phablet 480 · sm 640 · md 768 (tablet – có rail, không còn bottom nav) · lg 1024 (laptop)
+ *   xl 1280 (desktop – sidebar đầy đủ) · desk 1440 · 2xl 1536 · 3xl 1600 (màn hình lớn)
+ * Luôn dùng breakpoint có tên: Tailwind xếp media query dạng tùy ý (min-[1440px]) SAU mọi breakpoint có tên,
+ * nên lg: sẽ ghi đè min-[1440px]: và phá bố cục desktop lớn.
  */
 @theme {
   --breakpoint-xs: 24.375rem;
+  --breakpoint-phablet: 30rem;
+  --breakpoint-desk: 90rem;
   --breakpoint-3xl: 100rem;
 }
 

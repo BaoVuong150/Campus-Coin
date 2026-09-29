@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NotFound() {
   const [t, user] = await Promise.all([getServerMessages(), getSession()]);
   const c = t.common;
-  const action = "w-full min-[480px]:w-auto";
+  const action = "w-full phablet:w-auto";
 
   return (
     <StatusScreen

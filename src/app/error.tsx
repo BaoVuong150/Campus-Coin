@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n/provider";
 export default function PublicError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const { t } = useI18n();
   const c = t.common;
-  const action = "w-full min-[480px]:w-auto";
+  const action = "w-full phablet:w-auto";
   return (
     <StatusScreen
       code="500"

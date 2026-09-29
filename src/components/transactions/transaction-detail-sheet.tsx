@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Pencil, Repeat, Trash2 } from "lucide-react";
+import { AlertTriangle, History, Pencil, Repeat, Trash2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Amount } from "@/components/common/amount";
 import { CategoryIcon } from "@/components/common/category-icon";
@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/context/ToastContext";
+import { useApi } from "@/hooks/use-api";
+import { useCategories } from "@/hooks/use-categories";
 import { useTransactionMutations } from "@/hooks/use-transactions";
 import { useI18n } from "@/i18n/provider";
 import { formatDate, formatDateTime } from "@/lib/utils/date";
-import type { TransactionDTO } from "@/types/finance";
+import type { TransactionDTO, TransactionHistoryEntry } from "@/types/finance";
 
 interface Props {
   transaction: TransactionDTO | null;
@@ -108,8 +110,46 @@ export function TransactionDetailSheet({ transaction, unusual, onClose, onEdit }
             <Row label={d.createdAt}>{formatDateTime(transaction.createdAt)}</Row>
             {transaction.updatedAt !== transaction.createdAt && <Row label={d.updatedAt}>{formatDateTime(transaction.updatedAt)}</Row>}
           </dl>
+          <TransactionHistory id={transaction.id} />
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** Nhật ký thay đổi (mới nhất trước): mỗi lần tạo/sửa ghi lại số tiền, mô tả, danh mục, ngày tại thời điểm đó. */
+function TransactionHistory({ id }: { id: string }) {
+  const { t, fmt } = useI18n();
+  const h = t.transactions.detail.history;
+  const { data } = useApi<TransactionHistoryEntry[]>(`/api/transactions/${id}/history`);
+  const { data: categories } = useCategories();
+  if (!data || data.length === 0) return null;
+  const categoryName = (categoryId: number) => {
+    const found = categories?.find((c) => c.id === categoryId);
+    return found ? fmt.category(found.name) : "—";
+  };
+
+  return (
+    <section className="mt-5 border-t border-border pt-4" aria-labelledby={`history-${id}`}>
+      <h3 id={`history-${id}`} className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-muted">
+        <History className="size-3.5" aria-hidden /> {h.title}
+      </h3>
+      <ol className="space-y-3">
+        {data.map((entry) => (
+          <li key={entry.id} className="rounded-md border border-border px-3 py-2.5 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <Badge tone={entry.action === "delete" ? "danger" : entry.action === "create" ? "success" : "neutral"}>{h.actions[entry.action]}</Badge>
+              <span className="text-[12px] text-muted">{formatDateTime(entry.at)}</span>
+            </div>
+            <p className="mt-1.5 text-foreground">
+              {entry.snapshot.description} · <Amount value={entry.snapshot.amount} type={entry.snapshot.type} />
+            </p>
+            <p className="text-[12px] text-muted">
+              {categoryName(entry.snapshot.categoryId)} · {formatDate(entry.snapshot.date)}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

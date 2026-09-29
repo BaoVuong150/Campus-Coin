@@ -74,3 +74,34 @@ export function forecastConfidence(dataDays: number, paceSource: ForecastResult[
   if (dataDays < FORECAST_CONFIDENCE_DAYS.high) return "medium";
   return "high";
 }
+
+export interface NextMonthInput {
+  /** Thu nhập cố định dự kiến trong tháng tới (khoản thu định kỳ, hoặc trợ cấp cơ bản nếu chưa khai báo định kỳ). */
+  fixedIncome: number;
+  /** Chi phí cố định/định kỳ đến hạn trong tháng tới. */
+  fixedExpenses: number;
+  /** Chi tiêu linh hoạt trung bình/ngày gần đây (null nếu chưa đủ dữ liệu). */
+  dailyVariable: number | null;
+  daysInMonth: number;
+}
+
+export interface NextMonthForecast {
+  expectedIncome: number;
+  fixedExpenses: number;
+  variableExpenses: number;
+  /** Thu dự kiến − chi dự kiến; âm nghĩa là tháng tới có thể thiếu tiền. */
+  projectedNet: number;
+}
+
+/**
+ * Dự báo tháng tới theo xu hướng lịch sử (SRS – "forecasts for the upcoming month"):
+ * khoản cố định lấy đúng theo lịch định kỳ, chi linh hoạt = tốc độ chi/ngày gần đây × số ngày của tháng.
+ * Thu nhập không đều (làm thêm, học bổng, quà) không được cộng để dự báo không lạc quan quá mức.
+ */
+export function forecastNextMonth(input: NextMonthInput): NextMonthForecast | null {
+  if (input.dailyVariable === null) return null;
+  const variableExpenses = roundMoney(input.dailyVariable * input.daysInMonth);
+  const expectedIncome = roundMoney(input.fixedIncome);
+  const fixedExpenses = roundMoney(input.fixedExpenses);
+  return { expectedIncome, fixedExpenses, variableExpenses, projectedNet: roundMoney(expectedIncome - fixedExpenses - variableExpenses) };
+}

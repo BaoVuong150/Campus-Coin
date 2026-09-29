@@ -6,6 +6,7 @@ import type {
   TransactionType,
 } from "@/constants/finance";
 import type { BudgetHealth } from "@/lib/finance/budget";
+import type { NextMonthForecast } from "@/lib/finance/forecast";
 import type { FinancialInsight } from "@/lib/finance/insights";
 import type { TipTemplate } from "@/i18n/templates";
 
@@ -134,6 +135,8 @@ export interface PlanningDTO {
     confidence: "insufficient" | "low" | "medium" | "high";
   };
   upcomingFixed: { id: string; name: string; amount: number; date: string; type: TransactionType }[];
+  /** Dự báo tháng kế tiếp; null khi chưa đủ dữ liệu chi tiêu (dưới 7 ngày). */
+  nextMonth: ({ month: string; basisDays: number } & NextMonthForecast) | null;
 }
 
 export interface RecurringDTO {
@@ -200,11 +203,16 @@ export interface ReportDTO {
   period: ReportPeriod;
   /** Tháng đại diện của kỳ ("YYYY-MM"); client dựng nhãn kỳ theo ngôn ngữ. */
   anchor: string;
+  /** true khi báo cáo theo khoảng ngày tùy chọn (from/to) thay vì tháng/quý/năm. */
+  custom: boolean;
+  /** Danh mục đang lọc (null = tất cả). */
+  categoryId: number | null;
   /** ISO – ngày đầu và ngày cuối của kỳ. */
   from: string;
   to: string;
   totals: { income: number; expense: number; net: number; transactionCount: number; averageDailySpend: number };
   trend: CashFlowPoint[];
+  weekly: { start: string; end: string; income: number; expense: number }[];
   categories: CategoryBreakdownItem[];
   largestTransactions: TransactionDTO[];
   budgetPerformance: { categoryName: string; limit: number; spent: number; percentage: number }[];
@@ -247,4 +255,12 @@ export interface InsightHistoryDTO {
   tips: { template: TipTemplate; params: Record<string, unknown>; potentialSaving: number }[] | null;
   legacySummary: string | null;
   legacyTip: string | null;
+}
+
+/** Một lần tạo/sửa/xóa giao dịch (nhật ký kiểm toán); snapshot là trạng thái ngay sau thao tác. */
+export interface TransactionHistoryEntry {
+  id: number;
+  action: "create" | "update" | "delete";
+  at: string;
+  snapshot: { amount: number; type: TransactionType; description: string; categoryId: number; date: string };
 }

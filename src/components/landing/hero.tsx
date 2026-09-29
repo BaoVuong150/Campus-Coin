@@ -52,13 +52,13 @@ export function Hero({ t, locale, signedIn }: { t: Messages; locale: Locale; sig
             {h.subtitle}
           </p>
           {/* < 480px: hai nút xếp dọc, full chiều rộng, dễ bấm bằng ngón cái. */}
-          <div className="mt-8 grid animate-rise gap-2 min-[480px]:flex min-[480px]:flex-wrap min-[480px]:items-center min-[480px]:gap-x-6 min-[480px]:gap-y-3" style={rise(220, 6)}>
-            <Link href={signedIn ? "/dashboard" : "/register"} className={buttonClasses("primary", "xl", "w-full min-[480px]:w-auto")}>
+          <div className="mt-8 grid animate-rise gap-2 phablet:flex phablet:flex-wrap phablet:items-center phablet:gap-x-6 phablet:gap-y-3" style={rise(220, 6)}>
+            <Link href={signedIn ? "/dashboard" : "/register"} className={buttonClasses("primary", "xl", "w-full phablet:w-auto")}>
               {signedIn ? t.landing.nav.openApp : h.primary}
             </Link>
             <a
               href="#how"
-              className="group inline-flex h-12 items-center justify-center gap-1.5 rounded-[11px] text-[15px] font-medium text-foreground transition-colors hover:text-primary-ink max-[480px]:border max-[480px]:border-border min-[480px]:h-11"
+              className="group inline-flex h-12 items-center justify-center gap-1.5 rounded-[11px] text-[15px] font-medium text-foreground transition-colors hover:text-primary-ink max-phablet:border max-phablet:border-border phablet:h-11"
             >
               {h.secondary}
               <ArrowRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />

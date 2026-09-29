@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/database/prisma";
-import { forecastConfidence, forecastMonthEnd } from "@/lib/finance/forecast";
+import { forecastConfidence, forecastMonthEnd, forecastNextMonth } from "@/lib/finance/forecast";
 import { calculateSafeToSpend } from "@/lib/finance/safe-to-spend";
 import { sampleDays, upcomingAllowance } from "@/lib/finance/sampling";
-import { currentMonthKey, monthRange, remainingDaysInMonth, shiftMonthKey } from "@/lib/utils/date";
+import { currentMonthKey, daysInMonth, monthRange, parseMonthKey, remainingDaysInMonth, shiftMonthKey } from "@/lib/utils/date";
 import type { PlanningDTO } from "@/types/finance";
 import { balanceBefore, endOfToday } from "./analytics.service";
 import { getBudgetOverview } from "./budget.service";
@@ -36,6 +36,17 @@ async function historicalDailyVariable(userId: string, month: string, firstActiv
   return (await variableExpense(userId, start, end)) / days;
 }
 
+/** Số tháng gần nhất (tính cả tháng hiện tại) dùng làm xu hướng chi linh hoạt cho dự báo tháng tới. */
+const NEXT_MONTH_TREND_MONTHS = 3;
+
+/** Chi linh hoạt/ngày trong ~3 tháng gần nhất đến hết hôm nay; null khi chưa đủ 1 tuần dữ liệu. */
+async function recentDailyVariable(userId: string, month: string, todayEnd: Date, firstActivity: Date | null) {
+  const start = monthRange(shiftMonthKey(month, -(NEXT_MONTH_TREND_MONTHS - 1))).start;
+  const days = sampleDays(start, todayEnd, firstActivity);
+  if (days < MIN_HISTORY_SAMPLE_DAYS) return { daily: null, days };
+  return { daily: (await variableExpense(userId, start, todayEnd)) / days, days };
+}
+
 async function goalDepositsThisMonth(userId: string, month: string): Promise<number> {
   const { start, end } = monthRange(month);
   const agg = await prisma.goalContribution.aggregate({
@@ -53,7 +64,8 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
   const first = await prisma.transaction.aggregate({ where: { user_id: userId }, _min: { date: true } });
   const firstActivity = first._min.date;
 
-  const [balance, recurringUpcoming, goalReserved, budget, user, variableSoFar, history, deposits, recurringIncomeCount] =
+  const next = shiftMonthKey(month, 1);
+  const [balance, recurringUpcoming, goalReserved, budget, user, variableSoFar, history, deposits, recurringIncomeCount, nextRecurring, recent] =
     await Promise.all([
       balanceBefore(userId, todayEnd),
       upcomingInMonth(userId, month, now),
@@ -67,6 +79,8 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
       historicalDailyVariable(userId, month, firstActivity),
       goalDepositsThisMonth(userId, month),
       prisma.recurringTransaction.count({ where: { user_id: userId, status: "active", type: "income" } }),
+      upcomingInMonth(userId, next, now),
+      recentDailyVariable(userId, month, todayEnd, firstActivity),
     ]);
 
   // Trợ cấp cơ bản trong Cài đặt được tính là thu nhập sắp nhận khi user chưa khai báo khoản thu định kỳ.
@@ -111,6 +125,16 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
     historicalDailyVariable: history,
   });
 
+  // Tháng tới: lịch định kỳ của tháng đó + trợ cấp cơ bản (nếu chưa khai báo khoản thu định kỳ) + xu hướng chi linh hoạt.
+  const { year: nextYear, month: nextMonthNumber } = parseMonthKey(next);
+  const baselineAllowance = recurringIncomeCount === 0 ? toNumber(user?.monthly_allowance_baseline) : 0;
+  const nextForecast = forecastNextMonth({
+    fixedIncome: nextRecurring.filter((u) => u.type === "income").reduce((a, u) => a + u.amount, 0) + baselineAllowance,
+    fixedExpenses: nextRecurring.filter((u) => u.type === "expense").reduce((a, u) => a + u.amount, 0),
+    dailyVariable: recent.daily,
+    daysInMonth: daysInMonth(nextYear, nextMonthNumber),
+  });
+
   // Tổng số ngày có dữ liệu (từ giao dịch đầu tiên tới hôm nay) – hiển thị "Dựa trên N ngày dữ liệu".
   const dataDays = sampleDays(new Date(0), todayEnd, firstActivity);
 
@@ -139,5 +163,6 @@ export async function getPlanning(userId: string, now = new Date()): Promise<Pla
       date: u.date.toISOString(),
       type: u.type,
     })),
+    nextMonth: nextForecast ? { month: next, basisDays: recent.days, ...nextForecast } : null,
   };
 }

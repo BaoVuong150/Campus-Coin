@@ -3,7 +3,7 @@ import { Globe, LayoutDashboard, ShieldCheck } from "lucide-react";
 import type { Messages } from "@/i18n";
 
 const GROUPS: { key: keyof Messages["sitemap"]["groups"]; icon: typeof Globe; hrefs: string[] }[] = [
-  { key: "public", icon: Globe, hrefs: ["/", "/login", "/register", "/admin/login"] },
+  { key: "public", icon: Globe, hrefs: ["/", "/login", "/register", "/forgot-password", "/admin/login"] },
   {
     key: "app",
     icon: LayoutDashboard,

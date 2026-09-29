@@ -94,14 +94,16 @@ npm run dev                 # http://localhost:3000
 | Khu vực | Nội dung |
 | --- | --- |
 | **Tổng quan** | Số dư, thu/chi tháng (so với tháng trước), ngân sách còn lại, *Số tiền có thể chi*, *Dự kiến cuối tháng*, dòng tiền 7 ngày → 12 tháng, chi tiêu theo danh mục (click để lọc giao dịch), ngân sách, giao dịch gần đây, nhận định, mục tiêu; **mẹo tiết kiệm cá nhân hóa** xếp theo số tiền có thể tiết kiệm (ghim / bỏ qua) |
-| **Giao dịch** | Tìm kiếm (debounce), lọc thu/chi, danh mục, khoảng ngày, khoảng tiền; sắp xếp; phân trang phía server; bảng (desktop) / thẻ (mobile); chi tiết, sửa, xóa có xác nhận; lưu vết kiểm toán |
+| **Giao dịch** | Tìm kiếm (debounce), lọc thu/chi, danh mục, khoảng ngày, khoảng tiền; sắp xếp; phân trang phía server; bảng (desktop) / thẻ (mobile); chi tiết, sửa, xóa có xác nhận; **lịch sử thay đổi** (tạo/sửa/xóa) trong chi tiết giao dịch; hàng **Xem gần đây** (giao dịch vừa xem/sửa, nhớ qua các phiên) |
 | **Thêm giao dịch** | Toggle thu/chi, ô số tiền lớn, *Gợi ý danh mục* theo mô tả (user luôn đổi được), chọn danh mục bằng icon, lặp lại định kỳ; cảnh báo trùng lặp và khoản chi bất thường trước khi lưu |
 | **Ngân sách** | Chọn tháng, tổng quan, thêm/sửa/xóa, sao chép từ tháng trước; cảnh báo ≥ 80% và khi vượt |
 | **Định kỳ & chi phí cố định** | Tiền nhà, Netflix, trợ cấp… trạng thái Đang chạy / Tạm dừng / Đã hủy; scheduler tự ghi giao dịch khi đến hạn, **idempotent** |
 | **Mục tiêu tiết kiệm** | Nạp / rút tiền (không rút quá số đã để dành), sửa, hoàn thành (tự hoàn thành khi đủ tiền), lưu trữ / khôi phục, số ngày còn lại, số tiền cần để dành mỗi tháng; mục tiêu đã có lịch sử không xóa được |
-| **Báo cáo** | Tháng / quý / năm: tổng kết, xu hướng, danh mục, top chi tiêu, giao dịch lớn nhất, hiệu quả ngân sách; **xuất PDF** (font tiếng Việt, biểu đồ vector); **gửi tóm tắt qua email** tới chính tài khoản (chỉ hiện khi đã cấu hình Resend); **lịch sử nhận định** các tháng trước, đánh dấu để xem lại |
+| **Báo cáo** | Tháng / quý / năm hoặc **khoảng ngày tùy chọn**, **lọc theo danh mục / nguồn thu**: tổng kết, xu hướng theo ngày, **tổng kết theo tuần**, danh mục, top chi tiêu, giao dịch lớn nhất, hiệu quả ngân sách; **xuất PDF hoặc ảnh PNG** (font tiếng Việt, cùng bố cục); **gửi tóm tắt qua email** tới chính tài khoản (chỉ hiện khi đã cấu hình Resend); **lịch sử nhận định** các tháng trước, đánh dấu để xem lại |
 | **Nhập CSV** | Tải file mẫu; nhận cột tiếng Việt/tiếng Anh, ngày `YYYY-MM-DD`/`DD/MM/YYYY`, số tiền `45.000`/`-45000`; xem trước, gợi ý danh mục hàng loạt, sửa từng dòng, bỏ qua giao dịch trùng; tối đa 500 dòng |
 | **Campus Points** | Điểm thưởng nội bộ (không phải tiền, không quy đổi): +10 giao dịch đầu tiên, +2 mỗi ngày có ghi chép, +5 để dành cho mục tiêu, +10 giữ ngân sách trọn tuần, +25 đạt tiết kiệm tháng, +25 hoàn thành mục tiêu; cấp độ, chuỗi ngày, thành tựu |
+| **Trợ lý hỗ trợ** | Nút trợ lý nổi (sinh viên): trả lời số dư, số tiền có thể chi mỗi ngày, danh mục chi nhiều nhất, tình trạng ngân sách từ dữ liệu thật; hướng dẫn dùng app kèm link. Nhận diện ý định bằng từ khóa – không gửi dữ liệu ra dịch vụ ngoài |
+| **Điều hướng** | Breadcrumbs trên mọi trang trong app; sơ đồ trang (sitemap) trực quan trên trang chủ |
 | **Song ngữ** | Tiếng Việt / English – nút VI/EN trên header, trang đăng nhập, landing và trong Cài đặt |
 | **Thông báo** | Ngân sách, định kỳ, mục tiêu, chi tiêu bất thường, hệ thống; chống spam bằng `dedupe_key`; đánh dấu đã đọc |
 | **Cài đặt** | Hồ sơ, giao diện sáng/tối + cỡ chữ, ngôn ngữ, thiết lập tài chính (trợ cấp, ngày nhận, tiết kiệm tháng – ảnh hưởng trực tiếp Số tiền có thể chi/dự báo), danh mục cá nhân (thêm/sửa/xóa), tùy chọn thông báo, đổi mật khẩu, đăng xuất mọi thiết bị khác. Tiền tệ (VND) và múi giờ (Việt Nam) cố định – chỉ hiển thị |
@@ -210,6 +212,15 @@ Hiển thị `dd/MM/yyyy`, tiền `1.250.000 ₫`. Không hard-code tháng/năm 
 ---
 
 ## 5. Nhật ký thay đổi
+
+### Rà soát hồ sơ nộp bài (TechWiz)
+
+- Bổ sung các yêu cầu SRS còn thiếu: lọc báo cáo theo khoảng ngày / danh mục / nguồn thu, tổng kết theo tuần, **xuất ảnh PNG**,
+  breadcrumbs, giao dịch vừa xem/sửa, **lịch sử thay đổi giao dịch** (`GET /api/transactions/:id/history`), **trợ lý hỗ trợ** trong app.
+- Sơ đồ trang trên trang chủ thêm "Quên mật khẩu".
+- Thư mục `submission/`: `database.sql`, ERD + từ điển dữ liệu sinh từ Prisma schema (`node scripts/generate-db-docs.mjs`),
+  dữ liệu kiểm thử + file CSV mẫu, tài khoản đăng nhập, hướng dẫn cài đặt, danh sách tính năng để quay video;
+  đóng gói ZIP bằng `node scripts/package-submission.mjs <TÊN_FILE>`.
 
 ### Hoàn thiện sản phẩm (triển khai được)
 

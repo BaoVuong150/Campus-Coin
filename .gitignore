@@ -41,3 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /.mail
+
+# submission: file lớn do nhóm tự làm (video, báo cáo) và ZIP đầu ra không đưa vào git
+/submission/deliverables/*
+!/submission/deliverables/README.md
+/dist-submission

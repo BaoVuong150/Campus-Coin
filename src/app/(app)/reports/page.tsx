@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, FileBarChart, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileBarChart, ImageDown, Mail, X } from "lucide-react";
 import { BudgetRow } from "@/components/budgets/budget-row";
 import { InsightHistoryCard } from "@/components/reports/insight-history-card";
 import { buildSlices, CategoryDonut } from "@/components/charts/category-donut";
@@ -15,15 +15,17 @@ import { useSessionUser } from "@/components/layout/session-context";
 import { useTransactionUI } from "@/components/transactions/transaction-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input, Select } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { SkeletonCard, SkeletonChart } from "@/components/ui/skeleton";
 import { useToast } from "@/context/ToastContext";
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { useReport } from "@/hooks/use-dashboard";
-import { exportReportPdf } from "@/lib/report-pdf";
+import { exportReportImage, exportReportPdf } from "@/lib/report-pdf";
 import { currentMonthKey, formatDate, parseMonthKey, shiftMonthKey } from "@/lib/utils/date";
 import { formatPercent, formatVND } from "@/lib/utils/money";
 import { useApi } from "@/hooks/use-api";
+import { useCategories } from "@/hooks/use-categories";
 import { useI18n } from "@/i18n/provider";
 import { apiFetch } from "@/lib/api-client";
 import type { BudgetItemDTO, ReportPeriod } from "@/types/finance";
@@ -58,8 +60,16 @@ export default function ReportsPage() {
   const order = useExpenseCategoryOrder();
   const [period, setPeriod] = useState<ReportPeriod>("month");
   const [anchor, setAnchor] = useState(currentMonthKey());
-  const [exporting, setExporting] = useState(false);
-  const { data, error, reload } = useReport(period, anchor);
+  const [exporting, setExporting] = useState<"pdf" | "image" | null>(null);
+  // Bộ lọc báo cáo (SRS: lọc theo khoảng ngày, danh mục, nguồn thu). Khoảng ngày hợp lệ ghi đè kỳ tháng/quý/năm.
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const rangeInvalid = !!from && !!to && from > to;
+  const custom = !!from && !!to && !rangeInvalid;
+  const filters = { categoryId, from: custom ? from : undefined, to: custom ? to : undefined };
+  const { data: categories } = useCategories();
+  const { data, error, reload } = useReport(period, anchor, filters);
   const slices = useMemo(() => buildSlices(data?.categories ?? [], order, colors.series, colors.other), [data, order, colors]);
   const current = currentMonthKey();
   const canNext = periodIndex(period, shiftMonthKey(anchor, STEP[period])) <= periodIndex(period, current);
@@ -72,7 +82,7 @@ export default function ReportsPage() {
     try {
       const res = await apiFetch<{ delivery: "sent" | "saved_locally"; to: string }>("/api/reports/email", {
         method: "POST",
-        body: { period, anchor },
+        body: { period, anchor, category_id: categoryId ?? undefined, from: filters.from, to: filters.to },
       });
       toast.success(res.delivery === "sent" ? l.email.sent(res.to) : l.email.savedDev);
     } catch (err) {
@@ -82,21 +92,22 @@ export default function ReportsPage() {
     }
   };
 
-  const handleExport = async () => {
-    if (!data) return;
-    setExporting(true);
+  const handleExport = async (format: "pdf" | "image") => {
+    if (!data || exporting) return;
+    setExporting(format);
     try {
-      await exportReportPdf(data, user.name, t, fmt);
-      toast.success(l.exported);
+      await (format === "pdf" ? exportReportPdf : exportReportImage)(data, user.name, t, fmt);
+      toast.success(format === "pdf" ? l.exported : l.exportedImage);
     } catch {
       toast.error(l.exportFailed, t.errors.INTERNAL_ERROR);
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
   const hasData = !!data && data.totals.transactionCount > 0;
-  const label = fmt.period(period, anchor);
+  const periodText = fmt.period(period, anchor);
+  const label = custom ? l.filters.custom(formatDate(from), formatDate(to)) : periodText;
 
   return (
     <div>
@@ -105,31 +116,39 @@ export default function ReportsPage() {
         description={data ? `${label} · ${formatDate(data.from)} – ${formatDate(data.to)}` : l.description}
         actions={
           <>
-            <Segmented
-              label={l.period}
-              value={period}
-              onChange={(p) => {
-                setPeriod(p);
-                setAnchor(current);
-              }}
-              options={[
-                { value: "month", label: l.periods.month },
-                { value: "quarter", label: l.periods.quarter },
-                { value: "year", label: l.periods.year },
-              ]}
-              size="md"
-            />
-            <div className="flex items-center rounded-md border border-border bg-surface p-0.5">
-              <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, -STEP[period]))} aria-label={l.prev}>
-                <ChevronLeft />
-              </Button>
-              <span className="min-w-24 text-center text-sm font-medium text-foreground">{label}</span>
-              <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, STEP[period]))} disabled={!canNext} aria-label={l.next}>
-                <ChevronRight />
-              </Button>
-            </div>
-            <Button onClick={handleExport} loading={exporting} disabled={!hasData}>
+            {/* Khi lọc theo khoảng ngày tùy chọn, kỳ tháng/quý/năm không còn áp dụng nên ẩn bộ chọn kỳ. */}
+            {!custom && (
+              <>
+                <Segmented
+                  label={l.period}
+                  value={period}
+                  onChange={(p) => {
+                    setPeriod(p);
+                    setAnchor(current);
+                  }}
+                  options={[
+                    { value: "month", label: l.periods.month },
+                    { value: "quarter", label: l.periods.quarter },
+                    { value: "year", label: l.periods.year },
+                  ]}
+                  size="md"
+                />
+                <div className="flex items-center rounded-md border border-border bg-surface p-0.5">
+                  <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, -STEP[period]))} aria-label={l.prev}>
+                    <ChevronLeft />
+                  </Button>
+                  <span className="min-w-24 text-center text-sm font-medium text-foreground">{label}</span>
+                  <Button variant="ghost" size="icon-sm" onClick={() => setAnchor(shiftMonthKey(anchor, STEP[period]))} disabled={!canNext} aria-label={l.next}>
+                    <ChevronRight />
+                  </Button>
+                </div>
+              </>
+            )}
+            <Button onClick={() => handleExport("pdf")} loading={exporting === "pdf"} disabled={!hasData || !!exporting}>
               <Download /> {l.export}
+            </Button>
+            <Button variant="outline" onClick={() => handleExport("image")} loading={exporting === "image"} disabled={!hasData || !!exporting}>
+              <ImageDown /> {l.exportImage}
             </Button>
             {/* Chỉ hiện khi hệ thống thực sự gửi được email (production đã cấu hình Resend). */}
             {emailEnabled?.enabled && (
@@ -140,6 +159,46 @@ export default function ReportsPage() {
           </>
         }
       />
+
+      <div className="mb-4 grid gap-3 rounded-lg border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,1fr))_auto] lg:items-end" role="group" aria-label={l.filters.label}>
+        <label className="min-w-0 space-y-1.5">
+          <span className="text-[12px] font-medium text-muted">{l.filters.category}</span>
+          <Select value={categoryId ?? ""} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}>
+            <option value="">{l.filters.allCategories}</option>
+            <optgroup label={l.filters.incomeGroup}>
+              {(categories ?? []).filter((c) => c.type === "income").map((c) => (
+                <option key={c.id} value={c.id}>{fmt.category(c.name)}</option>
+              ))}
+            </optgroup>
+            <optgroup label={l.filters.expenseGroup}>
+              {(categories ?? []).filter((c) => c.type === "expense").map((c) => (
+                <option key={c.id} value={c.id}>{fmt.category(c.name)}</option>
+              ))}
+            </optgroup>
+          </Select>
+        </label>
+        <label className="min-w-0 space-y-1.5">
+          <span className="text-[12px] font-medium text-muted">{l.filters.from}</span>
+          <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className="min-w-0 space-y-1.5">
+          <span className="text-[12px] font-medium text-muted">{l.filters.to}</span>
+          <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} aria-invalid={rangeInvalid || undefined} />
+        </label>
+        {(categoryId || from || to) && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setCategoryId(null);
+              setFrom("");
+              setTo("");
+            }}
+          >
+            <X /> {l.filters.clear}
+          </Button>
+        )}
+        {rangeInvalid && <p className="text-[12px] text-danger sm:col-span-2 lg:col-span-4">{l.filters.invalidRange}</p>}
+      </div>
 
       {error ? (
         <Card>
@@ -170,11 +229,30 @@ export default function ReportsPage() {
           </section>
 
           <Card>
-            <CardHeader title={l.trend} description={period === "month" ? l.byDay : l.byMonth} />
+            <CardHeader title={l.trend} description={data.trend[0]?.key.length === 10 ? l.byDay : l.byMonth} />
             <CardContent>
               <CashFlowBars data={data.trend} />
             </CardContent>
           </Card>
+
+          {data.weekly.length > 0 && (
+            <Card>
+              <CardHeader title={l.weekly.title} description={l.weekly.description} />
+              <CardContent>
+                <ul className="divide-y divide-border">
+                  {data.weekly.map((w) => (
+                    <li key={w.start} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
+                      <span className="text-muted">{l.weekly.week(formatDate(w.start), formatDate(w.end))}</span>
+                      <span className="tabular flex gap-4">
+                        <span className="text-success">+{formatVND(w.income)}</span>
+                        <span className="text-foreground">−{formatVND(w.expense)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="min-w-0">

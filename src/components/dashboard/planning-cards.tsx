@@ -247,7 +247,30 @@ function ForecastBody({ p }: { p: PlanningDTO }) {
       ) : (
         <p className="mt-3 text-[12px] text-muted">{l.pace(formatVND(f.dailyPace), f.paceSource === "history")}</p>
       )}
+      {p.nextMonth && <NextMonthForecast next={p.nextMonth} />}
     </div>
+  );
+}
+
+/** Dự báo tháng kế tiếp theo xu hướng: thu cố định − chi cố định − chi linh hoạt ước tính. */
+function NextMonthForecast({ next }: { next: NonNullable<PlanningDTO["nextMonth"]> }) {
+  const { t, fmt } = useI18n();
+  const l = t.dashboard.planning.nextMonth;
+  return (
+    <section className="mt-4 rounded-md border border-border px-3 pt-2 pb-2.5" aria-label={l.title(fmt.month(next.month))}>
+      <p className="py-1 text-[13px] font-semibold text-foreground">{l.title(fmt.month(next.month))}</p>
+      {next.expectedIncome > 0 && <Line label={l.income} value={next.expectedIncome} sign="+" />}
+      <Line label={l.fixed} value={next.fixedExpenses} sign="−" />
+      <Line label={l.variable} value={next.variableExpenses} sign="−" />
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-2 text-[13px]">
+        <span className="font-semibold text-foreground">{l.net}</span>
+        <span className={cn("tabular font-semibold", next.projectedNet < 0 ? "text-danger" : "text-foreground")}>
+          {next.projectedNet < 0 ? "− " : "+ "}
+          {formatVND(Math.abs(next.projectedNet))}
+        </span>
+      </div>
+      <p className="mt-1.5 text-[12px] text-subtle">{l.basis(next.basisDays)}</p>
+    </section>
   );
 }
 

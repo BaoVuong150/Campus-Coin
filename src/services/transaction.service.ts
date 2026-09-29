@@ -8,12 +8,12 @@ import type {
   TransactionQuery,
   UpdateTransactionInput,
 } from "@/lib/validations/transaction.schema";
-import type { Paginated, TransactionDTO, TransactionWarnings } from "@/types/finance";
+import type { Paginated, TransactionDTO, TransactionHistoryEntry, TransactionWarnings } from "@/types/finance";
 import { getUsableCategory, rememberCategoryChoice, usableCategoryWhere } from "./category.service";
 import { evaluateBudgetAlerts } from "./budget.service";
 import { notify } from "./notification.service";
 import { onTransactionLogged } from "./points.service";
-import { auditSnapshot, toNumber, toTransactionDTO } from "./mappers";
+import { asType, auditSnapshot, toNumber, toTransactionDTO } from "./mappers";
 
 const notFound = () => Errors.notFound("TRANSACTION_NOT_FOUND", "Không tìm thấy giao dịch.");
 
@@ -262,4 +262,34 @@ export async function flagUnusual(userId: string, items: TransactionDTO[]): Prom
     if (detectAnomaly(item.amount, all, cat).unusual) flagged.add(item.id);
   }
   return flagged;
+}
+
+/** Số bản ghi lịch sử tối đa trả về cho một giao dịch. */
+const HISTORY_LIMIT = 50;
+
+/**
+ * Lịch sử thay đổi của một giao dịch (SRS 3.4: sửa/xóa nhưng vẫn giữ dấu vết đầy đủ).
+ * Lọc theo user_id nên không đọc được lịch sử giao dịch của người khác (IDOR → danh sách rỗng).
+ */
+export async function getTransactionHistory(userId: string, id: string): Promise<TransactionHistoryEntry[]> {
+  const rows = await prisma.transactionAudit.findMany({
+    where: { transaction_id: id, user_id: userId },
+    orderBy: { created_at: "desc" },
+    take: HISTORY_LIMIT,
+  });
+  return rows.map((row) => {
+    const snap = (row.snapshot ?? {}) as Record<string, unknown>;
+    return {
+      id: row.id,
+      action: row.action === "create" || row.action === "delete" ? row.action : "update",
+      at: row.created_at.toISOString(),
+      snapshot: {
+        amount: Number(snap.amount ?? 0),
+        type: asType(String(snap.type ?? "expense")),
+        description: String(snap.description ?? ""),
+        categoryId: Number(snap.category_id ?? 0),
+        date: String(snap.date ?? ""),
+      },
+    };
+  });
 }
